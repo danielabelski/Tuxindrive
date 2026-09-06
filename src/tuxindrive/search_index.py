@@ -11,6 +11,8 @@ from __future__ import annotations
 import fnmatch
 import os
 import sqlite3
+from contextlib import contextmanager
+from collections.abc import Iterator
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +23,7 @@ from .models import SyncJob, SyncMode
 from .file_preview import index_text_path
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 DEFAULT_MAX_ENTRIES_PER_JOB = 250_000
 
 
@@ -92,12 +94,20 @@ class FolderSearchIndex:
             # Native Windows ACLs are authoritative there.
             pass
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.path, timeout=30)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA busy_timeout = 30000")
-        return connection
+        try:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA busy_timeout = 30000")
+            yield connection
+            connection.commit()
+        except BaseException:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def _initialize(self) -> None:
         with self._connect() as connection:
@@ -139,6 +149,41 @@ class FolderSearchIndex:
                 "INSERT OR REPLACE INTO metadata(key, value) VALUES('schema_version', ?)",
                 (str(SCHEMA_VERSION),),
             )
+            self._fts_available = False
+            try:
+                existed = connection.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='entries_fts'"
+                ).fetchone() is not None
+                connection.executescript(
+                    """
+                    CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
+                        search_text, content_text,
+                        content='entries', content_rowid='rowid',
+                        tokenize='trigram case_sensitive 0'
+                    );
+                    CREATE TRIGGER IF NOT EXISTS entries_fts_insert AFTER INSERT ON entries BEGIN
+                      INSERT INTO entries_fts(rowid,search_text,content_text)
+                      VALUES(new.rowid,new.search_text,new.content_text);
+                    END;
+                    CREATE TRIGGER IF NOT EXISTS entries_fts_delete AFTER DELETE ON entries BEGIN
+                      INSERT INTO entries_fts(entries_fts,rowid,search_text,content_text)
+                      VALUES('delete',old.rowid,old.search_text,old.content_text);
+                    END;
+                    CREATE TRIGGER IF NOT EXISTS entries_fts_update AFTER UPDATE ON entries BEGIN
+                      INSERT INTO entries_fts(entries_fts,rowid,search_text,content_text)
+                      VALUES('delete',old.rowid,old.search_text,old.content_text);
+                      INSERT INTO entries_fts(rowid,search_text,content_text)
+                      VALUES(new.rowid,new.search_text,new.content_text);
+                    END;
+                    """
+                )
+                if not existed:
+                    connection.execute("INSERT INTO entries_fts(entries_fts) VALUES('rebuild')")
+                self._fts_available = True
+            except sqlite3.OperationalError:
+                # Some distribution SQLite builds omit FTS5. The bounded LIKE
+                # fallback remains fully functional on those platforms.
+                self._fts_available = False
         self._protect(self.path, 0o600)
         for suffix in ("-wal", "-shm"):
             auxiliary = Path(str(self.path) + suffix)
@@ -321,9 +366,17 @@ class FolderSearchIndex:
     def _like_token(value: str) -> str:
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
-    def search(self, query: str, *, limit: int = 200) -> list[SearchResult]:
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 200,
+        stop_event: Event | None = None,
+    ) -> list[SearchResult]:
         tokens = [self._like_token(item) for item in _normalized(query).split() if item]
         if not tokens or limit <= 0:
+            return []
+        if stop_event is not None and stop_event.is_set():
             return []
         where = " AND ".join(
             "(search_text LIKE ? ESCAPE '\\' OR content_text LIKE ? ESCAPE '\\')"
@@ -334,18 +387,53 @@ class FolderSearchIndex:
             parameters.extend((f"%{token}%", f"%{token}%"))
         parameters.append(min(max(int(limit), 1), 1000))
         with self._connect() as connection:
-            rows = connection.execute(
-                f"""
-                SELECT job_id, job_name, root, relative_path, is_directory,
-                       size, modified_ns,
-                       CASE WHEN search_text LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END AS matched_content
-                FROM entries
-                WHERE {where}
-                ORDER BY is_directory DESC, length(relative_path), relative_path
-                LIMIT ?
-                """,
-                [f"%{tokens[0]}%", *parameters],
-            ).fetchall()
+            if stop_event is not None:
+                connection.set_progress_handler(
+                    lambda: 1 if stop_event.is_set() else 0, 1000
+                )
+            try:
+                raw_tokens = [item for item in _normalized(query).split() if item]
+                use_fts = self._fts_available and all(
+                    len(item) >= 3 and item.isalnum() for item in raw_tokens
+                )
+                if use_fts:
+                    fts_tokens = [item.replace('"', '""') for item in raw_tokens]
+                    expression = " AND ".join(f'"{item}"*' for item in fts_tokens)
+                    qualified_where = where.replace("search_text", "e.search_text").replace(
+                        "content_text", "e.content_text"
+                    )
+                    rows = connection.execute(
+                        f"""
+                        SELECT e.job_id, e.job_name, e.root, e.relative_path,
+                               e.is_directory, e.size, e.modified_ns,
+                               CASE WHEN e.search_text LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END AS matched_content
+                        FROM entries_fts
+                        JOIN entries AS e ON e.rowid = entries_fts.rowid
+                        WHERE entries_fts MATCH ? AND ({qualified_where})
+                        ORDER BY e.is_directory DESC, length(e.relative_path), e.relative_path
+                        LIMIT ?
+                        """,
+                        [f"%{tokens[0]}%", expression, *parameters],
+                    ).fetchall()
+                else:
+                    rows = connection.execute(
+                        f"""
+                        SELECT job_id, job_name, root, relative_path, is_directory,
+                               size, modified_ns,
+                               CASE WHEN search_text LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END AS matched_content
+                        FROM entries
+                        WHERE {where}
+                        ORDER BY is_directory DESC, length(relative_path), relative_path
+                        LIMIT ?
+                        """,
+                        [f"%{tokens[0]}%", *parameters],
+                    ).fetchall()
+            except sqlite3.OperationalError as exc:
+                if stop_event is not None and stop_event.is_set() and "interrupt" in str(exc).lower():
+                    return []
+                raise
+            finally:
+                connection.set_progress_handler(None, 0)
         return [
             SearchResult(
                 row["job_id"], row["job_name"], Path(row["root"]),

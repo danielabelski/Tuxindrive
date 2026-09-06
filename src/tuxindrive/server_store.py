@@ -23,7 +23,9 @@ class ServerStore:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(self.path.parent, 0o700)
         self._lock = threading.RLock()
-        self._connection = sqlite3.connect(path, check_same_thread=False)
+        self._connection = sqlite3.connect(path, timeout=30, check_same_thread=False)
+        self._used_cache: dict[str, int] = {}
+        self._last_purge = 0.0
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._connection.execute("PRAGMA synchronous=FULL")
         self._connection.executescript(
@@ -74,6 +76,9 @@ class ServerStore:
         return now, now + ttl
 
     def _used(self, tenant: str) -> int:
+        cached = self._used_cache.get(tenant)
+        if cached is not None:
+            return cached
         row = self._connection.execute(
             """SELECT
               COALESCE((SELECT SUM(length(body)) FROM mailbox WHERE tenant=?),0) +
@@ -82,20 +87,45 @@ class ServerStore:
               COALESCE((SELECT SUM(length(body)) FROM collaboration WHERE tenant=?),0)
             """, (tenant, tenant, tenant, tenant),
         ).fetchone()
-        return int(row[0] or 0)
+        used = int(row[0] or 0)
+        self._used_cache[tenant] = used
+        return used
+
+    def _adjust_used(self, tenant: str, delta: int) -> None:
+        if tenant in self._used_cache:
+            self._used_cache[tenant] = max(0, self._used_cache[tenant] + int(delta))
 
     def _reserve(self, tenant: str, size: int) -> None:
-        if size < 0 or size > self.quota_bytes or self._used(tenant) + size > self.quota_bytes:
+        if size < 0 or size > self.quota_bytes:
             raise ServerStoreError("Tenant storage quota exceeded")
+        if self._used(tenant) + size > self.quota_bytes:
+            # Expired bytes can remain physically present until the periodic
+            # maintenance window. Reclaim once before rejecting valid data.
+            self.purge(force=True)
+            if self._used(tenant) + size > self.quota_bytes:
+                raise ServerStoreError("Tenant storage quota exceeded")
 
-    def purge(self) -> int:
+    def purge(self, *, force: bool = False) -> int:
+        monotonic = time.monotonic()
         now = int(time.time())
         removed = 0
         with self._lock:
-            for table in ("mailbox", "objects", "rendezvous", "collaboration"):
+            if not force and monotonic - self._last_purge < 60.0:
+                return 0
+            for table, column in (
+                ("mailbox", "body"), ("objects", "body"),
+                ("rendezvous", "envelope"), ("collaboration", "body"),
+            ):
+                expired = self._connection.execute(
+                    f"SELECT tenant,COALESCE(SUM(length({column})),0) FROM {table} WHERE expires <= ? GROUP BY tenant",
+                    (now,),
+                ).fetchall()
                 cursor = self._connection.execute(f"DELETE FROM {table} WHERE expires <= ?", (now,))
                 removed += cursor.rowcount
+                for tenant, size in expired:
+                    self._adjust_used(str(tenant), -int(size or 0))
             self._connection.commit()
+            self._last_purge = monotonic
         return removed
 
     def put_mail(self, tenant: str, recipient: str, body: bytes, ttl: int) -> dict:
@@ -109,16 +139,18 @@ class ServerStore:
                 "INSERT INTO mailbox VALUES(?,?,?,?,?,?)",
                 (item_id, tenant, recipient, sqlite3.Binary(body), now, expires),
             )
+            self._adjust_used(tenant, len(body))
             self._connection.commit()
         return {"id": item_id, "created": now, "expires": expires, "bytes": len(body)}
 
     def list_mail(self, tenant: str, recipient: str, limit: int = 100) -> list[dict]:
         tenant = self._identifier(tenant, "tenant"); recipient = self._identifier(recipient, "recipient")
+        now = int(time.time())
         with self._lock:
             self.purge()
             rows = self._connection.execute(
-                "SELECT id,body,created,expires FROM mailbox WHERE tenant=? AND recipient=? ORDER BY created,id LIMIT ?",
-                (tenant, recipient, max(1, min(100, int(limit)))),
+                "SELECT id,body,created,expires FROM mailbox WHERE tenant=? AND recipient=? AND expires>? ORDER BY created,id LIMIT ?",
+                (tenant, recipient, now, max(1, min(100, int(limit)))),
             ).fetchall()
         return [{"id": row[0], "body": bytes(row[1]), "created": row[2], "expires": row[3]} for row in rows]
 
@@ -126,9 +158,15 @@ class ServerStore:
         tenant = self._identifier(tenant, "tenant"); recipient = self._identifier(recipient, "recipient")
         item_id = self._identifier(item_id, "message ID")
         with self._lock:
+            prior = self._connection.execute(
+                "SELECT length(body) FROM mailbox WHERE tenant=? AND recipient=? AND id=?",
+                (tenant, recipient, item_id),
+            ).fetchone()
             cursor = self._connection.execute(
                 "DELETE FROM mailbox WHERE tenant=? AND recipient=? AND id=?", (tenant, recipient, item_id)
             )
+            if cursor.rowcount and prior:
+                self._adjust_used(tenant, -int(prior[0] or 0))
             self._connection.commit()
         return cursor.rowcount == 1
 
@@ -146,6 +184,7 @@ class ServerStore:
                 return {"digest": digest, "bytes": existing[0], "expires": existing[1], "existing": True}
             self._reserve(tenant, len(body))
             self._connection.execute("INSERT INTO objects VALUES(?,?,?,?,?)", (digest, tenant, sqlite3.Binary(body), now, expires))
+            self._adjust_used(tenant, len(body))
             self._connection.commit()
         return {"digest": digest, "bytes": len(body), "expires": expires, "existing": False}
 
@@ -153,9 +192,13 @@ class ServerStore:
         tenant = self._identifier(tenant, "tenant")
         if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             raise ServerStoreError("Invalid object digest")
+        now = int(time.time())
         with self._lock:
             self.purge()
-            row = self._connection.execute("SELECT body FROM objects WHERE tenant=? AND digest=?", (tenant, digest)).fetchone()
+            row = self._connection.execute(
+                "SELECT body FROM objects WHERE tenant=? AND digest=? AND expires>?",
+                (tenant, digest, now),
+            ).fetchone()
         return bytes(row[0]) if row else None
 
     def put_rendezvous(self, tenant: str, device: str, envelope: bytes, ttl: int) -> dict:
@@ -169,14 +212,19 @@ class ServerStore:
                 "INSERT INTO rendezvous VALUES(?,?,?,?,?) ON CONFLICT(tenant,device) DO UPDATE SET envelope=excluded.envelope,created=excluded.created,expires=excluded.expires",
                 (tenant, device, sqlite3.Binary(envelope), now, expires),
             )
+            self._adjust_used(tenant, len(envelope) - int(prior[0] if prior else 0))
             self._connection.commit()
         return {"device": device, "created": now, "expires": expires}
 
     def get_rendezvous(self, tenant: str, device: str) -> bytes | None:
         tenant = self._identifier(tenant, "tenant"); device = self._identifier(device, "device")
+        now = int(time.time())
         with self._lock:
             self.purge()
-            row = self._connection.execute("SELECT envelope FROM rendezvous WHERE tenant=? AND device=?", (tenant, device)).fetchone()
+            row = self._connection.execute(
+                "SELECT envelope FROM rendezvous WHERE tenant=? AND device=? AND expires>?",
+                (tenant, device, now),
+            ).fetchone()
         return bytes(row[0]) if row else None
 
     def put_collaboration(self, tenant: str, workspace: str, body: bytes, ttl: int) -> dict:
@@ -185,16 +233,18 @@ class ServerStore:
         with self._lock:
             self.purge(); self._reserve(tenant, len(body))
             self._connection.execute("INSERT INTO collaboration VALUES(?,?,?,?,?,?)", (item_id, tenant, workspace, sqlite3.Binary(body), now, expires))
+            self._adjust_used(tenant, len(body))
             self._connection.commit()
         return {"id": item_id, "created": now, "expires": expires, "bytes": len(body)}
 
     def list_collaboration(self, tenant: str, workspace: str, after: int = 0, limit: int = 100) -> list[dict]:
         tenant = self._identifier(tenant, "tenant"); workspace = self._identifier(workspace, "workspace")
+        now = int(time.time())
         with self._lock:
             self.purge()
             rows = self._connection.execute(
-                "SELECT id,body,created,expires FROM collaboration WHERE tenant=? AND workspace=? AND created>=? ORDER BY created,rowid LIMIT ?",
-                (tenant, workspace, max(0, int(after)), max(1, min(100, int(limit)))),
+                "SELECT id,body,created,expires FROM collaboration WHERE tenant=? AND workspace=? AND created>=? AND expires>? ORDER BY created,rowid LIMIT ?",
+                (tenant, workspace, max(0, int(after)), now, max(1, min(100, int(limit)))),
             ).fetchall()
         return [{"id": row[0], "body": bytes(row[1]), "created": row[2], "expires": row[3]} for row in rows]
 

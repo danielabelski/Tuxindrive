@@ -24,7 +24,7 @@ The TuxInDrive development suite contains **464 automated tests: 452 Python test
 
 | Test module | Tests | What it verifies |
 |---|---:|---|
-| `test_audit.py` | 3 | Private audit persistence, filtering, malformed historical-line handling and private CSV/JSONL export. |
+| `test_audit.py` | 4 | Private audit persistence, filtering, bounded newest-first reads across chunk boundaries, malformed historical-line handling and private CSV/JSONL export. |
 | `test_bandwidth.py` | 13 | Directional syntax and invalid values, stricter global/job limits, automatic headroom/fair division, independent upload/download clocks, network-slot admission and release, update byte clock and bounded scan jitter. |
 | `test_bootstrap.py` | 7 | Linux/macOS transfer-engine selection, rejection and identity-cached revalidation of incompatible/replaced rclone versions, supported CPU architectures, and pinned release checksums. |
 | `test_capabilities.py` | 3 | Complete provider records and conservative adaptive-mode restrictions. |
@@ -32,7 +32,7 @@ The TuxInDrive development suite contains **464 automated tests: 452 Python test
 | `test_delta.py` | 1 | Rolling BLAKE2 block signatures identify only modified ranges and calculate transferred bytes. |
 | `test_diagnostics.py` | 1 | Startup failures are written before GTK imports, allowing diagnosis when the graphical runtime cannot start. |
 | `test_platform_support.py` | 5 | Safe distribution parsing, Linux/macOS/Windows machine-readable capabilities and unsupported-architecture blocking. |
-| `test_engine.py` | 53 | Full and incremental modes, atomic reservation, aggregate streaming budgets, global rates/admission, jitter/backoff, deletion/conflict safety, streaming/mount recovery, offline hydration, marker confinement, symlink rejection and engine replacement. |
+| `test_engine.py` | 58 | Full and incremental modes, atomic reservation, non-blocking mount startup, aggregate streaming budgets, global rates/admission, jitter/backoff, deletion/conflict safety, streaming/mount recovery, offline hydration, marker confinement, symlink rejection and engine replacement. |
 | `test_file_preview.py` | 13 | Default-local bounded text/image/document previews, no-follow reads, folder non-enumeration, UTF handling, archive traversal/ZIP-bomb rejection, and shell-free page/time-limited PDF extraction. |
 | `test_github_sync.py` | 6 | Credential-free GitHub URL/branch/item safety, redirect migration, global admission and guarded commit/fetch/rebase/push orchestration. |
 | `test_folder_layout.py` | 11 | Persistent selection during asynchronous cloud-tree loading, safe account-switch defaults, before/after drag ordering, cross-group moves, group-header append, Ungrouped fallback, self-drop handling, endpoint-path preservation, GTK text-payload round-trip and malformed-payload rejection. |
@@ -44,7 +44,7 @@ The TuxInDrive development suite contains **464 automated tests: 452 Python test
 | `test_packaging.py` | 17 | Debian/Windows/macOS/Android packaging, release-channel layout, native assets, automatic missing-version publication, upgrade process, Nautilus routing and emblem metadata. |
 | `test_password_helper.py` | 8 | Private credential-helper input/output, packaged Secret Service fallback, migration-key storage and rejection behavior. |
 | `test_profile_qr.py` | 3 | Stable desktop/Android QR protocol, multi-frame ordering/deduplication, bounds and incomplete/mixed/tampered transfer rejection. |
-| `test_performance.py` | 12 | Inotify delivery/startup race, remote retry, overflow reconciliation, monitor safety, cache protection, fail-closed markers and performance hooks. |
+| `test_performance.py` | 16 | Inotify delivery/startup race, remote retry, shared scans, interruptible monitor shutdown, overflow reconciliation, monitor safety, cache protection, fail-closed markers and performance hooks. |
 | `test_process_control.py` | 4 | Portable process creation, cancellation, process-group cleanup and timeout behavior. |
 | `test_proton.py` | 30 | Official CLI install/login/session, Secret Service, redaction/confinement, backend migration, safety previews, global admission and fail-closed routing. |
 | `test_collaboration.py` | 11 | Offline CRDT convergence, iterative deep-chain handling, immutable/bounded operation state, checkpoints, review/presence, deterministic ODT/ODS round trips, ZIP-bomb rejection, unsafe XML rejection and binary fallback. |
@@ -52,7 +52,7 @@ The TuxInDrive development suite contains **464 automated tests: 452 Python test
 | `test_policies.py` | 7 | Maximum-usage defaults plus controlled battery, metered-network and normal/overnight schedule decisions, including fail-open probe handling. |
 | `test_recovery.py` | 13 | Local archive/restore behavior, disabled retention, malformed/foreign record rejection, expiry pruning, mass-change and ransomware-suffix blocking, integrity-audit parsing and directional repairs. |
 | `test_responsive_windows.py` | 5 | Monitor-safe, freely resizable client/server windows, local scrolling, wide-control isolation and search preview feature gating. |
-| `test_search_index.py` | 12 | Private metadata indexing, explicit bounded content opt-in, Unicode/token lookup, literal wildcard handling, stale pruning, exclusions, symlink rejection, paused roots, streaming avoidance and safety-limit retention. |
+| `test_search_index.py` | 13 | Private metadata indexing, explicit bounded content opt-in, Unicode/token lookup, cancellation, literal wildcard handling, stale pruning, exclusions, symlink rejection, paused roots, streaming avoidance and safety-limit retention. |
 | `test_security.py` | 8 | Empty/absolute/parent path rejection, symlink refusal, confined atomic installation, Ed25519-only keys and signed transaction tamper detection. |
 | `test_server.py` | 26 | Private initialization, race-resistant root configuration writes, shared agent/relay bandwidth control, package-launcher forwarding and private library isolation, TLS/URL/token validation, default-off client flag, opaque mailbox/object/rendezvous/collaboration isolation and deterministic same-second operation ordering, expiry/quota bounds, bounded authenticated HTTP and relay admission, relay rejection, read-only MCP, GUI/desktop packaging and private staging-file permission rejection. |
 | `test_network_lab.py` | 4 | Separate release packaging, 19 loopback-only production-protocol scenarios with fictional tenants, real multi-address local TCP/HTTP traffic, private redacted reports, cancellation/cleanup, visual topology and non-blocking GUI progress reporting. |
@@ -110,9 +110,9 @@ Android JVM coverage is kept beside the mobile source: `MobileValidationTest` co
 
 ```bash
 sh scripts/build-deb.sh
-dpkg-deb --info dist/tuxindrive_0.26.34_all.deb
-dpkg-deb --contents dist/tuxindrive_0.26.34_all.deb
-sha256sum dist/tuxindrive_0.26.34_all.deb
+dpkg-deb --info dist/tuxindrive_0.26.35_all.deb
+dpkg-deb --contents dist/tuxindrive_0.26.35_all.deb
+sha256sum dist/tuxindrive_0.26.35_all.deb
 ```
 
 The CI **Static security analysis** step must run before tests and packaging:
@@ -127,8 +127,8 @@ The release is blocked on any high-severity Bandit result or unresolved dependen
 Release manifests must be signed outside Git with the Ed25519 release key:
 
 ```bash
-python3 scripts/sign-update.py --version 0.26.34 \
-  --package dist/tuxindrive_0.26.34_all.deb \
+python3 scripts/sign-update.py --version 0.26.35 \
+  --package dist/tuxindrive_0.26.35_all.deb \
   --output update/latest-v2.json \
   --private-key /secure/offline/TuxInDrive-update-signing-private.pem
 ```
@@ -144,8 +144,8 @@ private bootstrap and installed module layout:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.34_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.34_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.35_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.35_all.deb
 PYTHONPATH=src python3 -m unittest -v tests.test_server
 ```
 

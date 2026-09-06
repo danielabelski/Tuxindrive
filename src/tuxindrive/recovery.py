@@ -16,6 +16,7 @@ from .config import data_root
 from .models import SyncJob
 from .security import confined_path, install_confined, unlink_confined, copy_from_confined
 from .bandwidth import GlobalBandwidthController
+from .audit import reverse_file_lines
 
 
 class SafetyError(RuntimeError):
@@ -103,14 +104,14 @@ class RecoveryManager:
         if not index.is_file():
             return []
         values: list[RecoveryEntry] = []
-        for line in index.read_text(encoding="utf-8", errors="replace").splitlines():
+        for line in reverse_file_lines(index):
             try:
                 entry = RecoveryEntry.from_dict(json.loads(line))
             except (KeyError, TypeError, json.JSONDecodeError):
                 continue
             if Path(entry.stored_path).is_file():
                 values.append(entry)
-        return sorted(values, key=lambda item: item.created_at, reverse=True)
+        return values
 
     def restore(self, job: SyncJob, entry: RecoveryEntry) -> Path:
         source = Path(entry.stored_path)

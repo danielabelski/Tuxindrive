@@ -14,6 +14,29 @@ from .config import data_root
 from .file_permissions import private_descriptor
 
 
+def reverse_file_lines(path: Path, block_size: int = 64 * 1024):
+    """Yield UTF-8 lines newest-first without loading the complete file."""
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            position = handle.tell()
+            remainder = b""
+            while position:
+                size = min(max(1024, block_size), position)
+                position -= size
+                handle.seek(position)
+                data = handle.read(size) + remainder
+                parts = data.split(b"\n")
+                remainder = parts[0]
+                for line in reversed(parts[1:]):
+                    if line:
+                        yield line.decode("utf-8", errors="replace")
+            if remainder:
+                yield remainder.decode("utf-8", errors="replace")
+    except OSError:
+        return
+
+
 @dataclass(frozen=True, slots=True)
 class AuditEvent:
     timestamp: str
@@ -48,12 +71,8 @@ class AuditTimeline:
         return event
 
     def recent(self, limit: int = 250, job_id: str = "") -> list[AuditEvent]:
-        try:
-            lines = self.path.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return []
         events = []
-        for line in reversed(lines):
+        for line in reverse_file_lines(self.path):
             try:
                 event = AuditEvent(**json.loads(line))
             except (TypeError, json.JSONDecodeError):
@@ -100,7 +119,12 @@ class AuditTimeline:
         return len(events)
 
     def _compact(self) -> None:
-        lines = self.path.read_text(encoding="utf-8").splitlines()[-self.limit:]
+        lines = []
+        for line in reverse_file_lines(self.path):
+            lines.append(line)
+            if len(lines) >= self.limit:
+                break
+        lines.reverse()
         descriptor, temporary = tempfile.mkstemp(prefix="audit-", suffix=".jsonl", dir=self.path.parent)
         try:
             private_descriptor(descriptor)

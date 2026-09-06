@@ -3189,6 +3189,7 @@ class FolderSearchDialog(ResponsiveDialog):
         self.controller = controller
         self._results: list[SearchResult] = []
         self._query_source = 0
+        self._query_cancel = threading.Event()
         self._preview_serial = 0
         self._closed = False
         self.add_button("Close", Gtk.ResponseType.CLOSE)
@@ -3294,12 +3295,14 @@ class FolderSearchDialog(ResponsiveDialog):
         self.search_entry.grab_focus()
 
     def _search_changed(self, _entry: Gtk.SearchEntry) -> None:
+        self._query_cancel.set()
         if self._query_source:
             GLib.source_remove(self._query_source)
         self._query_source = GLib.timeout_add(180, self._run_search)
 
     def _destroyed(self, _dialog: Gtk.Widget) -> None:
         self._closed = True
+        self._query_cancel.set()
         self._preview_serial += 1
         if self._query_source:
             GLib.source_remove(self._query_source)
@@ -3310,6 +3313,9 @@ class FolderSearchDialog(ResponsiveDialog):
         if self._closed:
             return False
         query = self.search_entry.get_text().strip()
+        self._query_cancel.set()
+        self._query_cancel = threading.Event()
+        cancel = self._query_cancel
         self.store.clear()
         if not query:
             self._results = []
@@ -3327,7 +3333,10 @@ class FolderSearchDialog(ResponsiveDialog):
             self._render_results(query)
             return False
 
-        _run_thread(self.controller.search_index.search, ready, query)
+        _run_thread(
+            lambda: self.controller.search_index.search(query, stop_event=cancel),
+            ready,
+        )
         return False
 
     def _render_results(self, query: str) -> None:
@@ -5470,13 +5479,11 @@ class TuxInDriveApplication(Gtk.Application):
         host_report = inspect_host()
         for line in format_report(host_report).splitlines():
             LOGGER.info("Host capability: %s", line)
-        recovered = set(self.engine.recover_stale_mounts(self.config.jobs))
-        for job in self.config.jobs:
-            if job.id in recovered:
-                job.last_status = "Recovered a disconnected files-on-demand mount; reconnecting…"
-                LOGGER.warning("Detached stale streaming mount: %s", job.local_path)
-        if recovered:
-            self.save()
+        _run_thread(
+            self.engine.recover_stale_mounts,
+            self._stale_mounts_recovered,
+            list(self.config.jobs),
+        )
         self._install_css()
         GLib.timeout_add_seconds(30, self._scheduler_tick)
         self.configure_autostart()
@@ -5493,6 +5500,23 @@ class TuxInDriveApplication(Gtk.Application):
             action.connect("activate", callback)
             self.add_action(action)
         self._publish_nautilus_state()
+
+    def _stale_mounts_recovered(
+        self, recovered_ids: list[str] | None, error: Exception | None
+    ) -> bool:
+        if error:
+            LOGGER.warning("Stale mount recovery failed safely: %s", error)
+            return False
+        recovered = set(recovered_ids or ())
+        for job in self.config.jobs:
+            if job.id in recovered:
+                job.last_status = "Recovered a disconnected files-on-demand mount; reconnecting…"
+                LOGGER.warning("Detached stale streaming mount: %s", job.local_path)
+        if recovered:
+            self.save()
+            if self.window:
+                self.window.refresh()
+        return False
 
     def do_activate(self) -> None:
         if self.window is None:

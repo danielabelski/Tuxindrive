@@ -1,3 +1,11 @@
+tuxindrive (0.26.35-1) unstable; urgency=medium
+
+  * Prevent stale background scans and mount startup from blocking shutdown or UI.
+  * Accelerate and cancel private search queries; close SQLite handles reliably.
+  * Bound history reads and Android tree metadata; optimize relay-store cleanup.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sun, 06 Sep 2026 12:00:00 +0200
+
 tuxindrive (0.26.34-1) unstable; urgency=medium
 
   * Render synchronization activity as a separate circular tray indicator

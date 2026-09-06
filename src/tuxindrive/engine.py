@@ -1129,19 +1129,18 @@ class SyncEngine:
             ))
             return False
         if job.mode is SyncMode.VIRTUAL_DRIVE:
-            result = self.start_mount(job)
-            callback(result)
-            if result.success:
-                with self._lock:
-                    process = self._mounts.get(job.id)
-                if process:
-                    threading.Thread(
-                        target=self._watch_mount,
-                        args=(job, process, result.log_path, callback),
-                        name=f"tuxindrive-mount-{job.id[:8]}",
-                        daemon=True,
-                    ).start()
-            return result.success
+            with self._lock:
+                existing = self._mounts.get(job.id)
+                if job.id in self._active_jobs or (existing and existing.poll() is None):
+                    return False
+                self._active_jobs.add(job.id)
+            threading.Thread(
+                target=self._start_mount_worker,
+                args=(job, callback),
+                name=f"tuxindrive-mount-start-{job.id[:8]}",
+                daemon=True,
+            ).start()
+            return True
         job.local.mkdir(parents=True, exist_ok=True)
         with self._lock:
             if (
@@ -1162,6 +1161,22 @@ class SyncEngine:
         )
         thread.start()
         return True
+
+    def _start_mount_worker(
+        self, job: SyncJob, callback: Callable[[JobResult], None]
+    ) -> None:
+        process: subprocess.Popen[str] | None = None
+        try:
+            result = self.start_mount(job)
+            callback(result)
+            if result.success:
+                with self._lock:
+                    process = self._mounts.get(job.id)
+        finally:
+            with self._lock:
+                self._active_jobs.discard(job.id)
+        if process:
+            self._watch_mount(job, process, result.log_path, callback)
 
     def _run_bounded_worker(
         self,
@@ -1351,30 +1366,36 @@ class SyncEngine:
 
     @staticmethod
     def _unmount_path(path: Path) -> bool:
-        system = platform.system()
-        if system == "Windows":
-            mountvol = shutil.which("mountvol.exe")
-            if not mountvol:
-                return False
-            result = subprocess.run(
-                [mountvol, str(path), "/D"], check=False, capture_output=True, text=True
-            )
-            return result.returncode == 0
-        if system == "Darwin":
-            unmount = shutil.which("umount")
+        try:
+            system = platform.system()
+            if system == "Windows":
+                mountvol = shutil.which("mountvol.exe")
+                if not mountvol:
+                    return False
+                result = subprocess.run(
+                    [mountvol, str(path), "/D"], check=False, capture_output=True,
+                    text=True, timeout=10,
+                )
+                return result.returncode == 0
+            if system == "Darwin":
+                unmount = shutil.which("umount")
+                if not unmount:
+                    return False
+                result = subprocess.run(
+                    [unmount, str(path)], check=False, capture_output=True,
+                    text=True, timeout=10,
+                )
+                return result.returncode == 0
+            unmount = shutil.which("fusermount3") or shutil.which("fusermount")
             if not unmount:
                 return False
             result = subprocess.run(
-                [unmount, str(path)], check=False, capture_output=True, text=True
+                [unmount, "-uz", str(path)], check=False, capture_output=True,
+                text=True, timeout=10,
             )
             return result.returncode == 0
-        unmount = shutil.which("fusermount3") or shutil.which("fusermount")
-        if not unmount:
+        except (OSError, subprocess.TimeoutExpired):
             return False
-        result = subprocess.run(
-            [unmount, "-uz", str(path)], check=False, capture_output=True, text=True
-        )
-        return result.returncode == 0
 
     def stop_mount(self, job: SyncJob) -> bool:
         stopped_process = False
@@ -1522,6 +1543,7 @@ class SyncEngine:
         monitor = self._monitors.pop(job_id, None)
         if monitor:
             monitor.stop()
+            monitor.join(2.0)
 
     def _incremental_command(self, job: SyncJob, change: FileChange) -> list[str] | None:
         relative = change.path.strip("/")
@@ -1583,7 +1605,14 @@ class SyncEngine:
         ensure_private_directory(log_path.parent)
         completed = 0
         try:
-            total_files = sum(1 for item in job.local.rglob("*") if item.is_file())
+            with self._lock:
+                monitor = self._monitors.get(job.id)
+                known_file_count = monitor.known_file_count if monitor else None
+            total_files = (
+                known_file_count
+                if known_file_count is not None
+                else sum(1 for item in job.local.rglob("*") if item.is_file())
+            )
             decision = MassChangeGuard.assess(job, changes, total_files)
             if decision.blocked:
                 callback(JobResult(

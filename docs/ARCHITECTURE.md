@@ -1,6 +1,6 @@
 # TuxInDrive architecture
 
-This document describes how TuxInDrive 0.26.31 is implemented. Job failures
+This document describes how TuxInDrive 0.26.35 is implemented. Job failures
 persist a bounded structured reference (reason, time, reported source path and
 exact private log path); the desktop error dialog reads at most the final 64
 KiB of that one confined log, redacts common credential forms, and never starts
@@ -82,9 +82,12 @@ generations; cancellation or the per-root 250,000-entry bound retains the last
 complete unseen rows. Removed jobs are pruned.
 
 Unicode NFKC/casefolded search text supports case-insensitive multi-token
-matching without storing file bodies. The database and parent directory use
-private permissions on POSIX systems, and SQLite WAL mode lets the GTK search
-window query the last committed snapshot while a background refresh runs.
+matching without storing file bodies. FTS5 trigram candidates accelerate
+eligible substring queries, followed by the original literal match predicate;
+SQLite's progress handler cancels a superseded GUI query. Every connection is
+closed by a transaction context. The database and parent directory use private
+permissions on POSIX systems, and SQLite WAL mode lets the GTK search window
+query the last committed snapshot while a background refresh runs.
 Streaming/FUSE jobs are excluded so index construction cannot enumerate a
 remote directory or hydrate content. Opening a result re-resolves it, rejects a
 new symbolic link, and confirms confinement to the indexed root.
@@ -184,7 +187,8 @@ reconciliation. Local inotify events are normalized and transient editor files
 are excluded. Remote changes are detected with targeted or recursive `lsjson`
 queries. Provider failures increase backoff. Successful scan intervals include
 random jitter, preventing many jobs from issuing metadata requests at the same
-instant.
+instant. A monitor owns at most one provider subprocess; stopping or replacing
+the job terminates that subprocess and joins its worker within a bounded wait.
 
 Incremental work reserves the job ID under the engine lock **before** waiting
 for a global network slot. This prevents a full job and a callback job for the
@@ -303,6 +307,8 @@ Android is a native Compose application rather than a GTK port:
 - `RcloneCore.kt` wraps the embedded gomobile RPC API, private rclone config,
   browsing, bisync and the runtime bandwidth limit.
 - `MobileSyncWorker.kt` uses WorkManager constraints and a foreground service.
+  Its bounded metadata index is transactional SQLite (with one-time migration
+  from the former JSON file), and a mirror update enumerates each path once.
 - `AndroidUpdateWorker.kt` performs rate-limited signed-channel checks and
   verified atomic downloads without granting silent-install privileges.
   It mirrors a Storage Access Framework tree into app-private storage, checks
@@ -337,6 +343,8 @@ deliberately not scheduled by the system service.
 object, collaboration and audit tables. Tenant identity comes from the
 authenticated token mapping; payload columns remain opaque bytes, TTL/quota
 checks run under one store lock, and WAL/full-sync durability is enabled.
+Per-tenant byte totals are cached under that lock. Expired rows are never
+returned and bulk expiry/accounting cleanup is rate-limited to once per minute.
 
 `server_client.py` enforces origin-only URLs, HTTPS outside loopback, normal CA
 verification, bounded JSON and authenticated requests. `server_credentials.py`

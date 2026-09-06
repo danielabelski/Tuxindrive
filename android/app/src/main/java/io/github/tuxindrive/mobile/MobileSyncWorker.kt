@@ -3,6 +3,8 @@ package io.github.tuxindrive.mobile
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -37,22 +39,32 @@ class MobileSyncWorker(
         val mirror = File(root, "mirror")
         val baseline = File(root, "baseline.ready")
         val workdir = File(root, "bisync")
-        val indexFile = File(root, "android-tree-index.json")
-        return@withContext runCatching {
-            mirror.mkdirs()
-            val previous = loadIndex(indexFile)
-            val documents = snapshotDocuments(tree)
-            updateMirrorFromDocuments(documents, mirror, previous)
-            setForeground(foregroundInfo("Synchronizing cloud files…"))
-            repository.runBisync(mirror, remote, repository.syncRemotePath(), workdir, !baseline.exists())
-            setForeground(foregroundInfo("Updating offline folder…"))
-            val completed = updateDocumentsFromMirror(mirror, tree, documents, previous)
-            saveIndex(indexFile, completed)
-            baseline.parentFile?.mkdirs()
-            baseline.writeText("ready\n")
-            success("Synchronization complete")
-        }.getOrElse { error ->
-            failure(error.message ?: "Synchronization failed")
+        val indexStore = IndexStore(applicationContext, root)
+        val legacyIndex = File(root, "android-tree-index.json")
+        return@withContext try {
+            runCatching {
+                mirror.mkdirs()
+                var previous = indexStore.load()
+                if (previous.isEmpty() && legacyIndex.isFile) {
+                    previous = loadLegacyIndex(legacyIndex)
+                    indexStore.replace(previous)
+                    legacyIndex.delete()
+                }
+                val documents = snapshotDocuments(tree)
+                updateMirrorFromDocuments(documents, mirror, previous)
+                setForeground(foregroundInfo("Synchronizing cloud files…"))
+                repository.runBisync(mirror, remote, repository.syncRemotePath(), workdir, !baseline.exists())
+                setForeground(foregroundInfo("Updating offline folder…"))
+                val completed = updateDocumentsFromMirror(mirror, tree, documents, previous)
+                indexStore.replace(completed)
+                baseline.parentFile?.mkdirs()
+                baseline.writeText("ready\n")
+                success("Synchronization complete")
+            }.getOrElse { error ->
+                failure(error.message ?: "Synchronization failed")
+            }
+        } finally {
+            indexStore.close()
         }
     } }
 
@@ -70,6 +82,9 @@ class MobileSyncWorker(
                 val name = document.name ?: continue
                 if (name in setOf(".", "..") || '/' in name || '\\' in name) continue
                 val path = if (prefix.isBlank()) name else "$prefix/$name"
+                if (result.size >= MAX_TREE_ENTRIES) {
+                    throw RcloneException("Safety stop: Android folder contains more than $MAX_TREE_ENTRIES entries")
+                }
                 if (document.isDirectory) {
                     result[path] = DocumentNode(document, true, 0, document.lastModified())
                     visit(document, path)
@@ -125,12 +140,17 @@ class MobileSyncWorker(
         documents: MutableMap<String, DocumentNode>,
         previous: Map<String, IndexEntry>,
     ): Map<String, IndexEntry> {
-        val mirrorFiles = mirror.walkTopDown().filter { it.isFile }
-            .associateBy { it.relativeTo(mirror).invariantSeparatorsPath }
-        val mirrorDirectories = mirror.walkTopDown()
-            .filter { it != mirror && it.isDirectory }
-            .map { it.relativeTo(mirror).invariantSeparatorsPath }
-            .toSet()
+        val mirrorFiles = mutableMapOf<String, File>()
+        val mirrorDirectories = mutableSetOf<String>()
+        mirror.walkTopDown().forEach { item ->
+            if (item == mirror) return@forEach
+            val path = item.relativeTo(mirror).invariantSeparatorsPath
+            if (mirrorFiles.size + mirrorDirectories.size >= MAX_TREE_ENTRIES) {
+                throw RcloneException("Safety stop: synchronized mirror contains more than $MAX_TREE_ENTRIES entries")
+            }
+            if (item.isFile) mirrorFiles[path] = item
+            else if (item.isDirectory) mirrorDirectories.add(path)
+        }
         val existingFiles = documents.filterValues { !it.directory }.keys
         val removedFiles = existingFiles - mirrorFiles.keys
         if (removedFiles.size >= 10 && removedFiles.size * 100 > existingFiles.size.coerceAtLeast(1) * 25) {
@@ -204,7 +224,7 @@ class MobileSyncWorker(
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun loadIndex(file: File): Map<String, IndexEntry> = runCatching {
+    private fun loadLegacyIndex(file: File): Map<String, IndexEntry> = runCatching {
         val root = JSONObject(file.readText())
         val entries = root.getJSONObject("entries")
         entries.keys().asSequence().associateWith { path ->
@@ -217,20 +237,60 @@ class MobileSyncWorker(
         }
     }.getOrDefault(emptyMap())
 
-    private fun saveIndex(file: File, entries: Map<String, IndexEntry>) {
-        val values = JSONObject()
-        for ((path, item) in entries) {
-            values.put(path, JSONObject()
-                .put("documentSize", item.documentSize).put("documentModified", item.documentModified)
-                .put("mirrorSize", item.mirrorSize).put("mirrorModified", item.mirrorModified)
-                .put("sha256", item.sha256))
+    private class IndexStore(context: Context, root: File) : SQLiteOpenHelper(
+        context, File(root, "android-tree-index.sqlite3").absolutePath, null, 1,
+    ) {
+        override fun onCreate(database: SQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE entries(path TEXT PRIMARY KEY, document_size INTEGER NOT NULL, " +
+                    "document_modified INTEGER NOT NULL, mirror_size INTEGER NOT NULL, " +
+                    "mirror_modified INTEGER NOT NULL, sha256 TEXT NOT NULL)",
+            )
         }
-        file.parentFile?.mkdirs()
-        val temporary = File(file.parentFile, "${file.name}.new")
-        temporary.writeText(JSONObject().put("version", 1).put("entries", values).toString())
-        if (!temporary.renameTo(file)) {
-            temporary.copyTo(file, overwrite = true)
-            temporary.delete()
+
+        override fun onUpgrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+
+        fun load(): Map<String, IndexEntry> {
+            val result = mutableMapOf<String, IndexEntry>()
+            readableDatabase.query(
+                "entries",
+                arrayOf("path", "document_size", "document_modified", "mirror_size", "mirror_modified", "sha256"),
+                null, null, null, null, null, MAX_TREE_ENTRIES.toString(),
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    result[cursor.getString(0)] = IndexEntry(
+                        cursor.getLong(1), cursor.getLong(2), cursor.getLong(3),
+                        cursor.getLong(4), cursor.getString(5),
+                    )
+                }
+            }
+            return result
+        }
+
+        fun replace(entries: Map<String, IndexEntry>) {
+            val database = writableDatabase
+            database.beginTransaction()
+            try {
+                database.delete("entries", null, null)
+                val statement = database.compileStatement("INSERT INTO entries VALUES(?,?,?,?,?,?)")
+                try {
+                    for ((path, item) in entries) {
+                        statement.clearBindings()
+                        statement.bindString(1, path)
+                        statement.bindLong(2, item.documentSize)
+                        statement.bindLong(3, item.documentModified)
+                        statement.bindLong(4, item.mirrorSize)
+                        statement.bindLong(5, item.mirrorModified)
+                        statement.bindString(6, item.sha256)
+                        statement.executeInsert()
+                    }
+                } finally {
+                    statement.close()
+                }
+                database.setTransactionSuccessful()
+            } finally {
+                database.endTransaction()
+            }
         }
     }
 
@@ -271,6 +331,7 @@ class MobileSyncWorker(
     companion object {
         private const val CHANNEL = "tuxindrive-sync"
         private const val NOTIFICATION_ID = 253
+        private const val MAX_TREE_ENTRIES = 250_000
         private val syncMutex = Mutex()
 
         fun enqueue(context: Context, wifiOnly: Boolean, chargingOnly: Boolean) {

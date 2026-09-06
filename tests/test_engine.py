@@ -920,6 +920,24 @@ class SyncEngineCommandTests(unittest.TestCase):
         self.assertEqual(len(completed), 3)
         self.assertEqual(maximum, 2)
 
+    def test_virtual_mount_start_does_not_block_the_caller(self):
+        job = SyncJob("google", "/data/stream", mode=SyncMode.VIRTUAL_DRIVE)
+        entered = threading.Event()
+        release = threading.Event()
+
+        def start_mount(_job):
+            entered.set()
+            release.wait(2)
+            return JobResult(job.id, False, "stopped", Path("/tmp/mount.log"))
+
+        with patch.object(self.engine, "start_mount", side_effect=start_mount):
+            started_at = time.monotonic()
+            self.assertTrue(self.engine.run_async(job, MagicMock()))
+            elapsed = time.monotonic() - started_at
+            self.assertTrue(entered.wait(1))
+            self.assertLess(elapsed, 0.25)
+            release.set()
+
     def test_worker_replaces_incompatible_rclone_before_launch(self):
         job = SyncJob(account_remote="google", local_path="/data/Drive")
         completed = []

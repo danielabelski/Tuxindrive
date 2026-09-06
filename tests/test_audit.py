@@ -24,6 +24,17 @@ class AuditTimelineTests(unittest.TestCase):
             path.write_text("not json\n", encoding="utf-8")
             self.assertEqual(AuditTimeline(path).recent(), [])
 
+    def test_recent_reads_newest_events_across_chunk_boundaries(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "audit.jsonl"
+            timeline = AuditTimeline(path)
+            for index in range(400):
+                timeline.record("sync", "completed", "success", job_id=str(index))
+            self.assertEqual(
+                [event.job_id for event in timeline.recent(3)],
+                ["399", "398", "397"],
+            )
+
     def test_exports_csv_and_jsonl_as_private_operator_copies(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

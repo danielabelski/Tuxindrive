@@ -110,9 +110,25 @@ class PerformanceAndRecoveryTests(unittest.TestCase):
                 returncode=0,
                 stdout='[{"Path":"ready.txt","Size":5,"ModTime":"2026-08-27T10:00:00Z"}]',
             )
-            with patch("tuxindrive.callbacks.subprocess.run", return_value=response) as run:
+            process = Mock()
+            process.communicate.return_value = (response.stdout, "")
+            process.returncode = 0
+            with patch("tuxindrive.callbacks.subprocess.Popen", return_value=process) as run:
                 self.assertEqual(monitor_a.remote_snapshot(), monitor_b.remote_snapshot())
         self.assertEqual(run.call_count, 1)
+
+    def test_monitor_stop_terminates_an_active_provider_scan(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            monitor = ChangeMonitor(
+                SyncJob("shared", temporary), lambda: "rclone",
+                lambda *_args: True, lambda _job: None,
+            )
+            process = Mock()
+            process.poll.return_value = None
+            with monitor._process_lock:
+                monitor._active_process = process
+            monitor.stop()
+            process.terminate.assert_called_once_with()
 
     @unittest.skipUnless(platform.system() == "Linux", "inotify is Linux-specific")
     def test_idle_streaming_cache_skips_unchanged_recursive_rescan(self):

@@ -2,6 +2,22 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.35 — stability and large-library performance
+
+- Made files-on-demand mount startup and stale-mount recovery asynchronous so
+  slow operating-system helpers cannot freeze the desktop interface.
+- Added explicit cancellation for superseded search queries, an indexed
+  substring search path, and deterministic SQLite connection cleanup.
+- Made realtime provider scans terminate when a job stops and reuse the
+  monitor's file count for mass-change assessment instead of walking the local
+  tree again.
+- Bounded audit and recovery-history reads from the newest records backwards,
+  avoiding whole-log memory spikes.
+- Reduced server database work with cached tenant usage, periodic expiry
+  cleanup and expiry-aware reads while retaining durable transactions.
+- Replaced Android's monolithic JSON metadata rewrite with transactional SQLite,
+  combined duplicate mirror walks, and enforced a 250,000-entry safety bound.
+
 ## 0.26.34 — circular adjacent tray activity
 
 - Replaced the wide composite tray image with two genuine AppIndicator slots:

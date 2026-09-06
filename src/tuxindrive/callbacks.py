@@ -271,7 +271,10 @@ class ChangeMonitor:
         self.rclone_args = rclone_args or (lambda: [])
         self.scan_jitter = scan_jitter or (lambda _base: 0.0)
         self.stop_event = threading.Event()
+        self._process_lock = threading.Lock()
+        self._active_process: subprocess.Popen[str] | None = None
         self.last_remote_success = 0.0
+        self.known_file_count: int | None = None
         self.thread = threading.Thread(
             target=self._run, name=f"tuxindrive-callback-{job.id[:8]}", daemon=True
         )
@@ -281,6 +284,52 @@ class ChangeMonitor:
 
     def stop(self) -> None:
         self.stop_event.set()
+        with self._process_lock:
+            process = self._active_process
+        if process is not None and process.poll() is None:
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                pass
+
+    def join(self, timeout: float = 2.0) -> None:
+        if self.thread.is_alive() and self.thread is not threading.current_thread():
+            self.thread.join(max(0.0, timeout))
+        if self.thread.is_alive():
+            with self._process_lock:
+                process = self._active_process
+            if process is not None and process.poll() is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                if self.thread is not threading.current_thread():
+                    self.thread.join(0.5)
+
+    def _run_command(self, command: list[str], timeout: float) -> subprocess.CompletedProcess[str]:
+        if self.stop_event.is_set():
+            raise RuntimeError("Cloud monitor stopped")
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        with self._process_lock:
+            self._active_process = process
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, stderr = process.communicate()
+            raise
+        finally:
+            with self._process_lock:
+                if self._active_process is process:
+                    self._active_process = None
+        if self.stop_event.is_set():
+            raise RuntimeError("Cloud monitor stopped")
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
     @property
     def healthy(self) -> bool:
@@ -353,10 +402,10 @@ class ChangeMonitor:
                 return dict(cached[1])
         self.network_activity()
         with self.network_guard():
-            process = subprocess.run(
+            process = self._run_command(
                 [key[0], "lsjson", self.job.remote_spec, "--recursive",
                  "--files-only", "--no-mimetype", *key[2]],
-                check=False, capture_output=True, text=True, timeout=120,
+                timeout=120,
             )
         if process.returncode:
             raise RuntimeError(process.stderr.strip() or "Cloud change scan failed")
@@ -396,10 +445,10 @@ class ChangeMonitor:
         remote = f"{self.job.remote_spec.rstrip('/')}/{safe}"
         self.network_activity()
         with self.network_guard():
-            process = subprocess.run(
+            process = self._run_command(
                 [self.rclone_path(), "lsjson", remote, "--stat", "--no-mimetype",
                  *self.rclone_args()],
-                check=False, capture_output=True, text=True, timeout=30,
+                timeout=30,
             )
         if process.returncode:
             raise RuntimeError(process.stderr.strip() or "Targeted cloud check failed")
@@ -427,11 +476,11 @@ class ChangeMonitor:
                     manifest.write(item + "\n")
             self.network_activity()
             with self.network_guard():
-                process = subprocess.run(
+                process = self._run_command(
                     [self.rclone_path(), "lsjson", self.job.remote_spec, "--recursive",
                      "--files-only", "--no-mimetype", "--files-from-raw", manifest_name,
                      *self.rclone_args()],
-                    check=False, capture_output=True, text=True, timeout=60,
+                    timeout=60,
                 )
             if process.returncode:
                 raise RuntimeError(process.stderr.strip() or "Targeted cloud check failed")
@@ -495,6 +544,7 @@ class ChangeMonitor:
         startup_local = self.local_snapshot()
         startup_changes = changes_between(local, startup_local, "local")
         local = startup_local
+        self.known_file_count = len(local)
         deferred_local = {change.path: change for change in startup_changes}
         deferred_remote: dict[str, FileChange] = {}
         last_local_scan = time.monotonic()
@@ -531,6 +581,7 @@ class ChangeMonitor:
                             else:
                                 local[relative] = state
                         local_changes = changes_between(before, local, "local")
+                    self.known_file_count = len(local)
                 elif events is None:
                     self.stop_event.wait(timeout)
                     now = time.monotonic()
@@ -538,6 +589,7 @@ class ChangeMonitor:
                         new_local = self.local_snapshot()
                         local_changes = changes_between(local, new_local, "local")
                         local = new_local
+                        self.known_file_count = len(local)
                         last_local_scan = now
                 if deferred_local:
                     merged = dict(deferred_local)

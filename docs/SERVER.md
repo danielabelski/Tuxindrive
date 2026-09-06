@@ -19,7 +19,7 @@ on loopback with an ephemeral database and fictional clients, while disabling
 the synchronization agent and all production configuration. It does not expose
 the service to the LAN and is not a substitute for a production deployment.
 
-The 0.26.31 cross-folder filename index remains entirely on each desktop
+The 0.26.35 cross-folder filename index remains entirely on each desktop
 client. It is not uploaded to the server preview, and no server endpoint accepts
 filenames or search queries. Server-backed search would require a separate
 privacy and authorization design and is not part of the current preview.
@@ -46,18 +46,18 @@ service manager. All `/v1/` endpoints require a bearer token.
 
 ## Installation
 
-Download `tuxindrive-server_0.26.31_all.deb` from the matching
-[GitHub Release](https://github.com/tpluharik/Tuxindrive/releases/tag/v0.26.31),
+Download `tuxindrive-server_0.26.35_all.deb` from the matching
+[GitHub Release](https://github.com/tpluharik/Tuxindrive/releases/tag/v0.26.35),
 then install that local file. The leading `./` is required so APT treats the
 name as a file instead of searching configured package repositories:
 
 ```bash
 cd ~/Downloads
-sudo apt install ./tuxindrive-server_0.26.31_all.deb
+sudo apt install ./tuxindrive-server_0.26.35_all.deb
 ```
 
 If configuration of the defective 0.26.12 preview was left unfinished,
-installing 0.26.31 replaces its launcher and completes the pending package
+installing 0.26.35 replaces its launcher and completes the pending package
 configuration. If APT asks to repair dependencies afterward, run:
 
 ```bash
@@ -69,9 +69,9 @@ Build and inspect the package:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.31_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.31_all.deb
-sudo apt install ./dist/tuxindrive-server_0.26.31_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.35_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.35_all.deb
+sudo apt install ./dist/tuxindrive-server_0.26.35_all.deb
 ```
 
 The package creates a locked `tuxindrive-server` system account, a root-owned
@@ -226,7 +226,10 @@ sudo systemctl restart tuxindrive-server
 Opaque payload fields use strict base64 and are limited to 12 MiB per request.
 JSON bodies are limited to 16 MiB, list results are capped, TTLs are bounded,
 per-tenant storage quotas are atomic inside SQLite transactions, expired rows
-are removed before access, and source requests are rate-limited. SQLite uses
+are excluded from every read immediately, and bulk expiry cleanup runs at most
+once per minute. Per-tenant byte totals are cached under the same store lock,
+so ordinary mailbox and object requests do not rescan all opaque payload tables.
+Source requests are rate-limited. SQLite uses
 WAL plus full synchronous durability and private permissions.
 
 ## Security and present limits

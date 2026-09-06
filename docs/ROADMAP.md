@@ -7,7 +7,17 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.34
+## Current baseline: 0.26.35
+
+### Completed in 0.26.35: cross-platform stability and scale
+
+- Cancellable private indexed search with reliably closed database handles.
+- Interruptible realtime provider scans and non-blocking files-on-demand mount
+  startup/recovery.
+- Bounded newest-first audit and recovery-history reading.
+- Cached server tenant accounting with periodic expiry maintenance.
+- Transactional Android SQLite metadata, one-pass mirror enumeration and a
+  documented 250,000-entry safety ceiling.
 
 ### Completed in 0.26.34: native adjacent tray indicators
 

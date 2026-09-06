@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import threading
 from pathlib import Path
 
 from tuxindrive.models import SyncJob, SyncMode
@@ -62,6 +63,11 @@ class FolderSearchIndexTests(unittest.TestCase):
         (self.root / "1000 complete.txt").touch()
         self.index.refresh([self.job])
         self.assertEqual([item.name for item in self.index.search("100%")], ["100% complete.txt"])
+
+    def test_cancelled_search_returns_without_querying(self):
+        cancelled = threading.Event()
+        cancelled.set()
+        self.assertEqual(self.index.search("anything", stop_event=cancelled), [])
 
     def test_stale_entries_are_removed_after_complete_refresh(self):
         old = self.root / "old.txt"

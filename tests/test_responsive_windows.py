@@ -49,7 +49,7 @@ class ResponsiveWindowTests(unittest.TestCase):
 
         dialog = source[source.index("class FolderSearchDialog"):source.index("class MainWindow")]
         self.assertIn("class FolderSearchDialog(ResponsiveDialog)", dialog)
-        self.assertIn("_run_thread(self.controller.search_index.search, ready, query)", dialog)
+        self.assertIn("search(query, stop_event=cancel)", dialog)
         self.assertIn('Gtk.CheckButton(label="Enable preview")', dialog)
         self.assertIn("_run_thread(preview_path, ready, target)", dialog)
         self.assertIn("if self.preview_enabled.get_active()", dialog)

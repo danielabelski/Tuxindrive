@@ -71,6 +71,37 @@ The remaining P2 items are optional measurement accuracy and UI/history
 scalability improvements; they are not required for the 0.26.31 restart and
 idle-traffic correction.
 
+## Follow-up implemented in 0.26.35
+
+The September stability pass closed the remaining reproducible hot paths found
+in the shared engine, search, history, server relay and Android client:
+
+- every private-search SQLite connection is now committed or rolled back and
+  closed deterministically; eligible substring queries use an FTS5 trigram
+  candidate index while exact legacy semantics remain enforced, and a replaced
+  GUI query interrupts the old SQLite operation;
+- stopping a realtime job terminates its current provider metadata subprocess
+  and waits briefly for the monitor thread, preventing detached scans from
+  accumulating after configuration changes;
+- mount creation and stale-mount recovery no longer execute on the GTK thread;
+  operating-system unmount helpers have a ten-second upper bound;
+- incremental mass-change protection reuses the monitor's authoritative local
+  file count and falls back to a complete walk only when no monitor baseline is
+  available;
+- audit and recovery indexes are consumed backwards in fixed-size blocks, so a
+  short history view does not allocate the complete file;
+- relay storage caches per-tenant byte accounting, performs full expiry cleanup
+  at most once per minute, and filters every read by expiry immediately;
+- Android migrates the former JSON index to transactional SQLite, enumerates the
+  private mirror once per update phase, and refuses trees above 250,000 entries
+  rather than risking process-wide memory exhaustion.
+
+These changes do not remove deletion previews, recovery copies, provider
+backoff, signature verification, path confinement or credential isolation.
+The Python regression suite includes cancellation, expiry, newest-first history
+and non-blocking mount-start coverage; Android remains compiled and linted on
+the pinned CI toolchain.
+
 ## Restart investigation
 
 The reported long startup reconciliation is reproducible from the control
