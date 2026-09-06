@@ -1,8 +1,8 @@
 {
-  "version": "0.26.34",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.34/tuxindrive_0.26.34_all.deb",
-  "sha256": "c8c7c958c163d751ccdd00ba87d70d94fccf013c19ca154f9ecc88153f38b7bf",
-  "notes": "Circular adjacent tray activity and error indicators",
-  "expires_at": "2026-12-04T10:02:38.028599+00:00",
-  "signature": "vGuAngbdaly8N68uZF4lDBkFp7/dcIgmzGGQh3jXhwJfbEaISE4I+eTioOBpfYIYL598qyGDcXM9N8ZhRJTrBg=="
+  "version": "0.26.35",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.35/tuxindrive_0.26.35_all.deb",
+  "sha256": "08b1d926fbce19c435a0d7cce9079c0e08e0b2a4c0fc79953cbbb21948d00686",
+  "notes": "Cross-platform stability and performance improvements",
+  "expires_at": "2026-12-05T20:04:13.714405+00:00",
+  "signature": "DcCgIXkRTfE37e/CmMfMffl/rFQUH4gUBfo5/qIY9EGHr/iBK1N9om6gqRVAAMNOeKSUyg6LFTYuyL+Wx6YoBA=="
 }
