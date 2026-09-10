@@ -1,8 +1,8 @@
 {
-  "version": "0.26.36",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.36/TuxInDrive-0.26.36-windows-x64-setup.exe",
-  "sha256": "4173e4a8bc26791d8650112ad796be56b213f715628d58edd896ab0bdfbbc34b",
-  "notes": "Power efficiency, stability, and performance improvements",
-  "expires_at": "2026-12-09T06:40:21.795539+00:00",
-  "signature": "yiYlRTqcjO4knUUdbPqITXejiE59JdCG11X3TvvNtw1Aw9LTVOt0r/U+y/bhlFvDW29Ng3N8mGSthi2KMhMXDQ=="
+  "version": "0.26.37",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.37/TuxInDrive-0.26.37-windows-x64-setup.exe",
+  "sha256": "0e816805d516aa285328ea287cbe804b3bee18d1d4dcdc47e67852f6f222e5e8",
+  "notes": "Restore live activity log loading after startup",
+  "expires_at": "2026-12-09T07:13:49.593148+00:00",
+  "signature": "OkSsNub86HYC66ym2dFu1/KRZZoSMco655WtlBjBZhZDvlsA9IXRg8oweXNAG2WZdlAcA9yO7lnV40i3DFNTDQ=="
 }

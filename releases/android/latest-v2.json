@@ -1,8 +1,8 @@
 {
-  "version": "0.26.36",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.36/TuxInDrive-0.26.36-android.apk",
-  "sha256": "f822f46192dfc59a9e8f203d867b21e3378495e2480b263ecc7554968dbc37f4",
-  "notes": "Power efficiency, stability, and performance improvements",
-  "expires_at": "2026-12-09T06:40:43.244786+00:00",
-  "signature": "gu+cr6bhEJzqlnbVtO2SoZVRLn8Z6stMrbvh0vRoaDmfVKaTU/lIgWEKVgnz9HcEZprE+lWQMQhrAYa5wupLAQ=="
+  "version": "0.26.37",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.37/TuxInDrive-0.26.37-android.apk",
+  "sha256": "65343b0763e7d16be6e1c2e2ba4f5c7627e2234d74c4bcbf8044f43ce18fceec",
+  "notes": "Restore live activity log loading after startup",
+  "expires_at": "2026-12-09T07:13:50.108090+00:00",
+  "signature": "UJKzCPJFgd8JnsxDJ7jBb4vSYi1ri1w7qzbNsdwj3f8D6nJbGd05Utu3xaemzHcUaWdWK3+XdM70+pO+kut7DA=="
 }
