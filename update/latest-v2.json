@@ -1,8 +1,8 @@
 {
-  "version": "0.26.35",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.35/tuxindrive_0.26.35_all.deb",
-  "sha256": "08b1d926fbce19c435a0d7cce9079c0e08e0b2a4c0fc79953cbbb21948d00686",
-  "notes": "Cross-platform stability and performance improvements",
-  "expires_at": "2026-12-05T20:04:13.714405+00:00",
-  "signature": "DcCgIXkRTfE37e/CmMfMffl/rFQUH4gUBfo5/qIY9EGHr/iBK1N9om6gqRVAAMNOeKSUyg6LFTYuyL+Wx6YoBA=="
+  "version": "0.26.36",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.36/tuxindrive_0.26.36_all.deb",
+  "sha256": "1cefde3465ab0029d92b50df617105eabfd381d0b15d4816cf0a8835519c9718",
+  "notes": "Power efficiency, stability, and performance improvements",
+  "expires_at": "2026-12-09T06:40:12.233204+00:00",
+  "signature": "2ONcnNq3LF/k3UiEr71VGqtEQC1I9FdhcPpKPQbfmfnqUmyG4JFw0ixexcUPk5bri4RIbhVDLno3Su3VTzoUBw=="
 }

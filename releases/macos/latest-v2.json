@@ -1,8 +1,8 @@
 {
-  "version": "0.26.35",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.35/TuxInDrive-0.26.35-macos-arm64.dmg",
-  "sha256": "24e9f941835ca3cb9e90b22043010ce9aaeb16257cfcb83ce58b58816546ab01",
-  "notes": "Cross-platform stability and performance improvements",
-  "expires_at": "2026-12-05T20:04:13.906608+00:00",
-  "signature": "yrgmZgWCPhryqr+JD2W2vQzlg+BeTyX7EuJtPWkZfOP/V/ZYtUC1/hphjHTi+GAHTbodqKsO2E1D52w/eWy9Aw=="
+  "version": "0.26.36",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.36/TuxInDrive-0.26.36-macos-arm64.dmg",
+  "sha256": "3fb6a4fedbdae42c04ffded427203524074478dc309a570913c012dc7751f580",
+  "notes": "Power efficiency, stability, and performance improvements",
+  "expires_at": "2026-12-09T06:40:32.801035+00:00",
+  "signature": "6wrq8YrBUOSfS9FNoH1XCtPKhveOUeorp9P9qTqmzu2gTE40+q/ZGzP98my4tk+Twk4h0afStlQGBNPu4ZH4DQ=="
 }
