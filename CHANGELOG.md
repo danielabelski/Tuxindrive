@@ -2,6 +2,18 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.38 — resilient realtime directory changes
+
+- Treat directory moves, removals and ambiguous watcher topology as a request
+  for authoritative full reconciliation instead of replaying stale child paths.
+- Consume vanished-parent save events and allow legitimate local deletions to
+  reach the provider without requiring the removed parent to still exist.
+- Keep version-history archiving from blocking an incoming replacement when
+  the prior local parent has already vanished, without weakening symlink and
+  path-escape rejection.
+- Persist the side, processing phase and relative source path for incremental
+  failures so **Error details** is immediately actionable.
+
 ## 0.26.37 — restored live activity log
 
 - Restore the live-log refresh lifecycle when the saved setting makes the

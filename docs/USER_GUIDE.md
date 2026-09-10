@@ -2,11 +2,11 @@
 
 <p align="center"><img src="../branding/tuxindrive-logo.png" width="150" alt="TuxInDrive circular black-and-white penguin logo with a red bow tie"></p>
 
-This guide covers TuxInDrive 0.26.37 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
+This guide covers TuxInDrive 0.26.38 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
 
 Credentials for rclone-backed providers are kept in rclone's authenticated encrypted configuration. TuxInDrive generates its configuration key locally and stores it in GNOME Secret Service; existing rclone configurations already encrypted by an advanced user are left under that user's password-command setup. Proton's official CLI separately stores its browser session in Secret Service under `ch.proton.drive/drive-sdk-cli`; TuxInDrive never reads or exports it. Do not delete either secret until the related accounts have been disconnected.
 
-Version 0.26.37 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
+Version 0.26.38 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
 
 ### Upgrading from TuxDrive
 
@@ -28,14 +28,14 @@ sudo apt install tuxdrive
 On another Debian-family system, download the package and install it directly:
 
 ```bash
-sudo apt install ./tuxindrive_0.26.37_all.deb
+sudo apt install ./tuxindrive_0.26.38_all.deb
 ```
 
 Launch **TuxInDrive** from Ubuntu's application menu. TuxInDrive remains active in the system tray when its window is closed. On first start it verifies or installs its private cloud transfer engine.
 
 ### Windows and macOS
 
-Run the Windows setup executable or drag TuxInDrive from the macOS DMG to Applications. Both packages open the same account sidebar, synchronized-folder cards, settings and dialogs as Linux. Windows stores secrets in Credential Manager and needs WinFsp for streaming drives; macOS uses Keychain and needs macFUSE. File-manager badges remain Linux/Nautilus-only in 0.26.37.
+Run the Windows setup executable or drag TuxInDrive from the macOS DMG to Applications. Both packages open the same account sidebar, synchronized-folder cards, settings and dialogs as Linux. Windows stores secrets in Credential Manager and needs WinFsp for streaming drives; macOS uses Keychain and needs macFUSE. File-manager badges remain Linux/Nautilus-only in 0.26.38.
 
 ### Android
 
@@ -151,7 +151,7 @@ installation confirmation are controlled by Android and are never bypassed.
 Disable the setting to cancel automatic checks; **Check for updates** remains
 available for a manual check. Store-distributed builds do not self-update.
 
-When moving from 0.18.1, the legacy channel signed by its already trusted key first installs the fixed 0.19.1 bridge. Restart TuxInDrive, then use **Settings → Check for updates** again: 0.19.1 reads the separately signed v2 channel and installs the current 0.26.37 release. Never bypass a signature warning. If the error persists, close and reopen the update dialog to refetch the manifest; manual package installation remains the recovery path when a proxy or cache serves stale metadata.
+When moving from 0.18.1, the legacy channel signed by its already trusted key first installs the fixed 0.19.1 bridge. Restart TuxInDrive, then use **Settings → Check for updates** again: 0.19.1 reads the separately signed v2 channel and installs the current 0.26.38 release. Never bypass a signature warning. If the error persists, close and reopen the update dialog to refetch the manifest; manual package installation remains the recovery path when a proxy or cache serves stale metadata.
 
 ### Rename an item in TuxInDrive
 
@@ -489,7 +489,7 @@ Choose **Free local space (make online-only)** to remove that rule and matching 
 
 The mount uses one stable retention policy because rclone's generic LRU quota cannot exclude pinned files. TuxInDrive therefore applies its own conservative quota, configured in **Settings** as maximum cache GiB and minimum free-space GiB. Cleanup considers only complete, inactive, unpinned objects; pin markers, write-back metadata, recent activity, symlinks, or invalid/uncertain state prevent eviction. Use the per-item online-only action or whole-drive reset when immediate space recovery is required.
 
-For ordinary synchronized folders on Linux, local saves are detected through recursive inotify watches instead of repeated full-tree scans. New directories are watched dynamically. Kernel queue overflow, watch failure, rename ambiguity, suspend/reconnect inconsistency, or other uncertainty triggers a complete reconciliation before incremental synchronization continues. Remote checks normally begin at 30 seconds after activity and back off through 60, 120 and 300 seconds while idle; Proton uses a more conservative 60/120/300/600-second schedule, while direct peers can use 10/30/60/120 seconds. A failed scan retains pending local/remote changes and retries them rather than treating the failure as a clean baseline.
+For ordinary synchronized folders on Linux, local saves are detected through recursive inotify watches instead of repeated full-tree scans. New directories are watched dynamically. Kernel queue overflow, watch failure, a directory move/removal, rename ambiguity, suspend/reconnect inconsistency, or other topology uncertainty discards stale child events and triggers a complete reconciliation before incremental synchronization continues. A save notification whose parent already vanished is consumed rather than retried forever. Remote checks normally begin at 30 seconds after activity and back off through 60, 120 and 300 seconds while idle; Proton uses a more conservative 60/120/300/600-second schedule, while direct peers can use 10/30/60/120 seconds. A failed provider scan retains valid pending local/remote changes and retries them rather than treating the failure as a clean baseline.
 
 ![Streaming and hybrid folder layout](assets/04-streaming.svg)
 
@@ -552,7 +552,7 @@ To remove an exception, choose **Edit**, find **Synchronization exceptions**, an
 
 ### Local version history and recycle recovery
 
-Each normal sync job enables **Local version history** by default. Before an incoming cloud/peer replacement or deletion changes an existing local file, TuxInDrive copies the current version into its private recovery area. Full bisync runs also direct replaced versions into dated backup directories on both sides. Set **Version retention (days)** in **Edit**; expired local entries are pruned after incoming changes.
+Each normal sync job enables **Local version history** by default. Before an incoming cloud/peer replacement or deletion changes an existing local file, TuxInDrive copies the current version into its private recovery area. If a concurrent directory move already removed the old parent, there is no local version to archive; TuxInDrive safely continues with reconciliation while retaining all symlink and path-confinement checks. Full bisync runs also direct replaced versions into dated backup directories on both sides. Set **Version retention (days)** in **Edit**; expired local entries are pruned after incoming changes.
 
 Select **History** on a job to search by path, filter by recovery reason, inspect readable size and retention details, or open the protected saved-copy location. Select an entry and choose **Restore selected**. If a current file exists, it is archived before restoration, and TuxInDrive queues synchronization. Local recovery files live under `~/.local/share/tuxindrive/recovery`. The cloud-side hidden compatibility version area is application data and should not be selected as a second sync root.
 
@@ -736,7 +736,7 @@ cat ~/.local/state/tuxindrive/startup.log
 cat ~/.local/state/tuxindrive/crash.log
 ```
 
-Reinstall the current package with `sudo apt install ./tuxindrive_0.26.37_all.deb`.
+Reinstall the current package with `sudo apt install ./tuxindrive_0.26.38_all.deb`.
 
 ## 13. Data safety
 
@@ -746,10 +746,10 @@ Reinstall the current package with `sudo apt install ./tuxindrive_0.26.37_all.de
 - Do not point multiple normal jobs at overlapping local folders.
 - Removing a TuxInDrive job does not delete its local or cloud files.
 
-### Security upgrade checklist for 0.26.37
+### Security upgrade checklist for 0.26.38
 
-1. Install `tuxindrive_0.26.37_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
-2. Confirm **Settings → Check for updates** reports 0.26.37 and no signature or expiry error.
+1. Install `tuxindrive_0.26.38_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
+2. Confirm **Settings → Check for updates** reports 0.26.38 and no signature or expiry error.
 3. Reconnect each provider once and verify that `~/.config/rclone/rclone.conf` is encrypted and mode `0600`; do not print or upload it.
 4. Confirm the `TuxInDrive rclone configuration` entry exists in GNOME Passwords and Keys/Secret Service. Do not delete it without an export/recovery plan.
 5. Review peer invitations, revoke unused device and Onion credentials, and exchange replacements through an authenticated channel when compromise is suspected.

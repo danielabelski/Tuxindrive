@@ -218,6 +218,42 @@ class PerformanceAndRecoveryTests(unittest.TestCase):
                     monitor.stop()
                     monitor.thread.join(2)
 
+    def test_directory_topology_change_reconciles_without_incremental_replay(self):
+        reconciled = threading.Event()
+        applied = []
+
+        class RescanEvents:
+            def __init__(self, *_args):
+                self.sent = False
+
+            def read(self, _timeout):
+                from tuxindrive.callbacks import LocalEvents
+                if not self.sent:
+                    self.sent = True
+                    return LocalEvents(rescan=True)
+                time.sleep(0.01)
+                return LocalEvents()
+
+            def close(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as temporary:
+            job = SyncJob("cloud", temporary, initialized=True)
+            monitor = ChangeMonitor(
+                job, lambda: "rclone",
+                lambda _job, changes: applied.extend(changes) or True,
+                lambda _job: reconciled.set(), event_factory=RescanEvents,
+                initial_remote_snapshot={}, remote_backoff=(300,),
+            )
+            with patch.object(monitor, "remote_snapshot", return_value={}):
+                monitor.start()
+                try:
+                    self.assertTrue(reconciled.wait(2))
+                finally:
+                    monitor.stop()
+                    monitor.thread.join(2)
+        self.assertEqual(applied, [])
+
     @unittest.skipUnless(platform.system() == "Linux", "inotify is Linux-specific")
     def test_change_during_slow_remote_baseline_is_not_lost(self):
         remote_started = threading.Event()

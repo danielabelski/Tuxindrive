@@ -1604,6 +1604,8 @@ class SyncEngine:
         log_path = self._log_path(job)
         ensure_private_directory(log_path.parent)
         completed = 0
+        active_change: FileChange | None = None
+        phase = "preflight"
         try:
             with self._lock:
                 monitor = self._monitors.get(job.id)
@@ -1621,8 +1623,23 @@ class SyncEngine:
                     log_path, incremental=True, mass_change_blocked=True,
                 ))
                 return False
+            prepare_private_file(log_path)
+            with log_path.open("a", encoding="utf-8") as log:
+                log.write(
+                    f"\n[{datetime.now(timezone.utc).isoformat()}] "
+                    f"Incremental callback: {len(changes)} path(s)\n"
+                )
+                for item in changes:
+                    log.write(
+                        f"Change: side={item.side}; deleted={item.deleted}; "
+                        f"path={item.path}\n"
+                    )
+            phase = "version-history"
+            active_change = next((item for item in changes if item.side == "remote"), None)
             self.recovery.archive_incoming_changes(job, changes)
             if len(changes) > 1 and not job.peer_leases and not job.peer_delta:
+                active_change = changes[0]
+                phase = "batch-transfer"
                 completed = self._apply_incremental_batch(job, changes, log_path)
                 callback(JobResult(
                     job.id, True,
@@ -1630,13 +1647,34 @@ class SyncEngine:
                     log_path, incremental=True,
                 ))
                 return True
-            prepare_private_file(log_path)
             with log_path.open("a", encoding="utf-8") as log:
-                log.write(f"\n[{datetime.now(timezone.utc).isoformat()}] Incremental callback: {len(changes)} path(s)\n")
                 for change in changes:
+                    active_change = change
+                    phase = "validate-path"
                     if ".." in Path(change.path).parts:
                         raise RuntimeError(f"unsafe incremental path: {change.path}")
-                    local_path = confined_path(job.local, change.path, create_parents=change.side == "remote")
+                    if change.side == "local" and change.deleted:
+                        # The parent may legitimately be gone after a directory
+                        # deletion.  Remote deletion needs no local path lookup.
+                        local_path = job.local / change.path
+                    else:
+                        try:
+                            local_path = confined_path(
+                                job.local,
+                                change.path,
+                                create_parents=change.side == "remote",
+                            )
+                        except UnsafePathError as exc:
+                            if (
+                                change.side == "local"
+                                and str(exc) == "A parent directory does not exist"
+                            ):
+                                log.write(
+                                    "Skipped stale local event with vanished parent: "
+                                    f"{change.path}\n"
+                                )
+                                continue
+                            raise
                     lease = None
                     if job.peer_leases and change.side == "local":
                         try:
@@ -1652,6 +1690,7 @@ class SyncEngine:
                         except OSError as exc:
                             raise RuntimeError(str(exc)) from exc
                         continue
+                    phase = "build-command"
                     command = self._incremental_command(job, change)
                     if command is None:
                         if lease:
@@ -1679,6 +1718,7 @@ class SyncEngine:
                         staged_download = staging / f"{uuid.uuid4().hex}.download"
                         command[3] = str(staged_download)
                     try:
+                        phase = "transfer"
                         process = subprocess.Popen(
                             command,
                             stdout=log,
@@ -1704,13 +1744,29 @@ class SyncEngine:
                             continue
                         raise RuntimeError(f"incremental transfer failed for {change.path} (rclone exit {code})")
                     if staged_download is not None:
+                        phase = "install-download"
                         install_confined(staged_download, job.local, change.path)
                         staged_download.unlink(missing_ok=True)
                     completed += 1
             callback(JobResult(job.id, True, f"Incremental sync complete: {completed} changed path(s)", log_path, incremental=True))
             return True
         except (OSError, RuntimeError, UnsafePathError) as exc:
-            callback(JobResult(job.id, False, f"Incremental sync failed: {exc}", log_path, incremental=True))
+            source = active_change.path if active_change else ""
+            side = active_change.side if active_change else "unknown"
+            detail = (
+                f"Incremental sync failed: side={side}; phase={phase}; "
+                f"path={source or '(multiple paths)'}; reason={exc}"
+            )
+            try:
+                prepare_private_file(log_path)
+                with log_path.open("a", encoding="utf-8") as log:
+                    log.write(f"ERROR: {detail}\n")
+            except OSError:
+                pass
+            callback(JobResult(
+                job.id, False, detail, log_path,
+                blocked_path=source, incremental=True,
+            ))
             return False
         finally:
             with self._lock:
@@ -1737,9 +1793,22 @@ class SyncEngine:
             command = self._incremental_command(job, change)
             if command is None and not (change.side == "remote" and change.deleted):
                 continue
-            local_path = confined_path(
-                job.local, relative, create_parents=change.side == "remote"
-            )
+            if change.side == "local" and change.deleted:
+                local_path = job.local / relative
+            else:
+                try:
+                    local_path = confined_path(
+                        job.local, relative, create_parents=change.side == "remote"
+                    )
+                except UnsafePathError as exc:
+                    if (
+                        change.side == "local"
+                        and str(exc) == "A parent directory does not exist"
+                    ):
+                        # A stale save notification must not poison the retry
+                        # queue after its directory was moved or removed.
+                        continue
+                    raise
             if change.side == "local":
                 if change.deleted:
                     remote_delete.append(relative)

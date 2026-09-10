@@ -605,7 +605,10 @@ class ChangeMonitor:
                         new_local = self.local_snapshot()
                         local_changes = changes_between(local, new_local, "local")
                         local = new_local
-                        unsafe_monitor = batch.overflow
+                        # Directory moves/deletions invalidate child paths just
+                        # like an inotify overflow.  A full reconciliation is
+                        # the only safe way to interpret the new topology.
+                        unsafe_monitor = True
                     elif batch.paths:
                         before = dict(local)
                         for relative in batch.paths:
@@ -630,6 +633,10 @@ class ChangeMonitor:
                     merged.update({change.path: change for change in local_changes})
                     local_changes = list(merged.values())
                 if unsafe_monitor:
+                    # Never replay paths captured before a directory topology
+                    # change.  The authoritative reconciliation owns them now.
+                    deferred_local.clear()
+                    deferred_remote.clear()
                     self.reconcile(self.job)
                     recovery_due = time.monotonic() + 10.0
                     continue

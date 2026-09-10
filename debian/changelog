@@ -1,3 +1,11 @@
+tuxindrive (0.26.38-1) unstable; urgency=medium
+
+  * Reconcile directory topology changes instead of replaying stale paths.
+  * Consume vanished-parent events without weakening path confinement.
+  * Add side, phase and source path to incremental error diagnostics.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Thu, 10 Sep 2026 11:00:00 +0200
+
 tuxindrive (0.26.37-1) unstable; urgency=medium
 
   * Restore live activity log loading and refresh after application startup.

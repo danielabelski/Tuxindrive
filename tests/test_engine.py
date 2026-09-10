@@ -417,6 +417,70 @@ class SyncEngineCommandTests(unittest.TestCase):
             self.assertEqual(command[1], "copy")
             self.assertIn("--files-from-raw", command)
 
+    def test_stale_local_event_with_vanished_parent_is_consumed(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_CACHE_HOME": temporary}
+        ):
+            root = Path(temporary) / "local"
+            root.mkdir()
+            job = SyncJob("google", str(root), ransomware_protection=False)
+            callback = MagicMock()
+            with patch("tuxindrive.engine.subprocess.Popen") as popen:
+                result = self.engine._apply_incremental(
+                    job,
+                    [FileChange("renamed-away/report.txt", "local")],
+                    callback,
+                )
+            self.assertTrue(result)
+            popen.assert_not_called()
+            outcome = callback.call_args.args[0]
+            self.assertTrue(outcome.success)
+            self.assertIn("0 changed path", outcome.message)
+
+    def test_local_delete_does_not_require_the_removed_parent(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_CACHE_HOME": temporary}
+        ):
+            root = Path(temporary) / "local"
+            root.mkdir()
+            job = SyncJob("google", str(root), ransomware_protection=False)
+            callback = MagicMock()
+            process = MagicMock()
+            process.wait.return_value = 0
+            with patch("tuxindrive.engine.subprocess.Popen", return_value=process) as popen:
+                result = self.engine._apply_incremental(
+                    job,
+                    [FileChange("removed/report.txt", "local", deleted=True)],
+                    callback,
+                )
+            self.assertTrue(result)
+            self.assertEqual(popen.call_args.args[0][1], "deletefile")
+            self.assertIn("google:/removed/report.txt", popen.call_args.args[0])
+
+    def test_incremental_error_records_side_phase_and_source_path(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_CACHE_HOME": temporary}
+        ):
+            root = Path(temporary) / "local"
+            root.mkdir()
+            source = root / "report.txt"
+            source.write_text("content", encoding="utf-8")
+            job = SyncJob("google", str(root), ransomware_protection=False)
+            callback = MagicMock()
+            process = MagicMock()
+            process.wait.return_value = 7
+            with patch("tuxindrive.engine.subprocess.Popen", return_value=process):
+                result = self.engine._apply_incremental(
+                    job, [FileChange("report.txt", "local")], callback,
+                )
+            self.assertFalse(result)
+            outcome = callback.call_args.args[0]
+            self.assertEqual(outcome.blocked_path, "report.txt")
+            self.assertIn("side=local", outcome.message)
+            self.assertIn("phase=transfer", outcome.message)
+            self.assertIn("path=report.txt", outcome.message)
+            self.assertIn("path=report.txt", outcome.log_path.read_text(encoding="utf-8"))
+
     def test_per_job_traffic_accumulates_sessions_and_payload(self):
         with tempfile.TemporaryDirectory() as temporary:
             log = Path(temporary) / "job.log"

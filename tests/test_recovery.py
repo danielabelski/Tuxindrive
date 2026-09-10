@@ -10,6 +10,7 @@ from tuxindrive.models import SyncJob
 from tuxindrive.recovery import (
     AuditIssue, IntegrityAuditor, MassChangeGuard, RecoveryEntry, RecoveryManager, SafetyError,
 )
+from tuxindrive.security import UnsafePathError
 
 
 class RecoveryTests(unittest.TestCase):
@@ -43,6 +44,25 @@ class RecoveryTests(unittest.TestCase):
         )
         self.assertEqual(archived, [])
         self.assertFalse((self.root / "history" / self.job.id).exists())
+
+    def test_incoming_history_ignores_file_whose_parent_vanished(self):
+        self.assertEqual(
+            self.manager.archive_incoming_changes(
+                self.job,
+                [FileChange("renamed-away/draft.txt", "remote")],
+            ),
+            [],
+        )
+        self.assertFalse((self.root / "history" / self.job.id).exists())
+
+    def test_incoming_history_does_not_hide_symlinked_parent(self):
+        outside = self.root / "outside"
+        outside.mkdir()
+        (self.local / "linked").symlink_to(outside, target_is_directory=True)
+        with self.assertRaises((OSError, UnsafePathError)):
+            self.manager.archive_incoming_changes(
+                self.job, [FileChange("linked/draft.txt", "remote")],
+            )
 
     def test_entries_ignore_malformed_or_missing_history_records(self):
         index = self.root / "history" / self.job.id / "index.jsonl"

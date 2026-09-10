@@ -14,7 +14,7 @@ from typing import Iterable
 from .callbacks import FileChange
 from .config import data_root
 from .models import SyncJob
-from .security import confined_path, install_confined, unlink_confined, copy_from_confined
+from .security import UnsafePathError, confined_path, install_confined, unlink_confined, copy_from_confined
 from .bandwidth import GlobalBandwidthController
 from .audit import reverse_file_lines
 
@@ -66,7 +66,16 @@ class RecoveryManager:
 
     def archive_local(self, job: SyncJob, relative: str, reason: str) -> RecoveryEntry | None:
         relative = self._safe_relative(relative)
-        source = confined_path(job.local, relative)
+        try:
+            source = confined_path(job.local, relative)
+        except UnsafePathError as exc:
+            # Provider callbacks can race a directory rename/deletion.  There
+            # is no previous local version to preserve once that parent has
+            # vanished, so treat only this specific stale topology as empty.
+            # Other confinement failures (symlinks/escapes) remain fatal.
+            if str(exc) == "A parent directory does not exist":
+                return None
+            raise
         if not source.is_file():
             return None
         timestamp = datetime.now(timezone.utc)
