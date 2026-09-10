@@ -1,8 +1,8 @@
 {
-  "version": "0.26.37",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.37/tuxindrive_0.26.37_all.deb",
-  "sha256": "3b7f1ffc0a32987da9cc6503e48505ef1fb335cd4576df3f15584728f3e5022c",
-  "notes": "Restore live activity log loading after startup",
-  "expires_at": "2026-12-09T07:13:49.596196+00:00",
-  "signature": "FDLOndcsifs0DPxbgX++tf/QzUzX7+VmvrRR8aXzJKxcc0SdnN93q8TufzIx3bXfOtcIgPFNKUgB8k3oOXTiDw=="
+  "version": "0.26.38",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.38/tuxindrive_0.26.38_all.deb",
+  "sha256": "5350eefd8b558ddf48e591c168681da98efde333fa980559dd45bdafd5e70fb1",
+  "notes": "Resilient realtime directory changes and actionable incremental error details",
+  "expires_at": "2026-12-09T08:51:49.093057+00:00",
+  "signature": "pNF4CkzWi5jU8xFpKEbJzx4BvRFMWCZin9nGbQh0eJM1v6nldschSWRdddoy6cOnlGFhXBZbx3oRL1qUjLVsCA=="
 }

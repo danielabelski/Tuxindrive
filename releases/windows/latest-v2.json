@@ -1,8 +1,8 @@
 {
-  "version": "0.26.37",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.37/TuxInDrive-0.26.37-windows-x64-setup.exe",
-  "sha256": "0e816805d516aa285328ea287cbe804b3bee18d1d4dcdc47e67852f6f222e5e8",
-  "notes": "Restore live activity log loading after startup",
-  "expires_at": "2026-12-09T07:13:49.593148+00:00",
-  "signature": "OkSsNub86HYC66ym2dFu1/KRZZoSMco655WtlBjBZhZDvlsA9IXRg8oweXNAG2WZdlAcA9yO7lnV40i3DFNTDQ=="
+  "version": "0.26.38",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.38/TuxInDrive-0.26.38-windows-x64-setup.exe",
+  "sha256": "895628bc7244797c00f95262ae661d429801717bc8f58dacc44861a1dd1007af",
+  "notes": "Resilient realtime directory changes and actionable incremental error details",
+  "expires_at": "2026-12-09T08:51:49.167909+00:00",
+  "signature": "I0bHRnAQGjSgww5e13rg1NB6LUg2/AHIcqoV1VqeUrqtBh/N8/xwOMSlleYYuScXZNhx8/0gIZxjLMys+l+hAA=="
 }

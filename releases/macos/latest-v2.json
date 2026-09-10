@@ -1,8 +1,8 @@
 {
-  "version": "0.26.37",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.37/TuxInDrive-0.26.37-macos-arm64.dmg",
-  "sha256": "d9ecf3516bd670dc4a187a8d50da6ae09749e849bb0cc8bfc699b80934b71daa",
-  "notes": "Restore live activity log loading after startup",
-  "expires_at": "2026-12-09T07:13:49.728151+00:00",
-  "signature": "xg80UZWHAuAk+60A/njVsDJYoHJj9mW0yJ62V6Ft56wRBmWEFMilBMmRIlnYeqkurgTYSlOsTVXARhRIPYq7BQ=="
+  "version": "0.26.38",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.38/TuxInDrive-0.26.38-macos-arm64.dmg",
+  "sha256": "d1606098b938b4a94846c482cedf8848fa15a4f27d29e39e8d99fbdfdd1bcd94",
+  "notes": "Resilient realtime directory changes and actionable incremental error details",
+  "expires_at": "2026-12-09T08:51:49.251297+00:00",
+  "signature": "gaQOcdksZAId295tQnwkm42HOzouNQ/rvJI1kcRX7z3MCUgxnj7mAu/q04WZCdUT/6GDXk99Zdcj4FcDWO/QAw=="
 }
