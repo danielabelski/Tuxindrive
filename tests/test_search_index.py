@@ -9,6 +9,19 @@ from tuxindrive.search_index import FolderSearchIndex
 
 
 class FolderSearchIndexTests(unittest.TestCase):
+    def test_recent_complete_index_skips_only_matching_startup_walk(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "root"
+            root.mkdir()
+            (root / "ready.txt").write_text("ready", encoding="utf-8")
+            index = FolderSearchIndex(Path(temporary) / "index.sqlite3")
+            job = SyncJob("cloud", str(root))
+            self.assertTrue(index.startup_refresh_needed([job]))
+            index.refresh([job])
+            self.assertFalse(index.startup_refresh_needed([job]))
+            job.exclude_patterns.append("*.txt")
+            self.assertTrue(index.startup_refresh_needed([job]))
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name) / "sync"

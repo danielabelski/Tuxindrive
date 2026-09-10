@@ -517,21 +517,21 @@ class AppSettings:
     nautilus_integration: bool = True
     language: str = "en"
     visual_theme: str = "nordic_glass"
-    network_policy: str = "maximum"
+    network_policy: str = "controlled"
     global_bandwidth_limit: str = "10M"
     automatic_bandwidth_control: bool = True
     bandwidth_headroom_percent: int = 50
     allow_metered_networks: bool = True
-    pause_below_battery_percent: int = 0
+    pause_below_battery_percent: int = 25
     schedule_start: str = ""
     schedule_end: str = ""
     profile_remote: str = ""
     profile_last_backup: str = ""
     streaming_cache_max_gib: int = 20
     streaming_cache_min_free_gib: int = 5
-    streaming_refresh_mode: str = "realtime"
-    show_network_usage: bool = True
-    show_live_activity_log: bool = True
+    streaming_refresh_mode: str = "balanced"
+    show_network_usage: bool = False
+    show_live_activity_log: bool = False
     search_content_indexing: bool = False
     server_integration_enabled: bool = False
     server_url: str = "http://127.0.0.1:9443"
@@ -570,7 +570,7 @@ class AppSettings:
             except (TypeError, ValueError):
                 data[key] = default
         if data.get("streaming_refresh_mode") not in {"realtime", "balanced", "low_traffic"}:
-            data["streaming_refresh_mode"] = "realtime"
+            data["streaming_refresh_mode"] = "balanced"
         from .server_client import normalize_server_url
         try:
             data["server_url"] = normalize_server_url(

@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tuxindrive.models import AppConfig, AppSettings
+from tuxindrive.models import AppConfig, AppSettings, SyncJob
 from tuxindrive.server import (
     HeadlessAgent,
     ServerConfig,
@@ -102,6 +102,24 @@ class ServerBandwidthTests(unittest.TestCase):
             agent = HeadlessAgent("", "10M", bandwidth=controller)
             self.assertIs(agent.bandwidth, controller)
             self.assertIs(agent.engine.bandwidth, controller)
+
+    def test_headless_agent_restores_valid_persisted_schedule_clock(self):
+        with tempfile.TemporaryDirectory() as folder, mock.patch.dict(
+            os.environ,
+            {"XDG_CONFIG_HOME": folder, "XDG_DATA_HOME": folder, "XDG_CACHE_HOME": folder},
+        ):
+            agent = HeadlessAgent("", "10M")
+            job = SyncJob(
+                "cloud", str(Path(folder) / "sync"),
+                last_run="2026-09-10T10:00:00+00:00",
+            )
+            agent.config.jobs = [job]
+            with mock.patch("tuxindrive.server.time.time", return_value=1789034700):
+                agent.start()
+            try:
+                self.assertEqual(agent._last_started[job.id], 1789034400)
+            finally:
+                agent.stop()
 
 
 class ServerConfigurationTests(unittest.TestCase):

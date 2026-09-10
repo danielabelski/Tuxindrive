@@ -1,3 +1,12 @@
+tuxindrive (0.26.36-1) unstable; urgency=medium
+
+  * Reduce idle wakeups with interruptible realtime-folder monitoring.
+  * Add battery-aware defaults and balanced streaming refresh for new profiles.
+  * Suspend hidden telemetry polling and unnecessary cache maintenance.
+  * Batch Android background work and restore server scheduler timestamps.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Thu, 10 Sep 2026 12:00:00 +0200
+
 tuxindrive (0.26.35-1) unstable; urgency=medium
 
   * Prevent stale background scans and mount startup from blocking shutdown or UI.

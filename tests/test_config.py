@@ -126,13 +126,13 @@ class ConfigStoreTests(unittest.TestCase):
         self.assertEqual(config.settings.streaming_cache_min_free_gib, 5)
 
     def test_network_usage_feature_flag_defaults_on_and_round_trips(self):
-        self.assertTrue(AppConfig.from_dict({}).settings.show_network_usage)
+        self.assertFalse(AppConfig.from_dict({}).settings.show_network_usage)
         config = AppConfig.from_dict({"settings": {"show_network_usage": False}})
         self.assertFalse(config.settings.show_network_usage)
         self.assertFalse(config.to_dict()["settings"]["show_network_usage"])
 
     def test_live_activity_feature_flag_defaults_on_and_round_trips(self):
-        self.assertTrue(AppConfig.from_dict({}).settings.show_live_activity_log)
+        self.assertFalse(AppConfig.from_dict({}).settings.show_live_activity_log)
         config = AppConfig.from_dict({"settings": {"show_live_activity_log": False}})
         self.assertFalse(config.settings.show_live_activity_log)
         self.assertFalse(config.to_dict()["settings"]["show_live_activity_log"])
@@ -165,11 +165,11 @@ class ConfigStoreTests(unittest.TestCase):
         self.assertEqual((custom.mass_change_limit, custom.mass_change_percent), (120, 60))
 
     def test_streaming_refresh_mode_is_validated(self):
-        self.assertEqual(AppConfig.from_dict({}).settings.streaming_refresh_mode, "realtime")
+        self.assertEqual(AppConfig.from_dict({}).settings.streaming_refresh_mode, "balanced")
         config = AppConfig.from_dict({"settings": {"streaming_refresh_mode": "balanced"}})
         self.assertEqual(config.settings.streaming_refresh_mode, "balanced")
         invalid = AppConfig.from_dict({"settings": {"streaming_refresh_mode": "unsafe"}})
-        self.assertEqual(invalid.settings.streaming_refresh_mode, "realtime")
+        self.assertEqual(invalid.settings.streaming_refresh_mode, "balanced")
 
 
 if __name__ == "__main__":

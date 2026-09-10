@@ -49,7 +49,7 @@ The TuxInDrive development suite contains **464 automated tests: 452 Python test
 | `test_proton.py` | 30 | Official CLI install/login/session, Secret Service, redaction/confinement, backend migration, safety previews, global admission and fail-closed routing. |
 | `test_collaboration.py` | 11 | Offline CRDT convergence, iterative deep-chain handling, immutable/bounded operation state, checkpoints, review/presence, deterministic ODT/ODS round trips, ZIP-bomb rejection, unsafe XML rejection and binary fallback. |
 | `test_peer.py` | 27 | Invitation compatibility, approval-based LAN requests/advertisements, roles/drops/transports, signed atomic deltas, isolated device roots, authorization/revocation, host-key pinning, leases and private identities. |
-| `test_policies.py` | 7 | Maximum-usage defaults plus controlled battery, metered-network and normal/overnight schedule decisions, including fail-open probe handling. |
+| `test_policies.py` | 7 | Controlled defaults plus battery, metered-network and normal/overnight schedule decisions, including fail-open probe handling. |
 | `test_recovery.py` | 13 | Local archive/restore behavior, disabled retention, malformed/foreign record rejection, expiry pruning, mass-change and ransomware-suffix blocking, integrity-audit parsing and directional repairs. |
 | `test_responsive_windows.py` | 5 | Monitor-safe, freely resizable client/server windows, local scrolling, wide-control isolation and search preview feature gating. |
 | `test_search_index.py` | 13 | Private metadata indexing, explicit bounded content opt-in, Unicode/token lookup, cancellation, literal wildcard handling, stale pruning, exclusions, symlink rejection, paused roots, streaming avoidance and safety-limit retention. |
@@ -93,7 +93,7 @@ Android JVM coverage is kept beside the mobile source: `MobileValidationTest` co
 - LAN/QR invitations preserve the pinned host key and lease duration; protocol-v1 invitations remain importable.
 - Nautilus actions route through the single application instance, and startup-time sync requests wait for runtime readiness.
 - Peer delta blocks are individually BLAKE2-verified, the reconstructed file is SHA-256-verified, and replacement is atomic.
-- Transfer policy defaults remain unrestricted; controlled mode defers jobs on configured battery, metered-network, and schedule conditions.
+- New profiles use controlled transfer policy and pause below 25% while unplugged; existing explicit Maximum mode remains unrestricted.
 - The stricter global/job directional bandwidth limit reaches synchronization, streaming, scans, verification and repairs; native Git/Proton/update work shares admission, and scan jitter remains bounded.
 - An incremental job reserves its ID before it waits for network admission, preventing a full or second incremental run for the same mapping from starting concurrently.
 - Protocol-v4 peer invitations preserve roles, drop scope and expiry while legacy protocols remain importable.
@@ -110,9 +110,9 @@ Android JVM coverage is kept beside the mobile source: `MobileValidationTest` co
 
 ```bash
 sh scripts/build-deb.sh
-dpkg-deb --info dist/tuxindrive_0.26.35_all.deb
-dpkg-deb --contents dist/tuxindrive_0.26.35_all.deb
-sha256sum dist/tuxindrive_0.26.35_all.deb
+dpkg-deb --info dist/tuxindrive_0.26.36_all.deb
+dpkg-deb --contents dist/tuxindrive_0.26.36_all.deb
+sha256sum dist/tuxindrive_0.26.36_all.deb
 ```
 
 The CI **Static security analysis** step must run before tests and packaging:
@@ -127,8 +127,8 @@ The release is blocked on any high-severity Bandit result or unresolved dependen
 Release manifests must be signed outside Git with the Ed25519 release key:
 
 ```bash
-python3 scripts/sign-update.py --version 0.26.35 \
-  --package dist/tuxindrive_0.26.35_all.deb \
+python3 scripts/sign-update.py --version 0.26.36 \
+  --package dist/tuxindrive_0.26.36_all.deb \
   --output update/latest-v2.json \
   --private-key /secure/offline/TuxInDrive-update-signing-private.pem
 ```
@@ -144,8 +144,8 @@ private bootstrap and installed module layout:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.35_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.35_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.36_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.36_all.deb
 PYTHONPATH=src python3 -m unittest -v tests.test_server
 ```
 

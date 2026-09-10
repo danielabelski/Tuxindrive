@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-SYNC_ANIMATION_INTERVAL_MS = 160
+SYNC_ANIMATION_INTERVAL_MS = 320
 SYNC_ANIMATION_ICONS = tuple(f"tuxindrive-sync-{frame}" for frame in range(8))
 VALID_TRAY_STATES = frozenset(("ready", "syncing", "error"))
 

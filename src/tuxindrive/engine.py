@@ -97,7 +97,7 @@ class SyncEngine:
         self._job_backends: dict[str, str] = {}
         self._callback_baselines: dict[str, dict[str, FileState]] = {}
         self._traffic_totals: dict[str, tuple[int, int]] = {}
-        self._streaming_refresh_mode = "realtime"
+        self._streaming_refresh_mode = "balanced"
         self._cache_watchers: dict[str, InotifyTreeMonitor] = {}
         self._cache_cleanup_state: dict[str, tuple[int, int, bool, int]] = {}
         self.proton = proton or ProtonDriveClient()
@@ -107,7 +107,7 @@ class SyncEngine:
 
     def configure_streaming_refresh(self, mode: str) -> None:
         self._streaming_refresh_mode = (
-            mode if mode in {"realtime", "balanced", "low_traffic"} else "realtime"
+            mode if mode in {"realtime", "balanced", "low_traffic"} else "balanced"
         )
 
     def _record_network(self, job_id: str, sessions: int = 1, payload_bytes: int = 0) -> None:
@@ -225,7 +225,7 @@ class SyncEngine:
         self._remote_backoffs = {
             job.id: self._PROVIDER_REMOTE_BACKOFF.get(
                 provider_by_remote.get(job.account_remote),
-                (30.0, 60.0, 120.0, 300.0),
+                (60.0, 120.0, 300.0, 600.0),
             )
             for job in jobs
         }
@@ -595,7 +595,7 @@ class SyncEngine:
             "--vfs-cache-min-free-space",
             "off",
             "--vfs-cache-poll-interval",
-            "1m",
+            "5m",
             "--vfs-write-back",
             "5s",
             "--cache-dir",
@@ -1524,7 +1524,7 @@ class SyncEngine:
             reconcile,
             self._protected_patterns.get(job.id, ()),
             remote_backoff=self._remote_backoffs.get(
-                job.id, (30.0, 60.0, 120.0, 300.0)
+                job.id, (60.0, 120.0, 300.0, 600.0)
             ),
             initial_local_snapshot=initial_local,
             initial_remote_snapshot=initial_remote,

@@ -102,6 +102,27 @@ The Python regression suite includes cancellation, expiry, newest-first history
 and non-blocking mount-start coverage; Android remains compiled and linted on
 the pinned CI toolchain.
 
+## Energy follow-up implemented in 0.26.36
+
+The idle path now waits on inotify plus an explicit shutdown pipe instead of
+waking every second per realtime folder. Default provider reconciliation backs
+off from one minute to ten minutes while local saves still trigger immediately.
+Visible network and activity panels sample every five seconds and their timers
+are removed when hidden; both panels default off for new profiles. Streaming
+cache housekeeping is skipped when there is no enabled virtual drive, its VFS
+cache scan interval is five minutes, and balanced provider refresh is the new
+default. A complete index with an unchanged job/rule signature is reused for
+30 minutes across rapid restarts; synchronization still refreshes the affected
+folder. Power and metered-network probes are cached for 30 seconds and cover
+Linux, Windows and macOS without repeated helper processes.
+
+New desktop profiles select controlled transfer policy, retain the 50% network
+headroom, and pause automatic work below 25% battery while unplugged. Existing
+saved choices are not migrated or overwritten. Android periodic work requires
+a non-low battery and uses WorkManager's flexible 30-minute window; user-started
+work remains immediate. The headless server seeds its scheduler from strictly
+validated persisted timestamps to avoid a restart burst.
+
 ## Restart investigation
 
 The reported long startup reconciliation is reproducible from the control

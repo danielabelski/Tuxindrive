@@ -3868,7 +3868,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self._pending_update: UpdateRelease | None = None
         self._update_pulsing = False
         self._update_operation_active = False
-        GLib.timeout_add_seconds(1, self._refresh_activity_log)
+        self._activity_source = 0
         self._network_refreshing = False
         self._network_active = True
         self._network_source = 0
@@ -3930,6 +3930,9 @@ class MainWindow(Gtk.ApplicationWindow):
         if self._network_source:
             GLib.source_remove(self._network_source)
             self._network_source = 0
+        if self._activity_source:
+            GLib.source_remove(self._activity_source)
+            self._activity_source = 0
 
     def set_network_meter_enabled(self, enabled: bool) -> None:
         self.controller.config.settings.show_network_usage = enabled
@@ -3940,7 +3943,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self._render_network_usage(self.controller.network_meter.usage)
             if not self._network_source and self._network_active:
                 self._network_source = GLib.timeout_add_seconds(
-                    1, self._refresh_network_usage
+                    5, self._refresh_network_usage
                 )
         elif self._network_source:
             GLib.source_remove(self._network_source)
@@ -3957,7 +3960,14 @@ class MainWindow(Gtk.ApplicationWindow):
         if enabled:
             self.activity_panel.set_expanded(True)
             self._refresh_activity_log()
+            if not self._activity_source:
+                self._activity_source = GLib.timeout_add_seconds(
+                    5, self._refresh_activity_log
+                )
         else:
+            if self._activity_source:
+                GLib.source_remove(self._activity_source)
+                self._activity_source = 0
             self.activity_panel.set_expanded(False)
             self._activity_files.clear()
             self._activity_content = ""
@@ -4995,7 +5005,7 @@ class MainWindow(Gtk.ApplicationWindow):
             selected_theme = normalize_theme(theme.get_active_id())
             theme_changed = selected_theme != self.controller.config.settings.visual_theme
             self.controller.config.settings.visual_theme = selected_theme
-            self.controller.config.settings.network_policy = policy.get_active_id() or "maximum"
+            self.controller.config.settings.network_policy = policy.get_active_id() or "controlled"
             self.controller.config.settings.allow_metered_networks = metered.get_active()
             self.controller.config.settings.global_bandwidth_limit = bandwidth_value
             self.controller.config.settings.automatic_bandwidth_control = (
@@ -5013,7 +5023,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.controller.config.settings.streaming_cache_max_gib = cache_max.get_value_as_int()
             self.controller.config.settings.streaming_cache_min_free_gib = cache_free.get_value_as_int()
             self.controller.config.settings.streaming_refresh_mode = (
-                streaming_refresh.get_active_id() or "realtime"
+                streaming_refresh.get_active_id() or "balanced"
             )
             self.controller.engine.configure_streaming_refresh(
                 self.controller.config.settings.streaming_refresh_mode
@@ -5525,7 +5535,11 @@ class TuxInDriveApplication(Gtk.Application):
             _run_thread(self._load_runtime, self._runtime_loaded)
         if not self._search_index_started:
             self._search_index_started = True
-            self.refresh_search_index()
+            if self.search_index.startup_refresh_needed(
+                self.config.jobs,
+                include_content=self.config.settings.search_content_indexing,
+            ):
+                self.refresh_search_index()
         tray_available = self.indicator is not None
         if not (tray_available and (self.background or self.config.settings.start_minimized)):
             self.window.show_all()
@@ -6250,8 +6264,13 @@ class TuxInDriveApplication(Gtk.Application):
 
     def _scheduler_tick(self) -> bool:
         monotonic = time.monotonic()
+        has_streaming_jobs = any(
+            job.enabled and job.mode is SyncMode.VIRTUAL_DRIVE
+            for job in self.config.jobs
+        )
         if (
-            not self._cache_maintenance_running
+            has_streaming_jobs
+            and not self._cache_maintenance_running
             and monotonic - self._last_cache_maintenance >= 300
         ):
             gib = 1024 ** 3

@@ -7,7 +7,22 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.35
+## Current baseline: 0.26.36
+
+### Completed in 0.26.36: energy-aware idle operation
+
+- Replace one-second realtime-folder wakeups with interruptible kernel waits;
+  local filesystem events and provider scan deadlines keep the same semantics.
+- Make new profiles controlled and battery-aware by default: 50% bandwidth
+  reserve, pause below 25% while unplugged, and balanced streaming refresh.
+- Stop hidden network/activity panels from polling, reduce visible sampling to
+  five seconds, and skip cache maintenance when no streaming drive is enabled.
+- Reuse a complete matching local search index for 30 minutes across rapid
+  restarts; changed job rules and completed syncs still trigger refresh work.
+- Batch Android automatic work into a flexible 30-minute window and require a
+  non-low battery; manual sync remains immediately available.
+- Restore the headless server schedule from validated persisted completion
+  timestamps so a service restart does not cause an unnecessary immediate run.
 
 ### Completed in 0.26.35: cross-platform stability and scale
 
@@ -377,7 +392,7 @@ The next recommended development milestone is **1.0.0 — operational hardening*
 | 10 | NAT traversal with optional no-storage relay | Peer | Completed 0.12.0 | Shares attempt UPnP then NAT-PMP mapping. An optional SSH reverse tunnel forwards the already encrypted, host-key-pinned SFTP stream and stores no file content or TuxInDrive key. Manual direct mode remains available. |
 | 11 | Per-file offline availability controls | Cloud | Fixed 0.20.11 | Explicitly selected files/folders expose **Keep available offline** and **Free local space (make online-only)**. Exact file rules do not match siblings or parents; selected folders remain recursive, while background menus cannot trigger accidental folder/root hydration. Mount-relative versioned manifests verify the objects rclone actually caches. A stalled provider read is cancelled and retried, and terminal failure clears the pending state. |
 | 12 | Nautilus integration | Cloud | Repaired 0.20.11 | Live state emblems, safe sync/web/log actions and per-item streaming availability controls are shipped. The extension coalesces completion metadata, primes its last valid credential-free snapshot, stores URI keys rather than caller-owned FileInfo wrappers, reacquires current cache entries for badge refresh, emits the dedicated menu-update signal, uses the exact Nautilus 4.1 constructor boundary and applies sensitivity afterward as a property. Package upgrades retire an old application process before new extension actions are accepted. Six unbranded, color/shape/glyph-distinct functional badges identify each state. |
-| 13 | Network, battery and schedule policies | Both | Completed 0.12.0 | Settings can defer transfers on metered networks, below a battery threshold, or outside a daily window. Default **Maximum usage** applies no limits. |
+| 13 | Network, battery and schedule policies | Both | Completed 0.12.0; energy defaults 0.26.36 | Settings can defer transfers on metered networks, below a battery threshold, or outside a daily window. New profiles use controlled mode with a 25% unplugged-battery threshold; explicit existing choices remain unchanged. |
 | 14 | Read-only, send-only and receive-only peer roles | Peer | Hardened 0.19.1 | Protocol-v5 invitations persist directional roles. Each key now receives a distinct listener: read-only/receive-only uses server read-only mode, send-only is rooted in a dedicated inbox, and read/write retains the selected workspace. |
 | 15 | Peer activity and audit timeline | Peer | Phase 1 completed 0.13.0 | A private, permission-restricted, compacted JSONL timeline and GTK view record peer/sync lifecycle, failures, delta application and drop events. Device-attributed SFTP operation parsing and export/retention controls remain future refinements. |
 | 16 | One-time encrypted file drop | Peer | Hardened 0.19.1 | Every active drop receives a one-key, dedicated-port SFTP endpoint rooted at its random inbox. A modified client cannot list the parent workspace; ordinary jobs exclude inboxes and consumption is persisted after the first received file. |

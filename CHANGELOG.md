@@ -2,6 +2,22 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.36 — energy-aware idle operation
+
+- Realtime folder monitors now block on filesystem events and an interruptible
+  control pipe instead of waking every second per job.
+- New profiles use controlled transfer policy, a 25% unplugged battery pause,
+  50% bandwidth headroom, and balanced streaming refresh. Existing saved
+  choices are preserved.
+- Hidden activity/network panels stop polling, visible refresh drops to five
+  seconds, and VFS maintenance is skipped when no streaming drive is enabled.
+- Closely spaced restarts reuse a complete matching local search index for up
+  to 30 minutes; sync completion still refreshes the affected folder.
+- Android automatic synchronization is flexibly batched and requires a
+  non-low battery; manual work remains immediate.
+- The headless server restores valid persisted run times after restart, avoiding
+  an unnecessary immediate synchronization burst.
+
 ## 0.26.35 — stability and large-library performance
 
 - Made files-on-demand mount startup and stale-mount recovery asynchronous so

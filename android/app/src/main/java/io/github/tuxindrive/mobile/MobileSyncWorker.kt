@@ -358,8 +358,11 @@ class MobileSyncWorker(
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
                 .setRequiresCharging(chargingOnly)
+                .setRequiresBatteryNotLow(true)
                 .build()
-            val request = PeriodicWorkRequestBuilder<MobileSyncWorker>(15, TimeUnit.MINUTES)
+            val request = PeriodicWorkRequestBuilder<MobileSyncWorker>(
+                30, TimeUnit.MINUTES, 10, TimeUnit.MINUTES
+            )
                 .setConstraints(constraints)
                 .build()
             manager.enqueueUniquePeriodicWork(

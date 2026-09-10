@@ -1,7 +1,7 @@
 # TuxInDrive configuration reference
 
 This reference describes the persisted desktop configuration in TuxInDrive
-0.26.35. Normal changes should be made in **Settings**, **Connect account**, or
+0.26.36. Normal changes should be made in **Settings**, **Connect account**, or
 **Add/Edit folder**. Stop TuxInDrive and make a backup before manually editing
 JSON; a syntactically valid but inconsistent mapping can still synchronize the
 wrong location.
@@ -72,18 +72,18 @@ job state (`initialized`, last run/status/error) is persisted with the job.
 | `nautilus_integration` | `true` | Enable supported Linux file-manager actions. |
 | `language` | `en` | Interface language code. |
 | `visual_theme` | `nordic_glass` | Validated visual theme identifier. |
-| `network_policy` | `maximum` | Transfer policy selected in Settings. |
+| `network_policy` | `controlled` | Transfer policy selected in Settings; existing explicit values are preserved. |
 | `global_bandwidth_limit` | `10M` | Shared upload/download ceiling; empty means unlimited. |
 | `automatic_bandwidth_control` | `true` | Reserve headroom and divide the ceiling across simultaneous process-local consumers. |
 | `bandwidth_headroom_percent` | `50` | Portion retained for other applications/devices; clamped to 0–80%. |
 | `allow_metered_networks` | `true` | Permit scheduled work on metered connections. |
-| `pause_below_battery_percent` | `0` | Pause threshold; zero disables battery pausing. |
+| `pause_below_battery_percent` | `25` | Pause threshold while unplugged; zero disables battery pausing. |
 | `schedule_start`, `schedule_end` | empty | Optional daily transfer window. |
 | `profile_remote` | empty | Account chosen for encrypted profile backups. |
 | `profile_last_backup` | empty | Timestamp of the last successful profile backup. |
 | `streaming_cache_max_gib` | `20` | Maximum streaming cache target, clamped to 1–1024 GiB. |
 | `streaming_cache_min_free_gib` | `5` | Free-space reserve, clamped to 1–1024 GiB. |
-| `streaming_refresh_mode` | `realtime` | `realtime`, `balanced`, or `low_traffic`. |
+| `streaming_refresh_mode` | `balanced` | `realtime`, `balanced`, or `low_traffic`. |
 | `show_network_usage` | `true` | Feature flag for the current/daily traffic panel. |
 | `show_live_activity_log` | `true` | Feature flag for live-log rendering and visibility. |
 | `search_content_indexing` | `false` | Opt in to bounded local content indexing for supported formats; streaming mounts remain excluded. |

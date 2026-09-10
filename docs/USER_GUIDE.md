@@ -2,11 +2,11 @@
 
 <p align="center"><img src="../branding/tuxindrive-logo.png" width="150" alt="TuxInDrive circular black-and-white penguin logo with a red bow tie"></p>
 
-This guide covers TuxInDrive 0.26.35 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
+This guide covers TuxInDrive 0.26.36 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
 
 Credentials for rclone-backed providers are kept in rclone's authenticated encrypted configuration. TuxInDrive generates its configuration key locally and stores it in GNOME Secret Service; existing rclone configurations already encrypted by an advanced user are left under that user's password-command setup. Proton's official CLI separately stores its browser session in Secret Service under `ch.proton.drive/drive-sdk-cli`; TuxInDrive never reads or exports it. Do not delete either secret until the related accounts have been disconnected.
 
-Version 0.26.35 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
+Version 0.26.36 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
 
 ### Upgrading from TuxDrive
 
@@ -28,14 +28,14 @@ sudo apt install tuxdrive
 On another Debian-family system, download the package and install it directly:
 
 ```bash
-sudo apt install ./tuxindrive_0.26.35_all.deb
+sudo apt install ./tuxindrive_0.26.36_all.deb
 ```
 
 Launch **TuxInDrive** from Ubuntu's application menu. TuxInDrive remains active in the system tray when its window is closed. On first start it verifies or installs its private cloud transfer engine.
 
 ### Windows and macOS
 
-Run the Windows setup executable or drag TuxInDrive from the macOS DMG to Applications. Both packages open the same account sidebar, synchronized-folder cards, settings and dialogs as Linux. Windows stores secrets in Credential Manager and needs WinFsp for streaming drives; macOS uses Keychain and needs macFUSE. File-manager badges remain Linux/Nautilus-only in 0.26.35.
+Run the Windows setup executable or drag TuxInDrive from the macOS DMG to Applications. Both packages open the same account sidebar, synchronized-folder cards, settings and dialogs as Linux. Windows stores secrets in Credential Manager and needs WinFsp for streaming drives; macOS uses Keychain and needs macFUSE. File-manager badges remain Linux/Nautilus-only in 0.26.36.
 
 ### Android
 
@@ -151,7 +151,7 @@ installation confirmation are controlled by Android and are never bypassed.
 Disable the setting to cancel automatic checks; **Check for updates** remains
 available for a manual check. Store-distributed builds do not self-update.
 
-When moving from 0.18.1, the legacy channel signed by its already trusted key first installs the fixed 0.19.1 bridge. Restart TuxInDrive, then use **Settings → Check for updates** again: 0.19.1 reads the separately signed v2 channel and installs the current 0.26.35 release. Never bypass a signature warning. If the error persists, close and reopen the update dialog to refetch the manifest; manual package installation remains the recovery path when a proxy or cache serves stale metadata.
+When moving from 0.18.1, the legacy channel signed by its already trusted key first installs the fixed 0.19.1 bridge. Restart TuxInDrive, then use **Settings → Check for updates** again: 0.19.1 reads the separately signed v2 channel and installs the current 0.26.36 release. Never bypass a signature warning. If the error persists, close and reopen the update dialog to refetch the manifest; manual package installation remains the recovery path when a proxy or cache serves stale metadata.
 
 ### Rename an item in TuxInDrive
 
@@ -595,14 +595,15 @@ Never point a vault at a folder containing ordinary unencrypted files, never edi
 
 ### Global bandwidth, network, battery and schedule policies
 
-The environmental policy defaults to **Maximum usage**, so metered, battery,
-and schedule gates do not defer work. Independently, the default global
+New profiles default to **Apply network, battery and schedule policies**. They
+pause automatic transfers below 25% battery while unplugged; metered-network
+and daily schedule restrictions remain user-selectable. Independently, the default global
 bandwidth ceiling is `10M`. Set it empty for unlimited traffic, use one value
 such as `5M` for both directions, or use `UPLOAD:DOWNLOAD` such as `2M:10M`.
 The stricter global or per-folder value always wins.
 
 Keep **Automatically reserve bandwidth for other applications** enabled unless
-this device has a dedicated connection. The default reserves 20% of the ceiling
+this device has a dedicated connection. The default reserves 50% of the ceiling
 and divides the rest across enabled streaming drives plus sync and update lanes,
 preventing separate rclone processes from multiplying the limit. Increase the
 headroom for calls, gaming, or a router that becomes unresponsive under load.
@@ -618,7 +619,7 @@ does not turn transfer limiting on or off or delete accumulated totals.
 To add environmental constraints, select **Apply network, battery and schedule policies** and configure any combination of:
 
 - disallowing NetworkManager connections marked metered;
-- a battery percentage below which transfers pause while AC power is disconnected (`0` disables it);
+- a battery percentage below which transfers pause while AC power is disconnected (default `25`; `0` disables it);
 - a daily `HH:MM` start/end window, including an overnight window such as `22:00`–`06:00`.
 
 The gate runs before manual, callback and scheduled jobs. Deferred jobs show the policy reason and are reconsidered by the regular scheduler. Metadata already displayed by a mounted streaming filesystem can remain visible, but opening non-cached content still requires network access. See [Operations](OPERATIONS.md#network-policy) for congestion-safe settings.
@@ -735,7 +736,7 @@ cat ~/.local/state/tuxindrive/startup.log
 cat ~/.local/state/tuxindrive/crash.log
 ```
 
-Reinstall the current package with `sudo apt install ./tuxindrive_0.26.35_all.deb`.
+Reinstall the current package with `sudo apt install ./tuxindrive_0.26.36_all.deb`.
 
 ## 13. Data safety
 
@@ -745,10 +746,10 @@ Reinstall the current package with `sudo apt install ./tuxindrive_0.26.35_all.de
 - Do not point multiple normal jobs at overlapping local folders.
 - Removing a TuxInDrive job does not delete its local or cloud files.
 
-### Security upgrade checklist for 0.26.35
+### Security upgrade checklist for 0.26.36
 
-1. Install `tuxindrive_0.26.35_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
-2. Confirm **Settings → Check for updates** reports 0.26.35 and no signature or expiry error.
+1. Install `tuxindrive_0.26.36_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
+2. Confirm **Settings → Check for updates** reports 0.26.36 and no signature or expiry error.
 3. Reconnect each provider once and verify that `~/.config/rclone/rclone.conf` is encrypted and mode `0600`; do not print or upload it.
 4. Confirm the `TuxInDrive rclone configuration` entry exists in GNOME Passwords and Keys/Secret Service. Do not delete it without an export/recovery plan.
 5. Review peer invitations, revoke unused device and Onion credentials, and exchange replacements through an authenticated channel when compromise is suspected.

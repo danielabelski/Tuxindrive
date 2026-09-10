@@ -281,6 +281,21 @@ class HeadlessAgent:
 
     def start(self) -> None:
         self.engine.configure_jobs(self.config.jobs, self.config.accounts)
+        now = time.time()
+        for job in self.config.jobs:
+            if not job.last_run:
+                continue
+            try:
+                value = job.last_run.replace("Z", "+00:00")
+                stamp = datetime.fromisoformat(value)
+                if stamp.tzinfo is None:
+                    stamp = stamp.replace(tzinfo=timezone.utc)
+                epoch = stamp.timestamp()
+                if 0 < epoch <= now + 300:
+                    self._last_started[job.id] = epoch
+            except (TypeError, ValueError, OverflowError):
+                # A malformed persisted timestamp must not stop the service.
+                continue
         for share in self.config.peer_shares:
             if share.enabled:
                 try: self.peers.start(share)

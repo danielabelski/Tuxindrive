@@ -143,7 +143,9 @@ class InotifyTreeMonitor:
         self.excluded = excluded
         self._watches: dict[int, Path] = {}
         self._selector = selectors.DefaultSelector()
-        self._selector.register(self.fd, selectors.EVENT_READ)
+        self._wake_read, self._wake_write = os.pipe2(self._NONBLOCK | self._CLOEXEC)
+        self._selector.register(self.fd, selectors.EVENT_READ, "inotify")
+        self._selector.register(self._wake_read, selectors.EVENT_READ, "wake")
         try:
             self._watch_tree(self.root)
         except Exception:
@@ -176,7 +178,16 @@ class InotifyTreeMonitor:
             self._watch(root_path)
 
     def read(self, timeout: float) -> LocalEvents:
-        if not self._selector.select(max(0.0, timeout)):
+        ready = self._selector.select(max(0.0, timeout))
+        if not ready:
+            return LocalEvents()
+        if any(key.data == "wake" for key, _mask in ready):
+            try:
+                while os.read(self._wake_read, 4096):
+                    pass
+            except BlockingIOError:
+                pass
+        if not any(key.data == "inotify" for key, _mask in ready):
             return LocalEvents()
         paths: set[str] = set()
         overflow = False
@@ -224,14 +235,22 @@ class InotifyTreeMonitor:
                     rescan = True
         return LocalEvents(frozenset(paths), overflow, rescan)
 
+    def wake(self) -> None:
+        """Interrupt a long selector wait without periodic CPU wakeups."""
+        try:
+            os.write(self._wake_write, b"1")
+        except (BlockingIOError, OSError):
+            pass
+
     def close(self) -> None:
         try:
             self._selector.close()
         finally:
-            try:
-                os.close(self.fd)
-            except OSError:
-                pass
+            for descriptor in (self.fd, self._wake_read, self._wake_write):
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
 
 
 class ChangeMonitor:
@@ -273,6 +292,7 @@ class ChangeMonitor:
         self.stop_event = threading.Event()
         self._process_lock = threading.Lock()
         self._active_process: subprocess.Popen[str] | None = None
+        self._event_monitor: InotifyTreeMonitor | None = None
         self.last_remote_success = 0.0
         self.known_file_count: int | None = None
         self.thread = threading.Thread(
@@ -284,6 +304,10 @@ class ChangeMonitor:
 
     def stop(self) -> None:
         self.stop_event.set()
+        monitor = self._event_monitor
+        wake = getattr(monitor, "wake", None)
+        if wake is not None:
+            wake()
         with self._process_lock:
             process = self._active_process
         if process is not None and process.poll() is None:
@@ -515,6 +539,7 @@ class ChangeMonitor:
             events: InotifyTreeMonitor | None = self.event_factory(self.job.local, self._excluded)
         except OSError:
             events = None
+        self._event_monitor = events
         if self.initial_remote_snapshot is not None:
             remote = {
                 normalize_remote_path(path): state
@@ -531,6 +556,9 @@ class ChangeMonitor:
                     if self.remote_backoff else self.remote_poll_seconds
                 )
                 if self.stop_event.wait(self.scan_jitter(initial_delay)):
+                    if events is not None:
+                        events.close()
+                    self._event_monitor = None
                     return
                 remote = self.remote_snapshot()
                 remote_known = True
@@ -562,7 +590,13 @@ class ChangeMonitor:
                 remote_due_at = last_remote_scan + remote_delay
                 if recovery_due is not None:
                     remote_due_at = min(remote_due_at, recovery_due)
-                timeout = min(1.0, max(0.0, remote_due_at - now))
+                # inotify and the explicit wake pipe make this wait fully
+                # interruptible. Avoid waking every second while a folder is
+                # idle; provider reconciliation still runs at its exact due time.
+                timeout = max(0.0, remote_due_at - now)
+                if events is not None and not hasattr(events, "wake"):
+                    # Compatibility for non-interruptible platform/test monitors.
+                    timeout = min(1.0, timeout)
                 local_changes: list[FileChange] = []
                 unsafe_monitor = False
                 if events is not None and not local_changes:
@@ -736,3 +770,4 @@ class ChangeMonitor:
         finally:
             if events is not None:
                 events.close()
+            self._event_monitor = None

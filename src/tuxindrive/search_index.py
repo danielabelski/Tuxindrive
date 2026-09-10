@@ -9,8 +9,11 @@ hydrate cloud data or turn an idle desktop into a remote metadata scan.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
+import json
 import os
 import sqlite3
+import time
 from contextlib import contextmanager
 from collections.abc import Iterator
 import unicodedata
@@ -25,6 +28,7 @@ from .file_preview import index_text_path
 
 SCHEMA_VERSION = 3
 DEFAULT_MAX_ENTRIES_PER_JOB = 250_000
+STARTUP_REFRESH_MAX_AGE_SECONDS = 30 * 60
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +202,51 @@ class FolderSearchIndex:
             and not job.local.is_symlink()
         )
 
+    @staticmethod
+    def _refresh_signature(jobs: Iterable[SyncJob], include_content: bool) -> str:
+        values = [
+            (
+                job.id, job.local_path, job.mode.value,
+                tuple(job.exclude_patterns), tuple(job.selective_extensions),
+                job.selective_max_size_mb, job.selective_max_age_days,
+            )
+            for job in jobs
+        ]
+        payload = json.dumps(
+            [bool(include_content), values], ensure_ascii=True,
+            separators=(",", ":"), sort_keys=False,
+        ).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    def startup_refresh_needed(
+        self,
+        jobs: Iterable[SyncJob],
+        *,
+        include_content: bool = False,
+        max_age_seconds: float = STARTUP_REFRESH_MAX_AGE_SECONDS,
+    ) -> bool:
+        """Avoid repeating a full tree walk during closely spaced restarts.
+
+        Successful synchronization refreshes its own job immediately. The
+        bounded 30-minute startup window only reuses an already-complete local
+        index with the exact same job/rule/content-mode signature.
+        """
+        signature = self._refresh_signature(list(jobs), include_content)
+        try:
+            with self._connect() as connection:
+                values = dict(connection.execute(
+                    "SELECT key, value FROM metadata WHERE key IN (?, ?)",
+                    ("last_full_refresh", "last_full_signature"),
+                ).fetchall())
+            completed = float(values.get("last_full_refresh", "0"))
+        except (OSError, TypeError, ValueError, sqlite3.Error):
+            return True
+        return (
+            values.get("last_full_signature") != signature
+            or completed <= 0
+            or time.time() - completed >= max(0.0, max_age_seconds)
+        )
+
     def refresh(
         self,
         jobs: Iterable[SyncJob],
@@ -205,6 +254,7 @@ class FolderSearchIndex:
         stop_event: Event | None = None,
         include_content: bool = False,
     ) -> IndexStats:
+        jobs = list(jobs)
         indexed = removed = skipped = limited = 0
         cancelled = False
         configured_ids: set[str] = set()
@@ -246,6 +296,13 @@ class FolderSearchIndex:
                     ).rowcount
                 else:
                     removed += connection.execute("DELETE FROM entries").rowcount
+                connection.executemany(
+                    "INSERT OR REPLACE INTO metadata(key, value) VALUES(?, ?)",
+                    (
+                        ("last_full_refresh", str(time.time())),
+                        ("last_full_signature", self._refresh_signature(jobs, include_content)),
+                    ),
+                )
         return IndexStats(indexed, removed, skipped, limited, cancelled)
 
     def refresh_job(

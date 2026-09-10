@@ -169,6 +169,22 @@ class PerformanceAndRecoveryTests(unittest.TestCase):
                 monitor.close()
         self.assertIn("saved.txt", paths)
 
+    @unittest.skipUnless(platform.system() == "Linux", "inotify is Linux-specific")
+    def test_inotify_idle_wait_can_be_woken_for_immediate_shutdown(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            monitor = InotifyTreeMonitor(Path(temporary), lambda _path: False)
+            finished = threading.Event()
+            waiter = threading.Thread(
+                target=lambda: (monitor.read(60), finished.set()), daemon=True
+            )
+            waiter.start()
+            try:
+                time.sleep(0.02)
+                monitor.wake()
+                self.assertTrue(finished.wait(1))
+            finally:
+                monitor.close()
+
     def test_monitor_overflow_fails_closed_into_reconciliation(self):
         reconciled = threading.Event()
 
