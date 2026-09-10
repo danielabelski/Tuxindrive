@@ -3876,8 +3876,17 @@ class MainWindow(Gtk.ApplicationWindow):
         self._network_worker_stop = threading.Event()
         self._network_sample_request = threading.Event()
         self.connect("destroy", self._stop_network_usage)
+        self.connect("map", self._refresh_activity_log_on_map)
         self.set_network_meter_enabled(
             self.controller.config.settings.show_network_usage
+        )
+        # Merely making the expander visible is not enough: the live log has
+        # its own refresh lifecycle so hidden logs consume no idle CPU.  Start
+        # that lifecycle explicitly when the persisted setting restores a
+        # visible panel, otherwise the panel stays blank until the setting is
+        # toggled off and on again.
+        self.set_activity_log_enabled(
+            self.controller.config.settings.show_live_activity_log
         )
         self._refresh_now()
 
@@ -3976,6 +3985,10 @@ class MainWindow(Gtk.ApplicationWindow):
     def _hide_activity_log(self, _button: Gtk.Widget) -> None:
         self.set_activity_log_enabled(False)
         self.controller.save()
+
+    def _refresh_activity_log_on_map(self, *_args) -> None:
+        """Populate a restored log panel as soon as the window becomes visible."""
+        self._refresh_activity_log()
 
     def _render_network_usage(self, usage) -> None:
         if not usage.available:

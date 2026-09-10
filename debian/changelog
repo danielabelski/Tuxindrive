@@ -1,3 +1,10 @@
+tuxindrive (0.26.37-1) unstable; urgency=medium
+
+  * Restore live activity log loading and refresh after application startup.
+  * Populate the enabled log panel as soon as the main window becomes visible.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Thu, 10 Sep 2026 09:30:00 +0200
+
 tuxindrive (0.26.36-1) unstable; urgency=medium
 
   * Reduce idle wakeups with interruptible realtime-folder monitoring.

@@ -19,7 +19,7 @@ on loopback with an ephemeral database and fictional clients, while disabling
 the synchronization agent and all production configuration. It does not expose
 the service to the LAN and is not a substitute for a production deployment.
 
-The 0.26.36 cross-folder filename index remains entirely on each desktop
+The 0.26.37 cross-folder filename index remains entirely on each desktop
 client. It is not uploaded to the server preview, and no server endpoint accepts
 filenames or search queries. Server-backed search would require a separate
 privacy and authorization design and is not part of the current preview.
@@ -46,18 +46,18 @@ service manager. All `/v1/` endpoints require a bearer token.
 
 ## Installation
 
-Download `tuxindrive-server_0.26.36_all.deb` from the matching
-[GitHub Release](https://github.com/tpluharik/Tuxindrive/releases/tag/v0.26.36),
+Download `tuxindrive-server_0.26.37_all.deb` from the matching
+[GitHub Release](https://github.com/tpluharik/Tuxindrive/releases/tag/v0.26.37),
 then install that local file. The leading `./` is required so APT treats the
 name as a file instead of searching configured package repositories:
 
 ```bash
 cd ~/Downloads
-sudo apt install ./tuxindrive-server_0.26.36_all.deb
+sudo apt install ./tuxindrive-server_0.26.37_all.deb
 ```
 
 If configuration of the defective 0.26.12 preview was left unfinished,
-installing 0.26.36 replaces its launcher and completes the pending package
+installing 0.26.37 replaces its launcher and completes the pending package
 configuration. If APT asks to repair dependencies afterward, run:
 
 ```bash
@@ -69,9 +69,9 @@ Build and inspect the package:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.36_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.36_all.deb
-sudo apt install ./dist/tuxindrive-server_0.26.36_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.37_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.37_all.deb
+sudo apt install ./dist/tuxindrive-server_0.26.37_all.deb
 ```
 
 The package creates a locked `tuxindrive-server` system account, a root-owned

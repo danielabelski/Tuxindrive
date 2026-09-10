@@ -65,6 +65,26 @@ class ResponsiveWindowTests(unittest.TestCase):
         self.assertIn('Gtk.Button(label=tr("error_details"))', source)
         self.assertLess(source.index('Gtk.Button(label=tr("view_log"))'), source.index('Gtk.Button(label=tr("error_details"))'))
 
+    def test_persisted_live_log_setting_starts_refresh_lifecycle(self) -> None:
+        source = (REPOSITORY / "src/tuxindrive/app.py").read_text(encoding="utf-8")
+        window = source[source.index("class MainWindow"):]
+
+        initialization = window[:window.index("    def _refresh_network_usage")]
+        self.assertIn(
+            "self.set_activity_log_enabled(\n"
+            "            self.controller.config.settings.show_live_activity_log\n"
+            "        )",
+            initialization,
+        )
+        self.assertLess(
+            initialization.index("self._activity_source = 0"),
+            initialization.index("self.set_activity_log_enabled("),
+        )
+        self.assertIn(
+            'self.connect("map", self._refresh_activity_log_on_map)',
+            initialization,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

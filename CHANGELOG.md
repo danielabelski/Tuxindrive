@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.37 — restored live activity log
+
+- Restore the live-log refresh lifecycle when the saved setting makes the
+  panel visible at startup, instead of leaving an empty panel until the option
+  is toggled off and on again.
+- Populate the visible log immediately when the main window is mapped while
+  retaining the energy-saving behavior that stops polling when the panel is
+  disabled.
+
 ## 0.26.36 — energy-aware idle operation
 
 - Realtime folder monitors now block on filesystem events and an interruptible
