@@ -384,6 +384,199 @@ The next recommended development milestone is **1.0.0 — operational hardening*
 - Fail closed when an onion-only, verified-device or no-retention policy cannot be satisfied.
 - Do not synchronize a ZIP-based office document on every keystroke. Collaborative ODF work requires a structured document model, deterministic export and explicit compatibility boundaries.
 
+## Competitive feature diff and implementation roadmap
+
+Last reviewed: **2026-09-12**. This comparison uses public product
+documentation, not inferred behavior or marketing screenshots. A dash means
+that the capability is not documented as a core product feature; it does not
+claim that the result is impossible through scripts or third-party tools.
+TuxInDrive is compared with the five products that overlap most strongly with
+its multi-cloud desktop scope. rclone is both an upstream transfer engine used
+by TuxInDrive and a substitute for users willing to operate a CLI or API.
+
+Legend: **Yes** = documented first-class capability; **Partial** = narrower,
+platform-specific, provider-dependent, or primarily CLI-based; **—** = not a
+documented core capability.
+
+| Capability | TuxInDrive 0.26.38 | rclone | GoodSync | Insync | odrive | ExpanDrive |
+|---|---|---|---|---|---|---|
+| Linux desktop GUI | Yes | Partial (experimental web GUI) | Partial (Linux server/web UI) | Yes | Partial (Linux sync agent/CLI) | Yes |
+| Multi-provider accounts | Yes | Yes (70+ backends) | Yes | Partial (Google Drive, OneDrive, Dropbox) | Yes | Yes |
+| Scheduled two-way synchronization | Yes | Yes (`bisync`) | Yes | Yes | Yes | Partial (offline selections) |
+| Files on demand / mounted drive | Yes (FUSE/VFS) | Yes (mount/VFS) | Partial | Partial | Yes (placeholder files) | Yes |
+| Explicit offline pin / free-space action | Yes | Partial (cache controls) | Partial | Partial | Yes (unsync/auto-unsync) | Yes |
+| Local version and deletion recovery | Yes | Partial (command composition) | Yes | Partial | Yes (backup mode) | Partial |
+| Graphical per-file conflict resolution | Yes | — | Partial (automatic policy/report) | Partial | Partial | Partial |
+| Rules by extension, size and age | Yes | Yes (filter rules) | Yes | Partial (ignore rules) | Partial (extension/name/prefix and thresholds) | Partial |
+| Private cross-folder search and bounded previews | Yes | — | — | Partial (cloud browser) | Partial (web preview) | Partial |
+| Global bandwidth, battery and schedule policy | Yes | Partial (bandwidth/scheduler composition) | Partial (bandwidth/schedule) | Partial | Partial (bandwidth) | — |
+| Headless automation / stable control API | Partial | Yes | Yes | Yes (headless Linux) | Yes (agent/CLI) | Partial |
+| Direct P2P and optional self-hosted roles | Yes (preview roles) | Partial (serve primitives) | Yes (GoodSync Connect) | — | — | — |
+| Open source | Yes (MIT) | Yes | — | — | — | — |
+
+### What the five competitors do better
+
+1. **rclone — backend breadth and automation maturity.** rclone documents more
+   than 70 storage products, restartable transfers, server-side copies,
+   integrity checks, mounts, serving protocols and a remote-control API. Its
+   backend support tiers and integration tests expose maturity more clearly
+   than TuxInDrive currently does. TuxInDrive should continue consuming rclone
+   rather than duplicating its backend implementations, while publishing the
+   narrower set that the GUI, safety model and recovery workflows actually
+   qualify. Sources: [rclone overview](https://rclone.org/) and
+   [Bisync safety and limitations](https://rclone.org/bisync/).
+2. **GoodSync — unattended operation and enterprise depth.** GoodSync combines
+   real-time and scheduled work, a background service, block-level transfer,
+   version history, move detection, rich filters, ACL propagation and broad
+   server/NAS support. TuxInDrive has stronger user-visible safety gates and
+   Linux desktop integration, but lacks equivalent fleet deployment and
+   provider-independent delta evidence. Source:
+   [GoodSync features](https://www.goodsync.com/features).
+3. **Insync — focused desktop polish.** Insync provides a small, coherent
+   three-provider product with selective sync, arbitrary local locations,
+   external/network drives, one-way modes, document conversion, ignore rules
+   and conflict handling across Linux, Windows and macOS. TuxInDrive is much
+   broader, but its onboarding and cloud-native document behavior must remain
+   equally understandable. Sources: [Insync overview](https://www.insynchq.com/)
+   and [syncing features](https://www.insynchq.com/syncing-superpowers).
+4. **odrive — progressive placeholder lifecycle.** odrive documents universal
+   sync, zero-byte placeholder files, automatic download thresholds,
+   unsync/auto-unsync, extension/name rules, separate upload/download limits,
+   backup and lightweight agents. TuxInDrive offers safer recovery and a richer
+   Linux GUI, while odrive presents disk reclamation and huge remote trees more
+   directly. Sources: [odrive sync](https://docs.odrive.com/Features/sync/) and
+   [subscription feature matrix](https://docs.odrive.com/usage-guide/subscription-features/).
+5. **ExpanDrive — mount-first usability and distribution.** ExpanDrive treats
+   Linux as a first-class platform, ships signed DEB/RPM repositories, reconnects
+   mounts after sleep, streams content on demand and exposes offline pinning in
+   the file manager. TuxInDrive has substantially more synchronization and
+   recovery functionality, but should match this predictability for its
+   streaming-only workflow. Sources: [ExpanDrive for Linux](https://www.expandrive.com/linux)
+   and [offline sync](https://docs.expandrive.com/offline-sync-mode).
+
+### Defensible TuxInDrive advantages
+
+- One Linux-first interface combines ordinary sync, streaming, searchable
+  local content, bounded previews, version recovery, graphical conflicts,
+  integrity repair and mass-change protection.
+- The global bandwidth controller, metered-network, battery and schedule rules
+  govern sync, mounts, verification, updates and other application traffic as
+  one budget rather than independent per-process limits.
+- Direct encrypted peer workspaces, directional device roles, Tor transport and
+  optional separately enabled server roles extend beyond a cloud-drive client.
+- The MIT implementation, explicit provider capability matrix, signed updater,
+  local credential boundaries and Network Lab make safety behavior inspectable.
+
+These are architectural advantages, not proof of greater maturity. The public
+project still needs longer production history, larger independent test coverage
+and marketplace reach before claiming better reliability than established
+commercial products.
+
+### Prioritized implementation roadmap derived from the gaps
+
+#### P0 — qualify reliability and publish evidence (1.0 release gate)
+
+- Publish a provider-by-provider capability and test dashboard generated from
+  the same declarations used by the GUI. Distinguish simulated, credentialed
+  integration and sustained production-like tests.
+- Run restart, sleep/resume, network-loss, token-expiry, rename/delete storm,
+  million-entry tree and low-disk fault campaigns for sync and streaming. Keep
+  downloadable redacted results, resource ceilings and regression thresholds.
+- Add a user-controlled diagnostic bundle containing version, capability state,
+  bounded redacted errors, queue depth and timing summaries, but never paths,
+  credentials or file content unless separately previewed and approved.
+- Treat zero silent data loss, bounded retry queues, deterministic recovery and
+  successful signed upgrade/rollback drills as 1.0 blockers.
+
+Acceptance gate: every generally available provider passes the common safety
+corpus; every documented failure has a visible reason and recovery action; a
+30-day unattended run completes without unbounded memory, descriptor, queue,
+cache or log growth.
+
+#### P0 — make files-on-demand lifecycle predictable
+
+- Add access-age and free-space-driven cache recommendations, with preview,
+  explicit confirmation and pin protection before eviction. Never evict dirty,
+  open, pending, recovery or explicitly offline content.
+- Restore mounts after login, sleep and connectivity changes through one bounded
+  state machine with visible phases, retry deadline and a manual fallback.
+- Expose identical **Keep offline**, **Free local space**, hydration progress and
+  error semantics through the GTK application and supported file managers.
+- Add large-tree lazy enumeration and cache-index benchmarks so opening the root
+  does not trigger full content downloads or unbounded provider calls.
+
+Acceptance gate: interruption at every hydration/eviction phase preserves the
+authoritative copy and pin state; sleep/resume and offline edits converge in the
+cross-platform fault matrix.
+
+#### P1 — stable headless control and fleet operation
+
+- Extract the existing GUI actions behind the versioned local control API and
+  JSON CLI already described below. Preserve confirmations for repair, restore,
+  sharing and other consequential actions.
+- Add policy deployment, health export, proxy configuration, token-expiry
+  reporting and service-mode packages without exposing arbitrary paths, shell
+  execution or provider credentials.
+- Publish one rootless OCI reference only after the Linux service passes the
+  same migration, backup, upgrade and 30-day endurance gates as the desktop.
+
+Acceptance gate: the GUI and CLI pass the same contract tests; one prior API
+major remains migratable; remote administration stays disabled by default and
+passes authorization and confused-deputy testing.
+
+#### P1 — live provider capabilities and efficient large-file paths
+
+- Probe only safe, bounded provider capabilities such as hashes, server-side
+  moves/copies, change feeds, versions and share-link support, cache the result,
+  and fail back to conservative static declarations.
+- Prefer provider change journals and server-side moves/copies where semantics
+  are verified, reducing full listings and re-uploads without weakening the
+  authoritative reconciliation path.
+- Prototype block/range delta transfer only for providers and file types with a
+  verifiable atomic protocol. Retain complete-file fallback and final digest
+  verification; do not generalize the existing peer delta merely to match a
+  competitor checkbox.
+
+Acceptance gate: capability loss or inconsistent provider responses select the
+safe full-operation path; byte savings and reconciliation equivalence are
+demonstrated on a published corpus.
+
+#### P1 — simplify selective sync and cloud-native documents
+
+- Add named rule presets with an explanation of which existing and future files
+  match, plus a dry-run count/size preview before a rule is saved.
+- Offer optional, provider-specific cloud-document export/import only when
+  round-trip behavior and filename mapping are documented. Preserve the native
+  cloud object by default and never present export as coauthoring.
+- Keep onboarding focused: provider, local folder, mode, protection profile and
+  first safety preview should be sufficient; advanced filters and capability
+  exceptions remain available without blocking the basic path.
+
+Acceptance gate: rule evaluation is identical across scheduled, incremental,
+repair and Android paths; cloud-document tests cover collisions, offline edits,
+format changes and rollback without destroying the native source object.
+
+#### P2 — complete desktop and marketplace reach
+
+- Bring status, pinning, free-space and safe actions to Dolphin and Thunar; add
+  native Windows/macOS placeholder adapters only where OS contracts preserve the
+  same recovery guarantees as the FUSE implementation.
+- Finish signed, reproducible PPA/Snap/Flatpak/AUR/Chocolatey/WinGet/Homebrew
+  delivery with automated install, upgrade and rollback smoke tests.
+- Add iOS only after the portable core and background-operation model can state
+  honest platform limitations; do not promise desktop-style continuous sync.
+
+Acceptance gate: packaging claims correspond to artifacts users can install
+from the named channel, and every platform publishes its explicit parity gaps.
+
+### Roadmap decision rule
+
+Work should proceed in the order above. P1/P2 work may be developed behind an
+experimental flag, but it must not displace a failing P0 gate or be advertised
+as generally available. A competitive feature is accepted only when it fits
+TuxInDrive's endpoint-controlled trust model, has a non-destructive failure
+path, includes upgrade/restart coverage and states its provider/platform limits.
+
 ## Top 40 feature status and proposals
 
 | Rank | Proposed feature | Focus | Priority | Why it matters / suggested approach |
