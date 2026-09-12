@@ -1000,7 +1000,12 @@ class SyncEngineCommandTests(unittest.TestCase):
             elapsed = time.monotonic() - started_at
             self.assertTrue(entered.wait(1))
             self.assertLess(elapsed, 0.25)
+            self.assertEqual(self.engine.mount_lifecycle(job.id).phase, "preflight")
             release.set()
+            deadline = time.monotonic() + 1
+            while self.engine.mount_lifecycle(job.id).phase != "failed" and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertEqual(self.engine.mount_lifecycle(job.id).phase, "failed")
 
     def test_worker_replaces_incompatible_rclone_before_launch(self):
         job = SyncJob(account_remote="google", local_path="/data/Drive")

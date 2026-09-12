@@ -1,7 +1,11 @@
 import unittest
+import os
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from tuxindrive.models import SyncJob
+from tuxindrive.selective_rules import preset_by_key, preview_local_rules
 
 
 class SelectiveRuleTests(unittest.TestCase):
@@ -26,6 +30,31 @@ class SelectiveRuleTests(unittest.TestCase):
     def test_empty_rules_do_not_change_existing_jobs(self):
         job = SyncJob(account_remote="cloud", local_path="/tmp/files")
         self.assertEqual(job.selective_args(), [])
+
+    def test_named_presets_and_local_preview_use_metadata_only(self):
+        self.assertIn("pdf", preset_by_key("documents").extensions)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "report.pdf").write_bytes(b"report")
+            (root / "archive.zip").write_bytes(b"archive")
+            try:
+                (root / "link.pdf").symlink_to(root / "report.pdf")
+            except OSError:
+                pass
+            job = SyncJob("cloud", temporary, selective_extensions=["pdf"])
+            result = preview_local_rules(job)
+        self.assertEqual(result.examined_files, 2)
+        self.assertEqual(result.selected_files, 1)
+        self.assertEqual(result.rejected_files, 1)
+        self.assertEqual(result.selected_bytes, 6)
+
+    def test_preview_is_bounded_and_reports_truncation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            for index in range(3):
+                Path(temporary, f"{index}.txt").write_text("x", encoding="utf-8")
+            result = preview_local_rules(SyncJob("cloud", temporary), max_files=2)
+        self.assertTrue(result.truncated)
+        self.assertEqual(result.examined_files, 2)
 
 
 if __name__ == "__main__":

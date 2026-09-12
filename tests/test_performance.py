@@ -40,6 +40,24 @@ class PerformanceAndRecoveryTests(unittest.TestCase):
             {"ready.txt": FileState(5, "1787824800000000000")},
         )
 
+    def test_cache_recommendation_does_not_delete_candidates(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_CACHE_HOME": temporary},
+        ):
+            job = SyncJob("cloud", "/mnt/cloud", mode=SyncMode.VIRTUAL_DRIVE, id="plan")
+            data = Path(temporary) / "tuxindrive" / "vfs" / job.id / "vfs"
+            data.mkdir(parents=True)
+            candidate = data / "old.bin"
+            candidate.write_bytes(b"0123456789")
+            os.utime(candidate, (1, 1))
+            result = StreamingCacheManager().recommend(
+                job, max_bytes=1, min_free_bytes=0, mounted=False, now=10_000,
+            )
+            self.assertTrue(candidate.exists())
+            self.assertEqual(result.released_files, 0)
+            self.assertEqual(result.planned_files, 1)
+            self.assertEqual(result.planned_bytes, 10)
+
     def test_restart_baseline_detects_local_changes_made_while_closed(self):
         class IdleEvents:
             def __init__(self, *_args):

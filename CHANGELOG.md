@@ -2,6 +2,18 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.39 — reliability controls and safe previews
+
+- Add selective-sync presets and a bounded metadata-only dry run showing the
+  number and size of matching local files before rules are saved.
+- Add a private diagnostic ZIP with bounded logs, credential redaction, path
+  omission by default, hashed job identifiers and no file content.
+- Add non-destructive cache recommendations and visible bounded mount phases.
+- Add cached runtime provider probes which fail back to conservative
+  declarations and never enable an undeclared feature.
+- Add the GTK-free `tuxindrive-control` JSON interface and expand weekly local
+  reliability evidence; credentialed provider/endurance gates remain required.
+
 ## 0.26.38 — resilient realtime directory changes
 
 - Treat directory moves, removals and ambiguous watcher topology as a request

@@ -1,7 +1,7 @@
 # TuxInDrive operations guide
 
 This guide covers normal administration, health checks, traffic policy,
-backup, recovery, and incident response for TuxInDrive 0.26.38. User-facing
+backup, recovery, and incident response for TuxInDrive 0.26.39. User-facing
 procedures are in the [user guide](USER_GUIDE.md); persisted fields and exact
 paths are in [Configuration](CONFIGURATION.md).
 
@@ -39,7 +39,7 @@ limits remain useful for lower-priority folders but cannot override the global
 ceiling upward.
 
 Keep **Automatically reserve bandwidth for other applications** enabled. Its
-default 20% reserve prevents TuxInDrive from deliberately filling the configured
+default 50% reserve prevents TuxInDrive from deliberately filling the configured
 ceiling, while the remaining budget is divided across all enabled streaming
 drives, the ordinary transfer lane, and the responsive update lane. This fixes the process-local
 multiplier that could previously let each mount consume the full limit. Raise
@@ -72,6 +72,14 @@ Legacy `tuxdrive` directories remain authoritative if they predate the branded
 directory. Individual job logs are linked from **View log**. Logs are designed
 to redact credentials, but review them for filenames, account names, hostnames,
 and local paths before sharing.
+
+The health dashboard's **Create diagnostic bundle** action is the preferred
+support export. It creates a mode-0600 ZIP with bounded log tails, redacted
+secrets, hashed job identifiers and path omission by default; it never includes
+credentials or synchronized file content. Local headless checks are available
+through `tuxindrive-control status`, `capabilities --probe`, `rules-preview`,
+`cache-plan`, and `diagnostic-bundle`. These commands are read-only; repair,
+deletion, sharing and restore retain their graphical confirmation flows.
 
 ## Local search-index maintenance
 

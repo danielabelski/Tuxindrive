@@ -24,6 +24,7 @@ from .diagnostics import (
     application_log_path,
     configure_logging,
     crash_log_path,
+    create_diagnostic_bundle,
     install_crash_handlers,
     log_boot_failure,
     log_directory,
@@ -99,6 +100,8 @@ from .error_details import details_for_job
 from .recovery_advisor import advice_for_error
 from .managed_policy import ManagedPolicy, load_managed_policy
 from .scheduling import persisted_run_time
+from .provider_probe import ProviderCapabilityProbe
+from .selective_rules import PRESETS, preset_by_key, preview_local_rules
 
 try:  # Ubuntu's AppIndicator extension provides Windows-like tray controls.
     gi.require_version("AyatanaAppIndicator3", "0.1")
@@ -991,6 +994,24 @@ class SyncJobDialog(ResponsiveDialog):
         self.selective_max_age = Gtk.SpinButton.new_with_range(0, 36500, 1)
         self.selective_max_age.set_value(existing.selective_max_age_days if existing else 0)
         self.selective_max_age.set_tooltip_text("0 means files are not filtered by age")
+        preset_row = Gtk.Box(spacing=8)
+        self.selective_preset = Gtk.ComboBoxText()
+        for preset in PRESETS:
+            self.selective_preset.append(preset.key, preset.label)
+        self.selective_preset.set_active_id("all")
+        apply_preset = Gtk.Button(label="Apply preset")
+        apply_preset.connect("clicked", self._apply_selective_preset)
+        preset_row.pack_start(self.selective_preset, True, True, 0)
+        preset_row.pack_start(apply_preset, False, False, 0)
+        preview_row = Gtk.Box(spacing=8)
+        preview = Gtk.Button(label="Preview rules")
+        preview.connect("clicked", self._preview_selective_rules)
+        self.selective_preview = Gtk.Label(
+            label="Scans local metadata only; no files are opened or transferred.", xalign=0
+        )
+        self.selective_preview.set_line_wrap(True)
+        preview_row.pack_start(preview, False, False, 0)
+        preview_row.pack_start(self.selective_preview, True, True, 0)
         rows = [
             ("Name", self.name),
             ("Cloud account", self.account),
@@ -1012,9 +1033,11 @@ class SyncJobDialog(ResponsiveDialog):
             ("Bandwidth limit", self.bandwidth),
             ("Google security warning", self.acknowledge_abuse),
             ("Synchronization exceptions", self.excludes),
+            ("Selective sync preset", preset_row),
             ("Only these extensions", self.selective_extensions),
             ("Maximum file size (MiB; 0 = unlimited)", self.selective_max_size),
             ("Maximum file age (days; 0 = any age)", self.selective_max_age),
+            ("Rule dry run", preview_row),
         ]
         for row, (label, widget) in enumerate(rows):
             grid.attach(Gtk.Label(label=label, xalign=0), 0, row, 1, 1)
@@ -1022,6 +1045,49 @@ class SyncJobDialog(ResponsiveDialog):
         self.add_button("Cancel", Gtk.ResponseType.CANCEL)
         self.add_button("Save" if existing else "Add folder", Gtk.ResponseType.OK)
         self.show_all()
+
+    def _apply_selective_preset(self, _button: Gtk.Button) -> None:
+        preset = preset_by_key(self.selective_preset.get_active_id() or "all")
+        self.selective_extensions.set_text(", ".join(preset.extensions))
+        self.selective_max_size.set_value(preset.max_size_mb)
+        self.selective_max_age.set_value(preset.max_age_days)
+        self.selective_preview.set_text(
+            f"Applied “{preset.label}”. Preview it before saving to see the local impact."
+        )
+
+    def _preview_selective_rules(self, button: Gtk.Button) -> None:
+        local = self.local.get_filename()
+        if not local:
+            self.selective_preview.set_text("Choose a local folder first.")
+            return
+        candidate = SyncJob(
+            account_remote=self.account.get_active_id() or "preview",
+            local_path=local,
+            exclude_patterns=self.excludes.rules(),
+            selective_extensions=[
+                value.strip().lower().lstrip("*.")
+                for value in self.selective_extensions.get_text().split(",")
+                if value.strip()
+            ],
+            selective_max_size_mb=self.selective_max_size.get_value_as_int(),
+            selective_max_age_days=self.selective_max_age.get_value_as_int(),
+        )
+        button.set_sensitive(False)
+        self.selective_preview.set_text("Scanning local metadata…")
+
+        def ready(result, error) -> None:
+            button.set_sensitive(True)
+            if error:
+                self.selective_preview.set_text(f"Preview failed: {error}")
+                return
+            suffix = " (bounded preview)" if result.truncated else ""
+            self.selective_preview.set_text(
+                f"Would select {result.selected_files} of {result.examined_files} files "
+                f"({format_bytes(result.selected_bytes)}); {result.rejected_files} excluded, "
+                f"{result.skipped_uncertain} uncertain{suffix}."
+            )
+
+        _run_thread(preview_local_rules, ready, candidate)
 
     def job(self) -> SyncJob:
         return self.jobs()[0]
@@ -3016,11 +3082,12 @@ class OperationsDashboard(ResponsiveDialog):
     def __init__(self, parent: Gtk.Window, controller: "TuxInDriveApplication") -> None:
         super().__init__(title="TuxInDrive sync health and audit", transient_for=parent, modal=False)
         self.set_default_size(920, 620)
+        self.controller = controller
         _set_window_brand_icon(self)
         notebook = Gtk.Notebook()
         notebook.append_page(self._health(controller), Gtk.Label(label="Sync health"))
         notebook.append_page(self._audit(controller), Gtk.Label(label="Audit timeline"))
-        notebook.append_page(self._capabilities(), Gtk.Label(label="Provider capabilities"))
+        notebook.append_page(self._capabilities(controller), Gtk.Label(label="Provider capabilities"))
         policy = Gtk.Label(label=controller.managed_policy.summary, xalign=0, yalign=0)
         policy.set_line_wrap(True)
         policy.set_selectable(True)
@@ -3032,13 +3099,43 @@ class OperationsDashboard(ResponsiveDialog):
         self.get_content_area().pack_start(notebook, True, True, 0)
         if controller.managed_policy.allow_audit_export:
             self.add_button("Export audit…", 2)
+        self.add_button("Create diagnostic bundle…", 3)
         self.add_button("Close", Gtk.ResponseType.CLOSE)
         self.connect("response", self._response)
         self.show_all()
 
     def _response(self, dialog: Gtk.Dialog, response: int) -> None:
-        if response != 2:
+        if response not in {2, 3}:
             dialog.destroy()
+            return
+        if response == 3:
+            chooser = Gtk.FileChooserDialog(
+                title="Create private diagnostic bundle", transient_for=self,
+                action=Gtk.FileChooserAction.SAVE,
+            )
+            chooser.add_button("Cancel", Gtk.ResponseType.CANCEL)
+            chooser.add_button("Create", Gtk.ResponseType.OK)
+            chooser.set_current_name("tuxindrive-diagnostics.zip")
+            chooser.set_do_overwrite_confirmation(True)
+            if chooser.run() == Gtk.ResponseType.OK:
+                path = Path(chooser.get_filename())
+                runtime = {
+                    "running_jobs": len(self.controller.engine.running_jobs),
+                    "mounted_jobs": len(self.controller.engine.mounted_jobs),
+                    "callback_jobs": len(self.controller.engine.callback_jobs),
+                }
+                try:
+                    target = create_diagnostic_bundle(
+                        self.controller.config, path, runtime=runtime
+                    )
+                    self.controller.message(
+                        f"Created redacted private diagnostic bundle at {target}."
+                    )
+                except (OSError, ValueError) as exc:
+                    self.controller.message(
+                        f"Diagnostic bundle failed: {exc}", Gtk.MessageType.ERROR
+                    )
+            chooser.destroy()
             return
         chooser = Gtk.FileChooserDialog(
             title="Export private audit timeline", transient_for=self,
@@ -3080,8 +3177,12 @@ class OperationsDashboard(ResponsiveDialog):
         running, mounted, callbacks = controller.engine.running_jobs, controller.engine.mounted_jobs, controller.engine.callback_jobs
         for job in controller.config.jobs:
             state = "Synchronizing" if job.id in running else "Streaming" if job.id in mounted else "Error" if job.last_error else "Paused" if not job.enabled else "Healthy" if job.initialized else "Pending"
+            lifecycle = controller.engine.mount_lifecycle(job.id)
+            if job.mode is SyncMode.VIRTUAL_DRIVE and lifecycle and job.id not in mounted:
+                state = lifecycle.phase.replace("_", " ").title()
             callback = "Active" if job.id in callbacks else "Inactive"
-            rows.append((job.name, state, job.mode.label, job.peer_role.label if job.peer_delta else "Cloud", callback, job.last_run or "Never", job.last_error or job.last_status))
+            detail = lifecycle.detail if lifecycle and job.mode is SyncMode.VIRTUAL_DRIVE else (job.last_error or job.last_status)
+            rows.append((job.name, state, job.mode.label, job.peer_role.label if job.peer_delta else "Cloud", callback, job.last_run or "Never", detail))
         return self._tree(("Folder", "State", "Mode", "Access", "Callbacks", "Last run", "Detail"), rows)
 
     def _audit(self, controller: "TuxInDriveApplication") -> Gtk.Widget:
@@ -3091,11 +3192,65 @@ class OperationsDashboard(ResponsiveDialog):
         ]
         return self._tree(("Time", "Category", "Action", "Result", "Peer", "Path", "Detail"), rows)
 
-    def _capabilities(self) -> Gtk.Widget:
-        rows = []
+    def _capabilities(self, controller: "TuxInDriveApplication") -> Gtk.Widget:
+        rows: list[tuple[str, ...]] = []
         for provider, value in CAPABILITIES.items():
-            rows.append((provider.label, "Yes" if value.streaming else "No", "Yes" if value.polling else "No", "Yes" if value.hashes else "No", "Yes" if value.server_move else "No", "Yes" if value.share_links else "No", "Yes" if value.versions else "No", value.notes))
-        return self._tree(("Provider", "Streaming", "Polling", "Hashes", "Moves", "Share links", "Versions", "Notes"), rows)
+            rows.append((provider.label, "Declared", "Yes" if value.streaming else "No", "Polling" if value.polling else "No", "Yes" if value.hashes else "No", "Yes" if value.server_move else "No", "Yes" if value.share_links else "No", "Yes" if value.versions else "No", value.notes))
+        columns = ("Provider", "Source", "Streaming", "Changes", "Hashes", "Moves", "Share links", "Versions", "Notes")
+        store = Gtk.ListStore(*([str] * len(columns)))
+        for row in rows:
+            store.append(list(row))
+        view = Gtk.TreeView(model=store)
+        for index, title in enumerate(columns):
+            renderer = Gtk.CellRendererText()
+            renderer.set_property("ellipsize", 3)
+            view.append_column(Gtk.TreeViewColumn(title, renderer, text=index))
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scroll.add(view)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        probe = Gtk.Button(label="Probe connected accounts")
+        status = Gtk.Label(
+            label="Declared capabilities are safe defaults. Runtime probing never enables an undeclared feature.",
+            xalign=0,
+        )
+        status.set_line_wrap(True)
+        box.pack_start(probe, False, False, 0)
+        box.pack_start(status, False, False, 0)
+        box.pack_start(scroll, True, True, 0)
+
+        def clicked(button: Gtk.Button) -> None:
+            button.set_sensitive(False)
+            status.set_text("Running bounded provider probes…")
+
+            def run():
+                return [(account, controller.capability_probe.probe(account)) for account in controller.config.accounts]
+
+            def ready(result, error) -> None:
+                button.set_sensitive(True)
+                if error:
+                    status.set_text(f"Capability probe failed safely: {error}")
+                    return
+                store.clear()
+                for account, live in result:
+                    static = capabilities_for(account.provider)
+                    store.append([
+                        account.display_name,
+                        "Verified" if live.verified else "Safe fallback",
+                        "Yes" if static.streaming else "No",
+                        "Yes" if live.change_notify else "No",
+                        "Yes" if live.hashes else "No",
+                        "Yes" if live.server_move else "No",
+                        "Yes" if static.share_links else "No",
+                        "Yes" if static.versions else "No",
+                        live.detail,
+                    ])
+                status.set_text(f"Checked {len(result)} connected account(s). Results are cached for 15 minutes.")
+
+            _run_thread(run, ready)
+
+        probe.connect("clicked", clicked)
+        return box
 
 
 class HelpCenterDialog(ResponsiveDialog):
@@ -4961,6 +5116,96 @@ class MainWindow(Gtk.ApplicationWindow):
         cache_row.attach(cache_max, 1, 0, 1, 1)
         cache_row.attach(Gtk.Label(label="Keep disk space free (GiB)", xalign=0), 0, 1, 1, 1)
         cache_row.attach(cache_free, 1, 1, 1, 1)
+        cache_preview = Gtk.Button(label="Preview safe cache cleanup")
+        cache_preview_status = Gtk.Label(
+            label="No files are removed until you review and confirm.", xalign=0
+        )
+        cache_preview_status.set_line_wrap(True)
+        cache_row.attach(cache_preview, 0, 2, 2, 1)
+        cache_row.attach(cache_preview_status, 0, 3, 2, 1)
+
+        def preview_cache(_button: Gtk.Button) -> None:
+            cache_preview.set_sensitive(False)
+            cache_preview_status.set_text("Examining cache metadata…")
+            gib = 1024 ** 3
+            maximum_bytes = cache_max.get_value_as_int() * gib
+            free_bytes = cache_free.get_value_as_int() * gib
+            jobs = [
+                job for job in self.controller.config.jobs
+                if job.mode is SyncMode.VIRTUAL_DRIVE
+            ]
+            mounted = self.controller.engine.mounted_jobs
+
+            def plan():
+                return [
+                    self.controller.engine.cache_manager.recommend(
+                        job,
+                        max_bytes=maximum_bytes,
+                        min_free_bytes=free_bytes,
+                        mounted=job.id in mounted,
+                    )
+                    for job in jobs
+                ]
+
+            def ready(results, error) -> None:
+                cache_preview.set_sensitive(True)
+                if error:
+                    cache_preview_status.set_text(f"Cache preview failed safely: {error}")
+                    return
+                planned_bytes = sum(item.planned_bytes for item in results)
+                planned_files = sum(item.planned_files for item in results)
+                uncertain = sum(item.skipped_uncertain for item in results)
+                cache_preview_status.set_text(
+                    f"Plan: {planned_files} inactive unpinned file(s), "
+                    f"{format_bytes(planned_bytes)}; {uncertain} uncertain item(s) protected."
+                )
+                if not planned_files:
+                    return
+                confirm = Gtk.MessageDialog(
+                    transient_for=dialog, modal=True, message_type=Gtk.MessageType.WARNING,
+                    buttons=Gtk.ButtonsType.NONE, text="Free the reviewed cache space now?",
+                )
+                confirm.format_secondary_text(
+                    f"TuxInDrive plans to remove {planned_files} inactive unpinned cache "
+                    f"file(s) ({format_bytes(planned_bytes)}). Dirty, recent, pinned and "
+                    "uncertain content remains protected. Cloud data is not deleted."
+                )
+                confirm.add_button("Cancel", Gtk.ResponseType.CANCEL)
+                confirm.add_button("Free local cache", Gtk.ResponseType.OK)
+                approved = confirm.run() == Gtk.ResponseType.OK
+                confirm.destroy()
+                if not approved:
+                    return
+                cache_preview.set_sensitive(False)
+                cache_preview_status.set_text("Applying the reviewed cache plan…")
+
+                def apply_plan():
+                    return [
+                        self.controller.engine.cache_manager.enforce(
+                            job,
+                            max_bytes=maximum_bytes,
+                            min_free_bytes=free_bytes,
+                            mounted=job.id in mounted,
+                        )
+                        for job in jobs
+                    ]
+
+                def applied(applied_results, apply_error) -> None:
+                    cache_preview.set_sensitive(True)
+                    if apply_error:
+                        cache_preview_status.set_text(f"Cache cleanup stopped safely: {apply_error}")
+                        return
+                    released = sum(item.released_bytes for item in applied_results)
+                    files = sum(item.released_files for item in applied_results)
+                    cache_preview_status.set_text(
+                        f"Released {format_bytes(released)} from {files} cache file(s)."
+                    )
+
+                _run_thread(apply_plan, applied)
+
+            _run_thread(plan, ready)
+
+        cache_preview.connect("clicked", preview_cache)
         schedule_start = Gtk.Entry()
         schedule_start.set_placeholder_text("Allowed from HH:MM (blank = anytime)")
         schedule_start.set_text(self.controller.config.settings.schedule_start)
@@ -5425,6 +5670,7 @@ class TuxInDriveApplication(Gtk.Application):
         self.updater = UpdateManager(__version__, bandwidth=self.bandwidth)
         set_language(self.config.settings.language)
         self.rclone = RcloneClient(self.config.settings.rclone_path)
+        self.capability_probe = ProviderCapabilityProbe(self.config.settings.rclone_path)
         self.proton = ProtonDriveClient(self.config.settings.proton_drive_path)
         self.cloud_browser = CloudBrowserClient(
             self.rclone, self.proton, lambda: self.config.accounts

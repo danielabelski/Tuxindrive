@@ -57,6 +57,13 @@ class JobResult:
     payload_bytes: int = 0
 
 
+@dataclass(frozen=True, slots=True)
+class MountLifecycle:
+    phase: str
+    detail: str
+    updated_at: str
+
+
 class SyncEngine:
     _MAX_ACTIVE_TRANSFERS = 2
     _ORPHANED_BISYNC_LOCK_GRACE_SECONDS = 120.0
@@ -84,6 +91,7 @@ class SyncEngine:
         )
         self._mounts: dict[str, subprocess.Popen[str]] = {}
         self._mount_paths: dict[str, Path] = {}
+        self._mount_states: dict[str, MountLifecycle] = {}
         self._monitors: dict[str, ChangeMonitor] = {}
         self._intentional_unmounts: set[str] = set()
         self._protected_patterns: dict[str, tuple[str, ...]] = {}
@@ -153,6 +161,16 @@ class SyncEngine:
             return {
                 job_id for job_id, process in self._mounts.items() if process.poll() is None
             }
+
+    def mount_lifecycle(self, job_id: str) -> MountLifecycle | None:
+        with self._lock:
+            return self._mount_states.get(job_id)
+
+    def _set_mount_lifecycle(self, job_id: str, phase: str, detail: str) -> None:
+        with self._lock:
+            self._mount_states[job_id] = MountLifecycle(
+                phase, detail, datetime.now(timezone.utc).isoformat()
+            )
 
     @property
     def callback_jobs(self) -> set[str]:
@@ -1134,6 +1152,10 @@ class SyncEngine:
                 if job.id in self._active_jobs or (existing and existing.poll() is None):
                     return False
                 self._active_jobs.add(job.id)
+                self._mount_states[job.id] = MountLifecycle(
+                    "queued", "Waiting for bounded mount startup",
+                    datetime.now(timezone.utc).isoformat(),
+                )
             threading.Thread(
                 target=self._start_mount_worker,
                 args=(job, callback),
@@ -1167,7 +1189,13 @@ class SyncEngine:
     ) -> None:
         process: subprocess.Popen[str] | None = None
         try:
+            self._set_mount_lifecycle(job.id, "preflight", "Checking mount point and FUSE support")
             result = self.start_mount(job)
+            self._set_mount_lifecycle(
+                job.id,
+                "connected" if result.success else "failed",
+                result.message,
+            )
             callback(result)
             if result.success:
                 with self._lock:
@@ -1398,6 +1426,7 @@ class SyncEngine:
             return False
 
     def stop_mount(self, job: SyncJob) -> bool:
+        self._set_mount_lifecycle(job.id, "stopping", "Disconnecting files-on-demand drive")
         stopped_process = False
         with self._lock:
             process = self._mounts.pop(job.id, None)
@@ -1412,7 +1441,12 @@ class SyncEngine:
             except (ProcessLookupError, subprocess.TimeoutExpired):
                 process.kill()
                 stopped_process = True
-        return self._unmount_path(job.local) or stopped_process
+        stopped = self._unmount_path(job.local) or stopped_process
+        self._set_mount_lifecycle(
+            job.id, "stopped" if stopped else "failed",
+            "Files-on-demand drive disconnected" if stopped else "Could not confirm mount disconnection",
+        )
+        return stopped
 
     def recover_stale_mounts(self, jobs: list[SyncJob]) -> list[str]:
         """Lazily detach configured streaming mounts not owned by this process."""
@@ -1436,6 +1470,9 @@ class SyncEngine:
                     mounted = exc.errno == errno.ENOTCONN
             if mounted and self._unmount_path(job.local):
                 recovered.append(job.id)
+                self._set_mount_lifecycle(
+                    job.id, "recovered", "Detached stale mount left by an earlier process"
+                )
         return recovered
 
     def _watch_mount(
@@ -1457,6 +1494,10 @@ class SyncEngine:
             # abrupt exit. Detach it immediately so parent folders remain
             # browsable in Nautilus while the controller schedules a retry.
             self._unmount_path(job.local)
+            self._set_mount_lifecycle(
+                job.id, "disconnected",
+                f"Mount process exited unexpectedly with status {return_code}",
+            )
             callback(
                 JobResult(
                     job.id,
@@ -1467,6 +1508,8 @@ class SyncEngine:
                     mount_lost=True,
                 )
             )
+        else:
+            self._set_mount_lifecycle(job.id, "stopped", "Files-on-demand drive disconnected")
 
     def shutdown(self) -> None:
         with self._lock:

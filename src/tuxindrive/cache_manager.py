@@ -19,6 +19,8 @@ class CacheCleanupResult:
     released_files: int = 0
     skipped_pinned: int = 0
     skipped_uncertain: int = 0
+    planned_bytes: int = 0
+    planned_files: int = 0
 
 
 class StreamingCacheManager:
@@ -75,6 +77,7 @@ class StreamingCacheManager:
         min_free_bytes: int,
         mounted: bool,
         now: float | None = None,
+        apply: bool = True,
     ) -> CacheCleanupResult:
         root = self._root(job)
         data = root / "vfs"
@@ -121,9 +124,9 @@ class StreamingCacheManager:
         except OSError:
             return CacheCleanupResult(job.id, total, skipped_pinned=skipped_pinned, skipped_uncertain=skipped_uncertain + 1)
         need = max(0, total - max_bytes, min_free_bytes - free)
-        released = files_released = 0
+        released = files_released = planned = files_planned = 0
         for _last_use, size, path in sorted(candidates):
-            if released >= need:
+            if (released if apply else planned) >= need:
                 break
             try:
                 # Recheck the object immediately before deletion. A recent
@@ -136,17 +139,38 @@ class StreamingCacheManager:
                 if mounted and current - max(stat.st_atime, stat.st_mtime) < self.inactivity_seconds:
                     skipped_uncertain += 1
                     continue
+                planned += size
+                files_planned += 1
+                if not apply:
+                    continue
                 path.unlink()
                 released += size
                 files_released += 1
             except OSError:
                 skipped_uncertain += 1
         # Empty directories contain no user data and are best-effort cleanup.
-        for directory in sorted((item for item in data.rglob("*") if item.is_dir()), reverse=True):
-            try:
-                directory.rmdir()
-            except OSError:
-                pass
+        if apply:
+            for directory in sorted((item for item in data.rglob("*") if item.is_dir()), reverse=True):
+                try:
+                    directory.rmdir()
+                except OSError:
+                    pass
         return CacheCleanupResult(
-            job.id, total, released, files_released, skipped_pinned, skipped_uncertain
+            job.id, total, released, files_released, skipped_pinned,
+            skipped_uncertain, planned, files_planned,
+        )
+
+    def recommend(
+        self,
+        job: SyncJob,
+        *,
+        max_bytes: int,
+        min_free_bytes: int,
+        mounted: bool,
+        now: float | None = None,
+    ) -> CacheCleanupResult:
+        """Return the conservative eviction plan without changing the cache."""
+        return self.enforce(
+            job, max_bytes=max_bytes, min_free_bytes=min_free_bytes,
+            mounted=mounted, now=now, apply=False,
         )

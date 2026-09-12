@@ -26,6 +26,8 @@ class PackagingTests(unittest.TestCase):
 
     def test_build_has_installed_layout_import_smoke_test(self):
         build_script = Path("scripts/build-deb.sh").read_text(encoding="utf-8")
+        self.assertIn("tuxindrive-control", build_script)
+        self.assertTrue(Path("packaging/tuxindrive-control").is_file())
         self.assertIn('PYTHONPATH="$PACKAGE_ROOT/usr/lib"', build_script)
         self.assertIn('find_spec("tuxindrive.app")', build_script)
         self.assertIn('usr/bin/tuxdrive', build_script)

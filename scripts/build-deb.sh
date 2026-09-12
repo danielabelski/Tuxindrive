@@ -25,6 +25,7 @@ mkdir -p \
 cp "$PROJECT_ROOT/packaging/DEBIAN/control" "$PACKAGE_ROOT/DEBIAN/control"
 cp "$PROJECT_ROOT/packaging/DEBIAN/postinst" "$PACKAGE_ROOT/DEBIAN/postinst"
 cp "$PROJECT_ROOT/packaging/tuxindrive-launcher" "$PACKAGE_ROOT/usr/bin/tuxindrive"
+cp "$PROJECT_ROOT/packaging/tuxindrive-control" "$PACKAGE_ROOT/usr/bin/tuxindrive-control"
 ln -s tuxindrive "$PACKAGE_ROOT/usr/bin/tuxindrive-doctor"
 ln -s tuxindrive "$PACKAGE_ROOT/usr/bin/tuxdrive"
 ln -s tuxindrive "$PACKAGE_ROOT/usr/bin/tuxdrive-doctor"
@@ -80,6 +81,7 @@ cp -R "$PROJECT_ROOT/docs/assets/." "$PACKAGE_ROOT/usr/share/doc/tuxindrive/asse
 cp "$PROJECT_ROOT/branding/tuxindrive-logo.png" "$PACKAGE_ROOT/usr/share/doc/tuxindrive/tuxindrive-logo.png"
 cp "$PROJECT_ROOT/LICENSE" "$PACKAGE_ROOT/usr/share/doc/tuxindrive/copyright"
 chmod 0755 "$PACKAGE_ROOT/usr/bin/tuxindrive"
+chmod 0755 "$PACKAGE_ROOT/usr/bin/tuxindrive-control"
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tuxindrive/rclone-password"
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tuxindrive/update-helper"
 chmod 0755 "$PACKAGE_ROOT/DEBIAN/postinst"
@@ -89,7 +91,7 @@ chmod 0644 "$PACKAGE_ROOT/usr/share/nautilus-python/extensions/tuxindrive.py"
 # Verify the exact installed layout used by /usr/bin/tuxindrive. This catches
 # PYTHONPATH/package-placement regressions before a .deb can be published.
 TUXINDRIVE_BUILD_VERSION="$VERSION" PYTHONPATH="$PACKAGE_ROOT/usr/lib" /usr/bin/python3 -c \
-  'import importlib.util, os, tuxindrive; assert tuxindrive.__version__ == os.environ["TUXINDRIVE_BUILD_VERSION"]; assert importlib.util.find_spec("tuxindrive.app"); assert importlib.util.find_spec("tuxindrive.proton"); assert importlib.util.find_spec("tuxindrive.cache_manager"); assert importlib.util.find_spec("tuxindrive.network_usage"); assert importlib.util.find_spec("tuxindrive.i18n"); assert importlib.util.find_spec("tuxindrive.help_content"); assert importlib.util.find_spec("tuxindrive.themes"); assert importlib.util.find_spec("tuxindrive.folder_layout"); assert importlib.util.find_spec("tuxindrive.collaboration"); assert importlib.util.find_spec("tuxindrive.platform_support"); assert importlib.util.find_spec("tuxindrive.updater"); assert importlib.util.find_spec("tuxindrive.update_helper"); assert importlib.util.find_spec("tuxindrive.peer"); assert importlib.util.find_spec("tuxindrive.tor"); assert importlib.util.find_spec("tuxindrive.recovery"); assert importlib.util.find_spec("tuxindrive.delta"); assert importlib.util.find_spec("tuxindrive.policies"); assert importlib.util.find_spec("tuxindrive.audit"); assert importlib.util.find_spec("tuxindrive.capabilities"); assert importlib.util.find_spec("tuxindrive.migration"); assert importlib.util.find_spec("tuxindrive.security"); assert importlib.util.find_spec("tuxindrive.github_sync"); assert importlib.util.find_spec("tuxindrive.nautilus_support")'
+  'import importlib.util, os, tuxindrive; assert tuxindrive.__version__ == os.environ["TUXINDRIVE_BUILD_VERSION"]; assert importlib.util.find_spec("tuxindrive.app"); assert importlib.util.find_spec("tuxindrive.control"); assert importlib.util.find_spec("tuxindrive.proton"); assert importlib.util.find_spec("tuxindrive.cache_manager"); assert importlib.util.find_spec("tuxindrive.network_usage"); assert importlib.util.find_spec("tuxindrive.i18n"); assert importlib.util.find_spec("tuxindrive.help_content"); assert importlib.util.find_spec("tuxindrive.themes"); assert importlib.util.find_spec("tuxindrive.folder_layout"); assert importlib.util.find_spec("tuxindrive.collaboration"); assert importlib.util.find_spec("tuxindrive.platform_support"); assert importlib.util.find_spec("tuxindrive.updater"); assert importlib.util.find_spec("tuxindrive.update_helper"); assert importlib.util.find_spec("tuxindrive.peer"); assert importlib.util.find_spec("tuxindrive.tor"); assert importlib.util.find_spec("tuxindrive.recovery"); assert importlib.util.find_spec("tuxindrive.delta"); assert importlib.util.find_spec("tuxindrive.policies"); assert importlib.util.find_spec("tuxindrive.audit"); assert importlib.util.find_spec("tuxindrive.capabilities"); assert importlib.util.find_spec("tuxindrive.migration"); assert importlib.util.find_spec("tuxindrive.security"); assert importlib.util.find_spec("tuxindrive.github_sync"); assert importlib.util.find_spec("tuxindrive.nautilus_support")'
 # Importing for the smoke test creates bytecode with the build host's Python
 # version.  Distribution packages must let the target host generate its own
 # cache rather than shipping that build-only directory.

@@ -1,3 +1,11 @@
+tuxindrive (0.26.39-1) unstable; urgency=medium
+
+  * Add private redacted diagnostic bundles and a GTK-free status CLI.
+  * Add selective-sync presets and bounded metadata-only rule previews.
+  * Add safe cache recommendations, mount phases, and provider probes.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sat, 12 Sep 2026 10:00:00 +0200
+
 tuxindrive (0.26.38-1) unstable; urgency=medium
 
   * Reconcile directory topology changes instead of replaying stale paths.

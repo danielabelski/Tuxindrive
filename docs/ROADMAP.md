@@ -7,9 +7,21 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.38
+## Current baseline: 0.26.39
 
-### Completed in 0.26.38: live activity log startup
+### Completed in 0.26.39: first competitive P0/P1 reliability slice
+
+- Add private, bounded diagnostic bundles with default path omission, secret
+  redaction, hashed job identifiers and an explicit user-created output file.
+- Add named selective-sync presets and an exact bounded local metadata dry run
+  before saving extension, size and age rules.
+- Add non-destructive cache recommendations plus visible mount lifecycle phases.
+- Add 15-minute cached runtime provider probes that may narrow but never expand
+  the safe static capability declarations.
+- Add a GTK-free JSON control CLI and extend weekly deterministic reliability
+  evidence. Credentialed provider and endurance tests remain external gates.
+
+### Completed in 0.26.37: live activity log startup
 
 - The persisted live-log setting now starts the bounded refresh lifecycle when
   the application opens, so an enabled panel no longer remains blank.
@@ -398,7 +410,7 @@ Legend: **Yes** = documented first-class capability; **Partial** = narrower,
 platform-specific, provider-dependent, or primarily CLI-based; **—** = not a
 documented core capability.
 
-| Capability | TuxInDrive 0.26.38 | rclone | GoodSync | Insync | odrive | ExpanDrive |
+| Capability | TuxInDrive 0.26.39 | rclone | GoodSync | Insync | odrive | ExpanDrive |
 |---|---|---|---|---|---|---|
 | Linux desktop GUI | Yes | Partial (experimental web GUI) | Partial (Linux server/web UI) | Yes | Partial (Linux sync agent/CLI) | Yes |
 | Multi-provider accounts | Yes | Yes (70+ backends) | Yes | Partial (Google Drive, OneDrive, Dropbox) | Yes | Yes |
@@ -482,9 +494,10 @@ commercial products.
 - Run restart, sleep/resume, network-loss, token-expiry, rename/delete storm,
   million-entry tree and low-disk fault campaigns for sync and streaming. Keep
   downloadable redacted results, resource ceilings and regression thresholds.
-- Add a user-controlled diagnostic bundle containing version, capability state,
-  bounded redacted errors, queue depth and timing summaries, but never paths,
-  credentials or file content unless separately previewed and approved.
+- **Implemented in 0.26.39:** a user-controlled diagnostic bundle contains
+  version, capability declarations, bounded redacted logs and runtime counts,
+  but never paths, credentials or file content by default. Timing histograms
+  remain future evidence work.
 - Treat zero silent data loss, bounded retry queues, deterministic recovery and
   successful signed upgrade/rollback drills as 1.0 blockers.
 
@@ -495,11 +508,12 @@ cache or log growth.
 
 #### P0 — make files-on-demand lifecycle predictable
 
-- Add access-age and free-space-driven cache recommendations, with preview,
-  explicit confirmation and pin protection before eviction. Never evict dirty,
-  open, pending, recovery or explicitly offline content.
-- Restore mounts after login, sleep and connectivity changes through one bounded
-  state machine with visible phases, retry deadline and a manual fallback.
+- **Implemented in 0.26.39:** access-age and free-space-driven cache
+  recommendations have a non-destructive preview, explicit confirmation and
+  conservative pin/recent/dirty/uncertain protection.
+- **Partially implemented in 0.26.39:** bounded mount startup now exposes its
+  queued, preflight, connected, recovered, disconnected and failed phases.
+  Platform sleep/connectivity event integration remains to be qualified.
 - Expose identical **Keep offline**, **Free local space**, hydration progress and
   error semantics through the GTK application and supported file managers.
 - Add large-tree lazy enumeration and cache-index benchmarks so opening the root
@@ -511,9 +525,11 @@ cross-platform fault matrix.
 
 #### P1 — stable headless control and fleet operation
 
-- Extract the existing GUI actions behind the versioned local control API and
-  JSON CLI already described below. Preserve confirmations for repair, restore,
-  sharing and other consequential actions.
+- **Partially implemented in 0.26.39:** the versioned GTK-free JSON CLI exposes
+  redacted status, capability checks, rule previews, cache plans and diagnostic
+  export. Repair, restore, sharing and other consequential actions deliberately
+  remain behind graphical confirmations until a local authorization protocol is
+  designed and tested.
 - Add policy deployment, health export, proxy configuration, token-expiry
   reporting and service-mode packages without exposing arbitrary paths, shell
   execution or provider credentials.
@@ -526,9 +542,10 @@ passes authorization and confused-deputy testing.
 
 #### P1 — live provider capabilities and efficient large-file paths
 
-- Probe only safe, bounded provider capabilities such as hashes, server-side
-  moves/copies, change feeds, versions and share-link support, cache the result,
-  and fail back to conservative static declarations.
+- **Implemented in 0.26.39 for hashes, moves, copies and change notifications:**
+  safe provider probes are bounded, cached for 15 minutes and fail back to
+  conservative static declarations. Versions/share-link probing remains static
+  until providers expose an equally safe common contract.
 - Prefer provider change journals and server-side moves/copies where semantics
   are verified, reducing full listings and re-uploads without weakening the
   authoritative reconciliation path.
@@ -543,8 +560,10 @@ demonstrated on a published corpus.
 
 #### P1 — simplify selective sync and cloud-native documents
 
-- Add named rule presets with an explanation of which existing and future files
-  match, plus a dry-run count/size preview before a rule is saved.
+- **Implemented on desktop in 0.26.39:** named rule presets explain their
+  extension/size/age values and a bounded metadata-only dry run reports local
+  count and size before save. Android parity and remote-only future-file counts
+  remain future work.
 - Offer optional, provider-specific cloud-document export/import only when
   round-trip behavior and filename mapping are documented. Preserve the native
   cloud object by default and never present export as coauthoring.
