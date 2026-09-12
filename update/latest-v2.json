@@ -1,8 +1,8 @@
 {
-  "version": "0.26.38",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.38/tuxindrive_0.26.38_all.deb",
-  "sha256": "5350eefd8b558ddf48e591c168681da98efde333fa980559dd45bdafd5e70fb1",
-  "notes": "Resilient realtime directory changes and actionable incremental error details",
-  "expires_at": "2026-12-09T08:51:49.093057+00:00",
-  "signature": "pNF4CkzWi5jU8xFpKEbJzx4BvRFMWCZin9nGbQh0eJM1v6nldschSWRdddoy6cOnlGFhXBZbx3oRL1qUjLVsCA=="
+  "version": "0.26.39",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.39/tuxindrive_0.26.39_all.deb",
+  "sha256": "98aff3a5ad7fb106b96478ebd907e03f7df60bb1a266e664dd8147347d4e165c",
+  "notes": "Reliability controls, safe previews, diagnostics and provider capability checks",
+  "expires_at": "2026-12-11T07:26:49.883308+00:00",
+  "signature": "f1ieaaBgiA/hoZTPSjK51/13GWiJ3+qk3b02X6RKPjwvSZ9yl9eEWEkGwgYxMMMOFs37OW6Estc5sd4NGvqYDw=="
 }

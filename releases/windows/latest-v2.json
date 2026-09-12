@@ -1,8 +1,8 @@
 {
-  "version": "0.26.38",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.38/TuxInDrive-0.26.38-windows-x64-setup.exe",
-  "sha256": "895628bc7244797c00f95262ae661d429801717bc8f58dacc44861a1dd1007af",
-  "notes": "Resilient realtime directory changes and actionable incremental error details",
-  "expires_at": "2026-12-09T08:51:49.167909+00:00",
-  "signature": "I0bHRnAQGjSgww5e13rg1NB6LUg2/AHIcqoV1VqeUrqtBh/N8/xwOMSlleYYuScXZNhx8/0gIZxjLMys+l+hAA=="
+  "version": "0.26.39",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.39/TuxInDrive-0.26.39-windows-x64-setup.exe",
+  "sha256": "9327520642dc20098dddd2a75c4898ccdcc525be287be8de3e290ae7784ccb77",
+  "notes": "Reliability controls, safe previews, diagnostics and provider capability checks",
+  "expires_at": "2026-12-11T07:26:49.962967+00:00",
+  "signature": "D1SYe9ASphBBpCuz6u9h00U3CsbxeA5+p7IpqQuALGzQpg7iP4UNoS4647RqLgN0lhuynLZc61FHG/N1H8ojBQ=="
 }
