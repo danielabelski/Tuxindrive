@@ -1,8 +1,8 @@
 {
-  "version": "0.26.43",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.43/TuxInDrive-0.26.43-android.apk",
-  "sha256": "a22f93acffb252c3db9700287e042c14246c45617d20f58c4117b2c2dcc03574",
-  "notes": "Complete multi-line account identities across supported providers",
-  "expires_at": "2026-12-19T19:20:13.186045+00:00",
-  "signature": "7KpHRPGpaVbQAwcNamRtglzl12hOKYIcZz1gPMx76P6y1hWW9cKbSsvH1aIGulbQ0NJLuSXRnIpQ1EwNIeLkDA=="
+  "version": "0.26.44",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.44/TuxInDrive-0.26.44-android.apk",
+  "sha256": "573eed813db7347f3c75d2f0689266d2f91d6a175fc869a1573abae05cf020ab",
+  "notes": "Customizable cloud account names and persistent sidebar ordering",
+  "expires_at": "2026-12-19T19:44:51.252499+00:00",
+  "signature": "8Pmz+23abyVhADc927G9eYrOLWunH1ep2qhGIuwBlipbpR8S51Dx3eLZkMiT0VSDZj4bmkGGiYWMg9ljoYN5Dg=="
 }

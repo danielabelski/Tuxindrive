@@ -1,8 +1,8 @@
 {
-  "version": "0.26.43",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.43/TuxInDrive-0.26.43-windows-x64-setup.exe",
-  "sha256": "7bca78456feaaeb26d729c34726ddddbc8996ac6eb0b7e716c232b0f39385817",
-  "notes": "Complete multi-line account identities across supported providers",
-  "expires_at": "2026-12-19T19:20:12.833609+00:00",
-  "signature": "WtDiCbrHyb3n3D0c4Faf9+KwPfjhlQPt2ma4aSevruu07bfh8zx51e2tpdagyYKxHo0JkTpTNB9Ic0OICooIBg=="
+  "version": "0.26.44",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.44/TuxInDrive-0.26.44-windows-x64-setup.exe",
+  "sha256": "5db92d5e73a025fd6066ef36fdb142ffae671a66376b04b9fc35791f870f1b7a",
+  "notes": "Customizable cloud account names and persistent sidebar ordering",
+  "expires_at": "2026-12-19T19:44:42.897934+00:00",
+  "signature": "U/k0XgpOdfzlBWDOj7pBPrngTb+VAeV3jVX3vfdTIEpR0vgkzB0NJf4XL69sabv+BDFc1CaV9p0cDIdyEh0RAg=="
 }
