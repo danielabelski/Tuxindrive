@@ -1,8 +1,8 @@
 {
-  "version": "0.26.39",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.39/tuxindrive_0.26.39_all.deb",
-  "sha256": "98aff3a5ad7fb106b96478ebd907e03f7df60bb1a266e664dd8147347d4e165c",
-  "notes": "Reliability controls, safe previews, diagnostics and provider capability checks",
-  "expires_at": "2026-12-11T07:26:49.883308+00:00",
-  "signature": "f1ieaaBgiA/hoZTPSjK51/13GWiJ3+qk3b02X6RKPjwvSZ9yl9eEWEkGwgYxMMMOFs37OW6Estc5sd4NGvqYDw=="
+  "version": "0.26.42",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.42/tuxindrive_0.26.42_all.deb",
+  "sha256": "3da4fafc21a1fdc905a3d2e8b9c9bf34d9346a1065456fba4e200a6860584e36",
+  "notes": "Authenticated account identities and truthful Google Drive roots",
+  "expires_at": "2026-12-19T18:26:22.620608+00:00",
+  "signature": "q11AdMdnBXYHgXR9Oex3oZXAg+c2bsyUQr8hYgmH0zpwT0s+Yu1+sumNgAysNUzzwhV34IpoVAI1NkYM20P3Ag=="
 }

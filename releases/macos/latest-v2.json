@@ -1,8 +1,8 @@
 {
-  "version": "0.26.39",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.39/TuxInDrive-0.26.39-macos-arm64.dmg",
-  "sha256": "4d2c62cc902dde69ebce2dd672e56ce857001a31a55453668fcc6961ac46e20d",
-  "notes": "Reliability controls, safe previews, diagnostics and provider capability checks",
-  "expires_at": "2026-12-11T07:26:50.053632+00:00",
-  "signature": "yV9fOb4G7C4OEEbN8Lzq5g7b6PytrvtRb+SnlM1Uix3a6J0v1GX2cvmqwKdEveF2I4tFqXZXC4Mv66OmbShuDQ=="
+  "version": "0.26.42",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.42/TuxInDrive-0.26.42-macos-arm64.dmg",
+  "sha256": "ae5444d8bf77fd5ed840607bbc2d385d0e7ee4f1fbc294f0968b8508c536612c",
+  "notes": "Authenticated account identities and truthful Google Drive roots",
+  "expires_at": "2026-12-19T18:26:22.789526+00:00",
+  "signature": "Cm7m+RQzQz+sZCsL9gQcTHEYTrazKRxSJ6mTl38b+8Dnw4GW5qQxBAsButpnq6M+AgOzZ6clM/C07FQPTjtUAQ=="
 }
