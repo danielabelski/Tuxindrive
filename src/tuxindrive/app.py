@@ -4973,12 +4973,19 @@ class MainWindow(Gtk.ApplicationWindow):
                 continue
             else:
                 index = self.controller.config.jobs.index(job)
-                if (job.local_path, job.remote_spec, job.mode) != (
+                endpoint_changed = (job.local_path, job.remote_spec, job.mode) != (
                     updated.local_path,
                     updated.remote_spec,
                     updated.mode,
-                ):
+                )
+                if endpoint_changed:
                     updated.initialized = False
+                    updated.enabled = False
+                    updated.last_status = (
+                        "Synchronization paused because an endpoint changed. "
+                        "Review the selected account, cloud location and local folder, "
+                        "then enable the job for a controlled recovery sync."
+                    )
                 self.controller.stop_job(job)
                 self.controller.config.jobs[index] = updated
                 self.controller.save()
@@ -6590,7 +6597,9 @@ class TuxInDriveApplication(Gtk.Application):
         job.last_status = result.message
         job.last_error = "" if result.success else result.message
         job.last_error_at = "" if result.success else now.isoformat()
-        job.last_error_source = "" if result.success else result.blocked_path
+        job.last_error_source = "" if result.success else (
+            result.error_source or result.blocked_path
+        )
         job.last_error_log = "" if result.success else str(result.log_path)
         if result.requires_resync:
             job.initialized = False
@@ -6600,6 +6609,13 @@ class TuxInDriveApplication(Gtk.Application):
         if result.mass_change_blocked:
             job.enabled = False
             job.last_status = f"{result.message} Review the log, then re-enable the job to approve a later retry."
+            job.last_error = job.last_status
+        if result.verification_blocked:
+            job.enabled = False
+            job.last_status = (
+                f"{result.message} Automatic sync paused until the reported provider "
+                "problem is resolved."
+            )
             job.last_error = job.last_status
         if result.success and job.mode is not SyncMode.VIRTUAL_DRIVE:
             job.initialized = True

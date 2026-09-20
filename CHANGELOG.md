@@ -2,6 +2,17 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.45 — verified two-way completion and endpoint safety
+
+- Verify the final local/cloud Bisync listings, including directory topology,
+  before reporting a two-way synchronization as complete.
+- Treat provider notices about ignored duplicate objects as actionable failures,
+  persist the affected path in Error details, and pause automatic retries.
+- Pause edited jobs when their local folder, cloud location, account or mode
+  changes so a stale baseline cannot be reused against a different endpoint.
+- Preserve the exact selected Google Drive scope so My Drive and Shared Drive
+  roots cannot silently reuse each other's synchronization baseline.
+
 ## 0.26.44 — customizable cloud account list
 
 - Add **Rename account** to every cloud-account menu; it changes only the

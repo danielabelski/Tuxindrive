@@ -49,9 +49,11 @@ class JobResult:
     cancelled: bool = False
     requires_resync: bool = False
     blocked_path: str = ""
+    error_source: str = ""
     incremental: bool = False
     mount_lost: bool = False
     mass_change_blocked: bool = False
+    verification_blocked: bool = False
     lease_blocked: bool = False
     network_sessions: int = 0
     payload_bytes: int = 0
@@ -554,6 +556,106 @@ class SyncEngine:
             return snapshot
         except (OSError, ValueError, OverflowError):
             return None
+
+    def _post_sync_listing_issue(self, job: SyncJob) -> tuple[str, str] | None:
+        """Return an actionable issue when Bisync's final sides do not agree.
+
+        Rclone can occasionally exit successfully after ignoring an object.  A
+        green status must therefore be backed by the final durable Path1/Path2
+        listings, including directories (the callback snapshots intentionally
+        contain files only).
+        """
+        try:
+            workdir = self._bisync_workdir(job)
+            path1_files = sorted(
+                workdir.glob("*.path1.lst"),
+                key=lambda item: item.stat().st_mtime_ns,
+                reverse=True,
+            )
+            if not path1_files:
+                return None
+            path1 = path1_files[0]
+            path2 = path1.with_name(
+                path1.name.removesuffix(".path1.lst") + ".path2.lst"
+            )
+            if not path2.is_file():
+                return None
+
+            def entries(path: Path) -> dict[str, tuple[str, int]] | None:
+                result: dict[str, tuple[str, int]] = {}
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    if not line or line.startswith("#"):
+                        continue
+                    fields = shlex.split(line)
+                    if len(fields) < 6 or fields[0] not in {"-", "d"}:
+                        return None
+                    relative = normalize_remote_path(fields[5])
+                    if not relative or ".." in Path(relative).parts:
+                        return None
+                    result[relative] = (fields[0], int(fields[1]))
+                return result
+
+            local = entries(path1)
+            remote = entries(path2)
+            if local is None or remote is None:
+                return None
+            local_only = sorted(local.keys() - remote.keys())
+            if local_only:
+                path = local_only[0]
+                return path, (
+                    "Post-sync verification failed (phase: final listing; side: cloud; "
+                    f"path: {path}): the item exists locally but is missing from the cloud."
+                )
+            remote_only = sorted(remote.keys() - local.keys())
+            if remote_only:
+                path = remote_only[0]
+                return path, (
+                    "Post-sync verification failed (phase: final listing; side: local; "
+                    f"path: {path}): the item exists in the cloud but is missing locally."
+                )
+            for path in sorted(local):
+                local_kind, local_size = local[path]
+                remote_kind, remote_size = remote[path]
+                if local_kind != remote_kind:
+                    return path, (
+                        "Post-sync verification failed (phase: final listing; side: both; "
+                        f"path: {path}): the item type differs between local and cloud."
+                    )
+                if local_kind == "-" and local_size != remote_size:
+                    return path, (
+                        "Post-sync verification failed (phase: final listing; side: both; "
+                        f"path: {path}): file sizes differ between local and cloud."
+                    )
+            return None
+        except (OSError, ValueError):
+            # Absence or an unreadable state file is handled by the existing
+            # baseline recovery path; it must not turn a successful first run
+            # into a false failure in its own right.
+            return None
+
+    @staticmethod
+    def _successful_run_log_issue(
+        log_path: Path, start_offset: int
+    ) -> tuple[str, str] | None:
+        """Detect rclone notices that mean an exit-zero run was incomplete."""
+        try:
+            with log_path.open("rb") as handle:
+                handle.seek(max(0, start_offset))
+                text = handle.read(4 * 1024 * 1024).decode("utf-8", errors="replace")
+        except OSError:
+            return None
+        duplicate = re.search(
+            r"(?im)^.*?NOTICE\s*:\s*(.+?):\s*Duplicate object found in destination\s*-\s*ignoring\s*$",
+            text,
+        )
+        if duplicate:
+            path = duplicate.group(1).strip()
+            return path, (
+                "Post-sync verification failed (phase: provider listing; side: cloud; "
+                f"path: {path}): a duplicate cloud object was ignored. "
+                "Resolve or rename the duplicate before retrying."
+            )
+        return None
 
     def _verified_remote_snapshot(self, job: SyncJob) -> dict[str, FileState] | None:
         """Read the provider in the same representation used by callbacks.
@@ -2034,6 +2136,7 @@ class SyncEngine:
                 force_resync=auto_reinitialize,
             )
             prepare_private_file(log_path)
+            run_log_offset = log_path.stat().st_size if log_path.exists() else 0
             with log_path.open("a", encoding="utf-8") as log:
                 log.write(
                     f"\n[{datetime.now(timezone.utc).isoformat()}] Starting TuxInDrive "
@@ -2064,19 +2167,41 @@ class SyncEngine:
                 log.write(f"[{datetime.now(timezone.utc).isoformat()}] Exit {return_code}\n")
             if return_code == 0:
                 if job.mode is SyncMode.TWO_WAY and not dry_run:
-                    baseline = (
-                        (None if auto_reinitialize else self._verified_remote_snapshot(job))
-                        or self._bisync_remote_snapshot(job)
+                    log_issue = self._successful_run_log_issue(
+                        log_path, run_log_offset
                     )
-                    if baseline is not None:
-                        with self._lock:
-                            self._callback_baselines[job.id] = baseline
-                message = (
-                    "Synchronization complete; sync state was reinitialized automatically"
-                    if auto_reinitialize
-                    else "Synchronization complete"
-                )
-                result = JobResult(job.id, True, message, log_path)
+                    listing_issue = (
+                        None if log_issue is not None
+                        else self._post_sync_listing_issue(job)
+                    )
+                    verification_issue = log_issue or listing_issue
+                    if verification_issue is not None:
+                        source, message = verification_issue
+                        result = JobResult(
+                            job.id,
+                            False,
+                            message,
+                            log_path,
+                            requires_resync=listing_issue is not None,
+                            error_source=source,
+                            verification_blocked=log_issue is not None,
+                        )
+                    else:
+                        baseline = (
+                            (None if auto_reinitialize else self._verified_remote_snapshot(job))
+                            or self._bisync_remote_snapshot(job)
+                        )
+                        if baseline is not None:
+                            with self._lock:
+                                self._callback_baselines[job.id] = baseline
+                        message = (
+                            "Synchronization complete; sync state was reinitialized automatically"
+                            if auto_reinitialize
+                            else "Synchronization complete"
+                        )
+                        result = JobResult(job.id, True, message, log_path)
+                else:
+                    result = JobResult(job.id, True, "Synchronization complete", log_path)
             elif cancelled:
                 result = JobResult(job.id, False, "Synchronization cancelled", log_path, True)
             else:

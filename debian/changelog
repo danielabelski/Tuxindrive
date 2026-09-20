@@ -1,3 +1,11 @@
+tuxindrive (0.26.45-1) unstable; urgency=medium
+
+  * Verify final two-way file and directory topology before reporting success.
+  * Surface ignored provider duplicates as actionable synchronization failures.
+  * Pause jobs after endpoint changes until a controlled recovery sync.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sun, 20 Sep 2026 22:20:00 +0200
+
 tuxindrive (0.26.44-1) unstable; urgency=medium
 
   * Add non-destructive cloud-account display-name editing.

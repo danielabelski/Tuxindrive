@@ -65,6 +65,15 @@ class ResponsiveWindowTests(unittest.TestCase):
         self.assertIn('Gtk.Button(label=tr("error_details"))', source)
         self.assertLess(source.index('Gtk.Button(label=tr("view_log"))'), source.index('Gtk.Button(label=tr("error_details"))'))
 
+    def test_endpoint_change_forces_review_before_recovery_sync(self) -> None:
+        source = (REPOSITORY / "src/tuxindrive/app.py").read_text(encoding="utf-8")
+        edit_job = source[source.index("    def _edit_job("):source.index("    def _rename_job(")]
+
+        self.assertIn("endpoint_changed = (job.local_path, job.remote_spec, job.mode)", edit_job)
+        self.assertIn("updated.initialized = False", edit_job)
+        self.assertIn("updated.enabled = False", edit_job)
+        self.assertIn("Synchronization paused because an endpoint changed", edit_job)
+
     def test_persisted_live_log_setting_starts_refresh_lifecycle(self) -> None:
         source = (REPOSITORY / "src/tuxindrive/app.py").read_text(encoding="utf-8")
         window = source[source.index("class MainWindow"):]

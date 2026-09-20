@@ -327,8 +327,17 @@ class HeadlessAgent:
                 job.last_status = result.message
                 job.last_error = "" if result.success else result.message
                 job.last_error_at = "" if result.success else finished_at
-                job.last_error_source = "" if result.success else result.blocked_path
+                job.last_error_source = "" if result.success else (
+                    result.error_source or result.blocked_path
+                )
                 job.last_error_log = "" if result.success else str(result.log_path)
+                if result.verification_blocked:
+                    job.enabled = False
+                    job.last_status = (
+                        f"{result.message} Automatic sync paused until the reported "
+                        "provider problem is resolved."
+                    )
+                    job.last_error = job.last_status
                 self.store.save(self.config)
             self._results[result.job_id] = {
                 "success": result.success, "message": result.message,

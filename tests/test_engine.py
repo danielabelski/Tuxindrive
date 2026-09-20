@@ -67,6 +67,103 @@ class SyncEngineCommandTests(unittest.TestCase):
             {"Folder/report.txt": FileState(42, "2026-08-13T10:20:30Z")},
         )
 
+    def test_post_sync_listing_verifies_files_and_directories_on_both_sides(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_DATA_HOME": temporary},
+        ):
+            job = SyncJob(account_remote="one", local_path="/data/One")
+            workdir = self.engine._prepare_bisync_workdir(job)
+            (workdir / "sync.path1.lst").write_text(
+                '# bisync listing v1\nd -1 - - 2026-01-01T00:00:00Z "DPH"\n'
+                '- 42 - - 2026-01-01T00:00:00Z "DPH/report.txt"\n',
+                encoding="utf-8",
+            )
+            (workdir / "sync.path2.lst").write_text(
+                '# bisync listing v1\nd -1 - - 2026-01-01T00:00:00Z "DPH"\n',
+                encoding="utf-8",
+            )
+            issue = self.engine._post_sync_listing_issue(job)
+        self.assertIsNotNone(issue)
+        source, message = issue
+        self.assertEqual(source, "DPH/report.txt")
+        self.assertIn("side: cloud", message)
+
+    def test_post_sync_listing_accepts_matching_directory_topology(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_DATA_HOME": temporary},
+        ):
+            job = SyncJob(account_remote="one", local_path="/data/One")
+            workdir = self.engine._prepare_bisync_workdir(job)
+            listing = (
+                '# bisync listing v1\nd -1 - - 2026-01-01T00:00:00Z "DPH"\n'
+                '- 42 - - 2026-01-01T00:00:00Z "DPH/report.txt"\n'
+            )
+            (workdir / "sync.path1.lst").write_text(listing, encoding="utf-8")
+            (workdir / "sync.path2.lst").write_text(listing, encoding="utf-8")
+            issue = self.engine._post_sync_listing_issue(job)
+        self.assertIsNone(issue)
+
+    def test_exit_zero_duplicate_notice_is_not_reported_as_complete(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            old = "NOTICE: historical.txt: Duplicate object found in destination - ignoring\n"
+            log.write_text(old, encoding="utf-8")
+            offset = log.stat().st_size
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    "2026/09/20 20:38:57 NOTICE: DPH/August2026/report.xlsx: "
+                    "Duplicate object found in destination - ignoring\n"
+                )
+            issue = self.engine._successful_run_log_issue(log, offset)
+        self.assertIsNotNone(issue)
+        source, message = issue
+        self.assertEqual(source, "DPH/August2026/report.xlsx")
+        self.assertIn("phase: provider listing", message)
+
+    def test_historical_duplicate_notice_does_not_poison_later_run(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "NOTICE: old.txt: Duplicate object found in destination - ignoring\n",
+                encoding="utf-8",
+            )
+            offset = log.stat().st_size
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write("Synchronization successful\n")
+            issue = self.engine._successful_run_log_issue(log, offset)
+        self.assertIsNone(issue)
+
+    def test_exit_zero_duplicate_pauses_job_without_forcing_resync(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ,
+            {"XDG_DATA_HOME": f"{temporary}/data", "XDG_CACHE_HOME": f"{temporary}/cache"},
+        ):
+            job = SyncJob(
+                account_remote="one",
+                local_path=f"{temporary}/local",
+                initialized=False,
+            )
+            Path(job.local_path).mkdir()
+            completed = []
+
+            def process_with_duplicate(_command, **kwargs):
+                kwargs["stdout"].write(
+                    "NOTICE: DPH/August2026: Duplicate object found in destination - ignoring\n"
+                )
+                process = MagicMock()
+                process.wait.return_value = 0
+                return process
+
+            with patch("tuxindrive.engine.resolve_rclone", return_value="/usr/bin/rclone"), \
+                 patch("tuxindrive.engine.subprocess.Popen", side_effect=process_with_duplicate):
+                self.engine._run_worker(
+                    job, Path(temporary) / "sync.log", completed.append, False
+                )
+        self.assertFalse(completed[0].success)
+        self.assertTrue(completed[0].verification_blocked)
+        self.assertFalse(completed[0].requires_resync)
+        self.assertEqual(completed[0].error_source, "DPH/August2026")
+
     def test_remote_timestamp_formats_compare_equally(self):
         self.assertEqual(
             normalize_remote_modtime("2026-08-13T10:20:30.000000000+0000"),
