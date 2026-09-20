@@ -1,3 +1,12 @@
+tuxindrive (0.26.40-1) unstable; urgency=medium
+
+  * Identify configured Google roots as My Drive, shared-with-me, Shared Drive,
+    or a custom folder without exposing remote identifiers or credentials.
+  * Warn when a legacy job still has the ambiguous configured-root label.
+  * Keep explicit My Drive selection independent of a Shared Drive base remote.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sun, 20 Sep 2026 12:00:00 +0200
+
 tuxindrive (0.26.39-1) unstable; urgency=medium
 
   * Add private redacted diagnostic bundles and a GTK-free status CLI.

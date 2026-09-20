@@ -78,6 +78,17 @@ class ConfigStoreTests(unittest.TestCase):
             self.assertFalse(FolderGroup.from_dict({"name": "Legacy group", "id": "legacy"}).collapsed)
             self.assertFalse(FolderGroup.from_dict({"name": "Invalid", "collapsed": "false"}).collapsed)
 
+    def test_legacy_google_root_label_requires_location_verification(self):
+        job = SyncJob(
+            account_remote="google-main",
+            local_path="/tmp/cloud",
+            cloud_location_name="Previously configured root",
+        )
+        self.assertEqual(
+            job.cloud_location_label,
+            "Configured Google Drive root — verify My Drive or Shared Drive",
+        )
+
     def test_profile_settings_round_trip(self):
         with tempfile.TemporaryDirectory() as temporary:
             store = ConfigStore(Path(temporary) / "config.json")

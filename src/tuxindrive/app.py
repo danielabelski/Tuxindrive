@@ -4395,7 +4395,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 + (
                     f"{job.cloud_location_name} · {job.repository_branch}"
                     if job.is_git else
-                    f"{job.cloud_location_name or job.account_remote}:/{job.remote_path}"
+                    f"{job.cloud_location_label}:/{job.remote_path}"
                 )
                 + f"  →  {job.local_path}"
             ),

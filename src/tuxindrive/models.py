@@ -443,6 +443,14 @@ class SyncJob:
         return f"{remote}:{remote_path}" if remote_path else f"{remote}:"
 
     @property
+    def cloud_location_label(self) -> str:
+        """Return an honest label for legacy Google-root selections."""
+        label = self.cloud_location_name.strip()
+        if label.casefold() == "previously configured root":
+            return "Configured Google Drive root — verify My Drive or Shared Drive"
+        return label or self.account_remote
+
+    @property
     def local(self) -> Path:
         return Path(self.local_path).expanduser()
 

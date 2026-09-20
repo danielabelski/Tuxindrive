@@ -2,6 +2,16 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.40 — truthful Google Drive root identity
+
+- Identify a configured Google endpoint as My Drive, Shared with me, a Shared
+  Drive, or a custom Drive folder before presenting it in the folder editor.
+- Keep the explicit My Drive choice scoped to the account root even when the
+  underlying rclone remote was originally pinned to a Shared Drive.
+- Replace the legacy `Previously configured root` card label with a visible
+  verification warning so a successful sync cannot be mistaken for another
+  Google Drive tree.
+
 ## 0.26.39 — reliability controls and safe previews
 
 - Add selective-sync presets and a bounded metadata-only dry run showing the

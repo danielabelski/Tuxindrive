@@ -164,15 +164,22 @@ class RcloneClientTests(unittest.TestCase):
 
     def test_google_locations_include_my_drive_shared_with_me_and_shared_drives(self):
         client = RcloneClient()
+        redacted = "[work]\ntype = drive\nteam_drive = XXX\ntoken = XXX\n"
         output = json.dumps([{"id": "drive-123", "name": "Operations"}])
         with patch.object(
             client,
             "_run",
-            return_value=subprocess.CompletedProcess([], 0, stdout=output, stderr=""),
+            side_effect=[
+                subprocess.CompletedProcess([], 0, stdout=redacted, stderr=""),
+                subprocess.CompletedProcess([], 0, stdout=output, stderr=""),
+            ],
         ):
             locations = client.google_drive_locations("work")
         self.assertEqual(locations[0].name, "My Drive")
         self.assertEqual(locations[1].name, "Shared with me")
+        configured = next(item for item in locations if item.key == "configured")
+        self.assertEqual(configured.name, "Configured root · Shared Drive")
+        self.assertNotIn("XXX", configured.name)
         self.assertTrue(any(item.name == "Shared Drive · Operations" for item in locations))
         shared = next(item for item in locations if item.key == "shared_drive:drive-123")
         self.assertIn("team_drive=drive-123", shared.scoped_remote)
@@ -181,6 +188,21 @@ class RcloneClientTests(unittest.TestCase):
         self.assertIn("team_drive=", google_scoped_remote("work", "my_drive"))
         self.assertIn("root_folder_id=root", google_scoped_remote("work", "my_drive"))
         self.assertIn("shared_with_me=true", google_scoped_remote("work", "shared_with_me"))
+
+    def test_google_configured_root_is_never_mislabelled_as_my_drive(self):
+        client = RcloneClient()
+        cases = {
+            "[work]\ntype = drive\n": "Configured root · My Drive",
+            "[work]\ntype = drive\nshared_with_me = true\n": "Configured root · Shared with me",
+            "[work]\ntype = drive\nroot_folder_id = XXX\n": "Configured root · Google Drive folder",
+        }
+        for redacted, expected in cases.items():
+            with self.subTest(expected=expected), patch.object(
+                client,
+                "_run",
+                return_value=subprocess.CompletedProcess([], 0, stdout=redacted, stderr=""),
+            ):
+                self.assertEqual(client._configured_google_root_name("work"), expected)
 
     def test_cloud_git_vault_and_direct_peer_backends_are_available(self):
         self.assertEqual(len(Provider), 14)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import configparser
 import json
 import os
 import platform
@@ -313,6 +314,7 @@ class RcloneClient:
 
     def google_drive_locations(self, remote: str) -> list[DriveLocation]:
         self._validate_remote_name(remote)
+        configured_name = self._configured_google_root_name(remote)
         locations = [
             DriveLocation(
                 "my_drive",
@@ -326,7 +328,7 @@ class RcloneClient:
             ),
             DriveLocation(
                 "configured",
-                "Previously configured root",
+                configured_name,
                 remote,
             ),
         ]
@@ -348,6 +350,35 @@ class RcloneClient:
                 )
             )
         return locations
+
+    def _configured_google_root_name(self, remote: str) -> str:
+        """Describe the effective base root without decrypting OAuth tokens.
+
+        A Google rclone remote may itself be pinned to a Shared Drive.  Calling
+        that endpoint merely a "previously configured root" made it look like
+        My Drive and allowed users to select the wrong tree.  rclone's redacted
+        configuration preserves option presence while replacing credentials
+        and identifiers, which is sufficient to identify the root type without
+        bringing an OAuth token or a Shared Drive ID into this process.
+        """
+        try:
+            result = self._run(["config", "redacted"])
+            parser = configparser.ConfigParser(interpolation=None)
+            parser.read_string(result.stdout or "")
+            if not parser.has_section(remote):
+                return "Configured Google Drive root"
+            values = parser[remote]
+            shared_with_me = values.get("shared_with_me", "").strip().lower()
+            if shared_with_me in {"true", "1", "yes"}:
+                return "Configured root · Shared with me"
+            if values.get("team_drive", "").strip():
+                return "Configured root · Shared Drive"
+            root_folder = values.get("root_folder_id", "").strip()
+            if not root_folder or root_folder == "root":
+                return "Configured root · My Drive"
+            return "Configured root · Google Drive folder"
+        except (RcloneError, configparser.Error):
+            return "Configured Google Drive root"
 
     def public_link(self, remote_spec: str) -> str:
         result = self._run(["link", remote_spec])
