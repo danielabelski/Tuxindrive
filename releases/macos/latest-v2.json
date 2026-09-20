@@ -1,8 +1,8 @@
 {
-  "version": "0.26.44",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.44/TuxInDrive-0.26.44-macos-arm64.dmg",
-  "sha256": "e8ff265320d6634c09f909db1204aaff38ebb02d4dee91ac77c1197ae265083c",
-  "notes": "Customizable cloud account names and persistent sidebar ordering",
-  "expires_at": "2026-12-19T19:44:47.577454+00:00",
-  "signature": "deSbdJXZGQpYafa68FsWkvQudUPBO76w9EYTWpILgJusFBwaEWZkn2G983XjbCSG/6LUq+DcYcVZX43JO0geAg=="
+  "version": "0.26.45",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.45/TuxInDrive-0.26.45-macos-arm64.dmg",
+  "sha256": "8558ae58f2a45870754d37473eaf87cc49920c5c6e87a799553ccaee1fb81b3c",
+  "notes": "Reliable two-way sync completion verification and safer endpoint recovery",
+  "expires_at": "2026-12-19T20:40:12.069470+00:00",
+  "signature": "oGjCsjRBUSRNBbH/ftX52rSPRgMYInpgcTHuk9VgDiSsJpDT7sfWsVWWN0najB3XbSj3LSY6LODUyXiAsup0Cg=="
 }

@@ -1,8 +1,8 @@
 {
-  "version": "0.26.44",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.44/tuxindrive_0.26.44_all.deb",
-  "sha256": "770d12be44cd40bfa6a0f93ea24910efd66c397d53580beb9e22bd251a2b7d1c",
-  "notes": "Customizable cloud account names and persistent sidebar ordering",
-  "expires_at": "2026-12-19T19:44:38.837192+00:00",
-  "signature": "rc2zBHKpogsWjanymh6Zf9FfaSbJAUL2wxg9Qrfk0qw5wj3xxWVkxAdChFgJzZIfbT4/X3i93e5AihU6kgQfDQ=="
+  "version": "0.26.45",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.45/tuxindrive_0.26.45_all.deb",
+  "sha256": "addc99784e04ac30eb402c425492c1d468fe0c2fe0afc1a4a1d4c3279d8f6d48",
+  "notes": "Reliable two-way sync completion verification and safer endpoint recovery",
+  "expires_at": "2026-12-19T20:40:11.909445+00:00",
+  "signature": "ZjfOS229KXwfpnFKsnw4avWZnyErvBlGyDEOJoseRwujUhLxJgdmjx6cglgJSUvMYnGBqgoYGv64zQNJ/KwKCg=="
 }
