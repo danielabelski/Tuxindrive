@@ -12,6 +12,8 @@ import sys
 import threading
 import ctypes
 from urllib.parse import quote
+from urllib.request import Request, urlopen
+from urllib.error import URLError
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -177,6 +179,61 @@ class RcloneClient:
             elif backend == "webdav":
                 accounts[name] = Provider.WEBDAV
         return accounts
+
+    def account_login(self, remote: str, provider: Provider) -> str:
+        """Return a non-secret login label without persisting provider tokens."""
+        self._validate_remote_name(remote)
+        try:
+            result = self._run(["config", "userinfo", f"{remote}:", "--json"], timeout=30)
+            identity = self._identity_label(json.loads(result.stdout or "{}"))
+            if identity:
+                return identity
+        except (RcloneError, json.JSONDecodeError):
+            pass
+        if provider is not Provider.GOOGLE_DRIVE:
+            return ""
+
+        # Older rclone Drive backends do not implement `config userinfo`.
+        # Refresh through rclone first, then keep its decrypted configuration
+        # dump only in memory long enough to call Google's read-only About API.
+        try:
+            self._run(["about", f"{remote}:", "--json"], timeout=30)
+            raw = json.loads(self._run(["config", "dump"]).stdout or "{}")
+            values = raw.get(remote, {})
+            token_value = values.get("token", "") if isinstance(values, dict) else ""
+            token = json.loads(token_value) if isinstance(token_value, str) else token_value
+            access_token = token.get("access_token", "") if isinstance(token, dict) else ""
+            if not access_token:
+                return ""
+            request = Request(
+                "https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress)",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            with urlopen(request, timeout=20) as response:
+                identity = self._identity_label(json.load(response).get("user", {}))
+            return identity
+        except (RcloneError, json.JSONDecodeError, OSError, URLError, ValueError, KeyError):
+            return ""
+
+    @staticmethod
+    def _identity_label(value: Any) -> str:
+        if not isinstance(value, dict):
+            return ""
+        preferred = (
+            "emailAddress", "email", "userPrincipalName", "login", "username",
+            "displayName", "name",
+        )
+        for key in preferred:
+            candidate = value.get(key)
+            if isinstance(candidate, str):
+                candidate = " ".join(candidate.split()).strip()
+                if candidate and len(candidate) <= 320:
+                    return candidate
+        for nested in ("user", "account", "owner"):
+            candidate = RcloneClient._identity_label(value.get(nested))
+            if candidate:
+                return candidate
+        return ""
 
     def begin_oauth(
         self,

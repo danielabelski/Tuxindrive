@@ -4,13 +4,49 @@ import tempfile
 import os
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from tuxindrive.models import Provider
 from tuxindrive.rclone import RcloneClient, RcloneError, google_scoped_remote
 
 
 class RcloneClientTests(unittest.TestCase):
+    def test_account_login_uses_provider_userinfo_when_available(self):
+        client = RcloneClient()
+        result = subprocess.CompletedProcess(
+            [], 0, stdout='{"email": "owner@example.com"}', stderr=""
+        )
+        with patch.object(client, "_run", return_value=result):
+            self.assertEqual(
+                client.account_login("cloud", Provider.DROPBOX),
+                "owner@example.com",
+            )
+
+    def test_google_account_login_falls_back_to_read_only_about_api(self):
+        client = RcloneClient()
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = (
+            b'{"user":{"emailAddress":"owner@example.com"}}'
+        )
+        calls = [
+            RcloneError("unsupported"),
+            subprocess.CompletedProcess([], 0, stdout="{}", stderr=""),
+            subprocess.CompletedProcess(
+                [], 0,
+                stdout=json.dumps({"cloud": {"token": json.dumps({"access_token": "secret"})}}),
+                stderr="",
+            ),
+        ]
+        with patch.object(client, "_run", side_effect=calls), patch(
+            "tuxindrive.rclone.urlopen", return_value=response
+        ) as opened:
+            self.assertEqual(
+                client.account_login("cloud", Provider.GOOGLE_DRIVE),
+                "owner@example.com",
+            )
+        request = opened.call_args.args[0]
+        self.assertNotIn("secret", request.full_url)
+
     def test_plain_config_is_encrypted_with_secret_service_helper(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

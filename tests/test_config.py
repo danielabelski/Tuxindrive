@@ -39,7 +39,7 @@ class ConfigStoreTests(unittest.TestCase):
             path = Path(temporary) / "nested" / "config.json"
             store = ConfigStore(path)
             value = AppConfig(
-                accounts=[Account("google-main", Provider.GOOGLE_DRIVE, "Work Drive")],
+                accounts=[Account("google-main", Provider.GOOGLE_DRIVE, "Work Drive", login_name="owner@example.com")],
                 jobs=[
                     SyncJob(
                         account_remote="google-main",
@@ -62,6 +62,7 @@ class ConfigStoreTests(unittest.TestCase):
             store.save(value)
             loaded = store.load()
             self.assertEqual(loaded.accounts[0].provider, Provider.GOOGLE_DRIVE)
+            self.assertEqual(loaded.accounts[0].login_name, "owner@example.com")
             self.assertEqual(
                 loaded.jobs[0].remote_spec,
                 "google-main,team_drive=drive-1,root_folder_id=:Projects",

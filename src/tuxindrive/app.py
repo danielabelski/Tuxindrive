@@ -4179,7 +4179,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _structure_signature(self) -> tuple:
         return (
-            tuple((item.remote, item.display_name, item.provider.value) for item in self.controller.config.accounts),
+            tuple((item.remote, item.display_name, item.login_name, item.provider.value) for item in self.controller.config.accounts),
             tuple((item.id, item.name, item.collapsed) for item in self.controller.config.folder_groups),
             tuple(
                 (job.id, job.name, job.account_remote, job.local_path, job.remote_path,
@@ -4206,7 +4206,9 @@ class MainWindow(Gtk.ApplicationWindow):
             )
             widgets["label"].set_markup(
                 f"<b>{GLib.markup_escape_text(account.display_name)}</b>\n"
-                f"<small>{account.provider.label} · {state}</small>"
+                f"<small>{account.provider.label}"
+                f"{(' · ' + GLib.markup_escape_text(account.login_name)) if account.login_name else ''}"
+                f" · {state}</small>"
             )
             widgets["icon"].set_tooltip_text(f"{account.provider.label} · {state}")
         for job in self.controller.config.jobs:
@@ -4258,11 +4260,18 @@ class MainWindow(Gtk.ApplicationWindow):
             text = Gtk.Label(xalign=0)
             text.set_markup(
                 f"<b>{GLib.markup_escape_text(account.display_name)}</b>\n"
-                f"<small>{account.provider.label} · {account_state}</small>"
+                f"<small>{account.provider.label}"
+                f"{(' · ' + GLib.markup_escape_text(account.login_name)) if account.login_name else ''}"
+                f" · {account_state}</small>"
             )
             menu = Gtk.MenuButton()
             menu.set_image(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
             popup = Gtk.Menu()
+            if account.login_name:
+                login = Gtk.MenuItem(label=f"Signed in as {account.login_name}")
+                login.set_sensitive(False)
+                popup.append(login)
+                popup.append(Gtk.SeparatorMenuItem())
             online = Gtk.MenuItem(label=tr("peer_settings") if account.provider is Provider.PEER else tr("open_online"))
             online.connect("activate", self._open_online, account)
             reconnect = Gtk.MenuItem(label=tr("reconnect"))
@@ -6285,7 +6294,57 @@ class TuxInDriveApplication(Gtk.Application):
             self.window.refresh()
             self.window.message(f"{account.display_name} connected successfully.")
         if account.provider.browser_oauth:
+            _run_thread(
+                self.rclone.account_login,
+                lambda result, error: self._account_login_ready(
+                    result, error, account.remote
+                ),
+                account.remote,
+                account.provider,
+            )
             _run_thread(self.profiles.available, self._profile_checked, account.remote)
+
+    def _account_login_ready(
+        self, login_name: str | None, error: Exception | None, remote: str
+    ) -> bool:
+        if error or not login_name:
+            return False
+        account = next(
+            (item for item in self.config.accounts if item.remote == remote), None
+        )
+        if account is None or account.login_name == login_name:
+            return False
+        account.login_name = login_name
+        self.save()
+        if self.window:
+            self.window.refresh()
+        return False
+
+    def _load_account_logins(
+        self, accounts: tuple[tuple[str, Provider], ...]
+    ) -> dict[str, str]:
+        return {
+            remote: login
+            for remote, provider in accounts
+            if (login := self.rclone.account_login(remote, provider))
+        }
+
+    def _account_logins_loaded(
+        self, logins: dict[str, str] | None, error: Exception | None
+    ) -> bool:
+        if error or not logins:
+            return False
+        changed = False
+        for account in self.config.accounts:
+            login = logins.get(account.remote, "")
+            if login and account.login_name != login:
+                account.login_name = login
+                changed = True
+        if changed:
+            self.save()
+            if self.window:
+                self.window.refresh()
+        return False
 
     def _profile_checked(self, available: bool | None, error: Exception | None) -> bool:
         if available and not error and self.window:
@@ -6823,6 +6882,17 @@ class TuxInDriveApplication(Gtk.Application):
         if self.window:
             self.window.refresh()
             self.window.message(tr("loaded"))
+        oauth_accounts = tuple(
+            (item.remote, item.provider)
+            for item in self.config.accounts
+            if item.provider.browser_oauth
+        )
+        if oauth_accounts:
+            _run_thread(
+                self._load_account_logins,
+                self._account_logins_loaded,
+                oauth_accounts,
+            )
         profile_accounts = [item for item in self.config.accounts if item.provider.browser_oauth]
         if profile_accounts:
             preferred = self.config.settings.profile_remote

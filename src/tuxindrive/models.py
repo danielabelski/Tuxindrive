@@ -244,6 +244,7 @@ class Account:
     remote: str
     provider: Provider
     display_name: str
+    login_name: str = ""
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     peer_host: str = ""
     peer_port: int = 2022
@@ -266,6 +267,7 @@ class Account:
             remote=value["remote"],
             provider=provider,
             display_name=value.get("display_name", value["remote"]),
+            login_name=" ".join(str(value.get("login_name", "")).split())[:320],
             created_at=value.get("created_at", datetime.now(timezone.utc).isoformat()),
             peer_host=value.get("peer_host", ""),
             peer_port=int(value.get("peer_port", 2022)),

@@ -2,6 +2,16 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.41 — visible authenticated account identities
+
+- Show the provider login identity on connected-account cards and at the top
+  of each account menu, making multiple accounts of one provider unambiguous.
+- Discover identities asynchronously after connection and at startup, including
+  a read-only Google Drive fallback for rclone versions without user-info
+  support.
+- Persist only the display identity as account metadata; OAuth access and
+  refresh tokens remain confined to rclone's encrypted configuration.
+
 ## 0.26.40 — truthful Google Drive root identity
 
 - Identify a configured Google endpoint as My Drive, Shared with me, a Shared

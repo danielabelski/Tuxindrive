@@ -1,3 +1,11 @@
+tuxindrive (0.26.41-1) unstable; urgency=medium
+
+  * Show the authenticated login identity on every supported account card.
+  * Backfill login labels for existing OAuth accounts without persisting tokens.
+  * Keep identity discovery asynchronous so account menus remain responsive.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sun, 20 Sep 2026 13:30:00 +0200
+
 tuxindrive (0.26.40-1) unstable; urgency=medium
 
   * Identify configured Google roots as My Drive, shared-with-me, Shared Drive,
