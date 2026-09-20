@@ -1,8 +1,8 @@
 {
-  "version": "0.26.42",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.42/TuxInDrive-0.26.42-android.apk",
-  "sha256": "9541e5b0e76be316d99004562497d1bbbe2c144f0e274e7bf62f5eba2b20f0aa",
-  "notes": "Authenticated account identities and truthful Google Drive roots",
-  "expires_at": "2026-12-19T18:26:23.058700+00:00",
-  "signature": "9/+W5mHnyzoLHqvjEq5IlYjcA9MrDkbR+pP/1IITCb3b8Tr8lcuzhiK3pAl++NEJJ3Wtr5X3jYOnQKJXD6DhBg=="
+  "version": "0.26.43",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.43/TuxInDrive-0.26.43-android.apk",
+  "sha256": "a22f93acffb252c3db9700287e042c14246c45617d20f58c4117b2c2dcc03574",
+  "notes": "Complete multi-line account identities across supported providers",
+  "expires_at": "2026-12-19T19:20:13.186045+00:00",
+  "signature": "7KpHRPGpaVbQAwcNamRtglzl12hOKYIcZz1gPMx76P6y1hWW9cKbSsvH1aIGulbQ0NJLuSXRnIpQ1EwNIeLkDA=="
 }

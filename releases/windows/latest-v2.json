@@ -1,8 +1,8 @@
 {
-  "version": "0.26.42",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.42/TuxInDrive-0.26.42-windows-x64-setup.exe",
-  "sha256": "0ee6c3b3ecfef012188cbb96fb876b461e9e98eae9c9d3cd8b1f5b12b88d2141",
-  "notes": "Authenticated account identities and truthful Google Drive roots",
-  "expires_at": "2026-12-19T18:26:22.700546+00:00",
-  "signature": "5nsoPgImPU8+hYOjCxHIlfhaayEWBs7vYJfNCXZ+f/xHhSVrhPE+z5L0COKgh8mG5WjUwjEclVJBXCsbgayDAg=="
+  "version": "0.26.43",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.43/TuxInDrive-0.26.43-windows-x64-setup.exe",
+  "sha256": "7bca78456feaaeb26d729c34726ddddbc8996ac6eb0b7e716c232b0f39385817",
+  "notes": "Complete multi-line account identities across supported providers",
+  "expires_at": "2026-12-19T19:20:12.833609+00:00",
+  "signature": "WtDiCbrHyb3n3D0c4Faf9+KwPfjhlQPt2ma4aSevruu07bfh8zx51e2tpdagyYKxHo0JkTpTNB9Ic0OICooIBg=="
 }
