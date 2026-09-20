@@ -2,11 +2,11 @@
 
 <p align="center"><img src="../branding/tuxindrive-logo.png" width="150" alt="TuxInDrive circular black-and-white penguin logo with a red bow tie"></p>
 
-This guide covers TuxInDrive 0.26.42 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
+This guide covers TuxInDrive 0.26.43 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
 
 Credentials for rclone-backed providers are kept in rclone's authenticated encrypted configuration. TuxInDrive generates its configuration key locally and stores it in GNOME Secret Service; existing rclone configurations already encrypted by an advanced user are left under that user's password-command setup. Proton's official CLI separately stores its browser session in Secret Service under `ch.proton.drive/drive-sdk-cli`; TuxInDrive never reads or exports it. Do not delete either secret until the related accounts have been disconnected.
 
-Version 0.26.42 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
+Version 0.26.43 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
 
 ### Upgrading from TuxDrive
 
@@ -202,10 +202,14 @@ Select `+` or **Connect account**, then choose Google Drive, Microsoft OneDrive,
 
 - **Account key** is TuxInDrive's local identifier. Use letters, numbers, dot, dash, or underscore.
 - **Display name** is the friendly name shown in the sidebar.
-- After authorization, the account card and its menu show the authenticated
-  provider login (for example an email address). Existing OAuth accounts are
-  filled in on the next startup. Only this display identity is saved in
-  TuxInDrive metadata; OAuth tokens remain in rclone's encrypted configuration.
+- The account card shows the display name, provider/state, and identity on
+  separate lines. Google Drive, OneDrive, Dropbox, Box and pCloud identities
+  are filled in after authorization and at startup; username-based providers
+  use their non-secret configured user. GitHub shows its author or repository
+  owner. If a provider cannot expose an identity, the card says **Account key**
+  instead of presenting that local alias as a login. Only the display identity
+  is saved in TuxInDrive metadata; OAuth tokens remain in rclone's encrypted
+  configuration and are never placed in a request URL or application log.
 - **OAuth client ID/secret** are optional for personal testing. A dedicated provider application is recommended for regular or organizational use.
 - Google Drive, OneDrive, Dropbox, Box, and pCloud normally open browser OAuth. Sign in on the provider's page and approve access; TuxInDrive does not receive the cloud password.
 - MEGA uses explicit provider credentials. Nextcloud and WebDAV ask for the server URL, username, and preferably an app password. S3-compatible storage asks for its provider, access key, secret key, optional endpoint, and region. SFTP asks for host, user, port, and an optional password; omit the password when an available SSH agent supplies the key. Secret values are protected before rclone stores them in its private configuration; they are never stored in TuxInDrive's account JSON.

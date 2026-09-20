@@ -11,7 +11,7 @@ import subprocess
 import sys
 import threading
 import ctypes
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 from dataclasses import dataclass
@@ -190,30 +190,89 @@ class RcloneClient:
                 return identity
         except (RcloneError, json.JSONDecodeError):
             pass
-        if provider is not Provider.GOOGLE_DRIVE:
-            return ""
 
-        # Older rclone Drive backends do not implement `config userinfo`.
-        # Refresh through rclone first, then keep its decrypted configuration
-        # dump only in memory long enough to call Google's read-only About API.
+        # Older rclone backends do not consistently implement `config userinfo`.
+        # Refresh through rclone when possible, then keep its decrypted config
+        # only in memory. Never return or log tokens or secret config values.
         try:
-            self._run(["about", f"{remote}:", "--json"], timeout=30)
+            try:
+                self._run(["about", f"{remote}:", "--json"], timeout=30)
+            except RcloneError:
+                pass
             raw = json.loads(self._run(["config", "dump"]).stdout or "{}")
             values = raw.get(remote, {})
+            if not isinstance(values, dict):
+                return ""
+            identity = self._configured_identity(values)
+            if identity:
+                return identity
             token_value = values.get("token", "") if isinstance(values, dict) else ""
             token = json.loads(token_value) if isinstance(token_value, str) else token_value
             access_token = token.get("access_token", "") if isinstance(token, dict) else ""
             if not access_token:
                 return ""
-            request = Request(
-                "https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress)",
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
+            request = self._identity_request(provider, access_token, values)
+            if request is None:
+                return self._identity_label(token)
             with urlopen(request, timeout=20) as response:
-                identity = self._identity_label(json.load(response).get("user", {}))
-            return identity
+                return self._identity_label(json.load(response))
         except (RcloneError, json.JSONDecodeError, OSError, URLError, ValueError, KeyError):
             return ""
+
+    @staticmethod
+    def _configured_identity(values: dict[str, Any]) -> str:
+        """Read only known non-secret identity fields from an rclone remote."""
+        for key in ("user", "username", "email", "login"):
+            candidate = values.get(key)
+            if isinstance(candidate, str):
+                candidate = " ".join(candidate.split()).strip()
+                if candidate and len(candidate) <= 320:
+                    return candidate
+        return ""
+
+    @staticmethod
+    def _identity_request(
+        provider: Provider, access_token: str, values: dict[str, Any]
+    ) -> Request | None:
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "User-Agent": "TuxInDrive account identity",
+        }
+        if provider is Provider.GOOGLE_DRIVE:
+            return Request(
+                "https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress)",
+                headers=headers,
+            )
+        if provider is Provider.ONEDRIVE:
+            return Request(
+                "https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName",
+                headers=headers,
+            )
+        if provider is Provider.DROPBOX:
+            return Request(
+                "https://api.dropboxapi.com/2/users/get_current_account",
+                data=b"null",
+                headers={**headers, "Content-Type": "application/json"},
+                method="POST",
+            )
+        if provider is Provider.BOX:
+            return Request(
+                "https://api.box.com/2.0/users/me?fields=name,login",
+                headers=headers,
+            )
+        if provider is Provider.PCLOUD:
+            hostname = str(values.get("hostname") or "api.pcloud.com").strip().lower()
+            if hostname not in {"api.pcloud.com", "eapi.pcloud.com"}:
+                hostname = "api.pcloud.com"
+            # pCloud requires the OAuth token as a form field. It is sent only
+            # in the HTTPS request body, never in the URL or application logs.
+            return Request(
+                f"https://{hostname}/userinfo",
+                data=urlencode({"access_token": access_token}).encode("ascii"),
+                headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": headers["User-Agent"]},
+                method="POST",
+            )
+        return None
 
     @staticmethod
     def _identity_label(value: Any) -> str:

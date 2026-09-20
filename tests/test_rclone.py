@@ -47,6 +47,61 @@ class RcloneClientTests(unittest.TestCase):
         request = opened.call_args.args[0]
         self.assertNotIn("secret", request.full_url)
 
+    def test_account_login_uses_non_secret_configured_username(self):
+        client = RcloneClient()
+        calls = [
+            RcloneError("unsupported"),
+            RcloneError("about unsupported"),
+            subprocess.CompletedProcess(
+                [], 0, stdout=json.dumps({"cloud": {"user": "owner@example.com", "pass": "secret"}}), stderr=""
+            ),
+        ]
+        with patch.object(client, "_run", side_effect=calls):
+            self.assertEqual(
+                client.account_login("cloud", Provider.NEXTCLOUD),
+                "owner@example.com",
+            )
+
+    def test_onedrive_account_login_falls_back_to_graph_identity(self):
+        client = RcloneClient()
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = (
+            b'{"displayName":"Owner","mail":"","userPrincipalName":"owner@example.com"}'
+        )
+        calls = [
+            RcloneError("unsupported"),
+            subprocess.CompletedProcess([], 0, stdout="{}", stderr=""),
+            subprocess.CompletedProcess(
+                [], 0,
+                stdout=json.dumps({"cloud": {"token": json.dumps({"access_token": "secret"})}}),
+                stderr="",
+            ),
+        ]
+        with patch.object(client, "_run", side_effect=calls), patch(
+            "tuxindrive.rclone.urlopen", return_value=response
+        ) as opened:
+            self.assertEqual(
+                client.account_login("cloud", Provider.ONEDRIVE),
+                "owner@example.com",
+            )
+        request = opened.call_args.args[0]
+        self.assertEqual(request.full_url, "https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName")
+        self.assertNotIn("secret", request.full_url)
+
+    def test_provider_identity_requests_keep_tokens_out_of_urls(self):
+        client = RcloneClient()
+        for provider in (
+            Provider.GOOGLE_DRIVE, Provider.ONEDRIVE, Provider.DROPBOX,
+            Provider.BOX, Provider.PCLOUD,
+        ):
+            with self.subTest(provider=provider):
+                request = client._identity_request(provider, "secret-token", {})
+                self.assertIsNotNone(request)
+                self.assertNotIn("secret-token", request.full_url)
+        pcloud = client._identity_request(Provider.PCLOUD, "secret-token", {"hostname": "evil.example"})
+        self.assertEqual(pcloud.full_url, "https://api.pcloud.com/userinfo")
+        self.assertIn(b"secret-token", pcloud.data)
+
     def test_plain_config_is_encrypted_with_secret_service_helper(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

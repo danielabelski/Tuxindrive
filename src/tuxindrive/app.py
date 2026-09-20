@@ -114,6 +114,29 @@ APP_ID = "io.github.tuxindrive.TuxInDrive"
 JOB_DND_TARGET = "UTF8_STRING"
 
 
+def _account_identity_display(account: Account) -> tuple[str, str]:
+    """Return an accurate identity label without presenting aliases as logins."""
+    if account.login_name:
+        return "Login", account.login_name
+    if account.provider is Provider.GITHUB and account.git_author_email:
+        return "Git author", account.git_author_email
+    if account.provider is Provider.GITHUB and account.repository_url:
+        try:
+            return "Repository owner", parse_repository_url(account.repository_url).owner
+        except GitHubSyncError:
+            pass
+    return "Account key", account.remote
+
+
+def _account_card_markup(account: Account, state: str) -> str:
+    identity_label, identity = _account_identity_display(account)
+    return (
+        f"<b>{GLib.markup_escape_text(account.display_name)}</b>\n"
+        f"<small>{GLib.markup_escape_text(account.provider.label)} · {GLib.markup_escape_text(state)}</small>\n"
+        f"<small>{identity_label}: {GLib.markup_escape_text(identity)}</small>"
+    )
+
+
 def _brand_logo_path() -> Path | None:
     candidates: list[Path] = []
     bundle_root = getattr(sys, "_MEIPASS", None)
@@ -4204,12 +4227,7 @@ class MainWindow(Gtk.ApplicationWindow):
                 tr("synchronizing") if any(job.id in running for job in jobs) else
                 tr("attention") if any(job.last_error for job in jobs) else tr("connected")
             )
-            widgets["label"].set_markup(
-                f"<b>{GLib.markup_escape_text(account.display_name)}</b>\n"
-                f"<small>{account.provider.label}"
-                f"{(' · ' + GLib.markup_escape_text(account.login_name)) if account.login_name else ''}"
-                f" · {state}</small>"
-            )
+            widgets["label"].set_markup(_account_card_markup(account, state))
             widgets["icon"].set_tooltip_text(f"{account.provider.label} · {state}")
         for job in self.controller.config.jobs:
             widgets = self._job_widgets.get(job.id)
@@ -4258,20 +4276,15 @@ class MainWindow(Gtk.ApplicationWindow):
             icon = Gtk.Image.new_from_icon_name(account.provider.icon_name, Gtk.IconSize.DND)
             icon.set_tooltip_text(f"{account.provider.label} · {account_state}")
             text = Gtk.Label(xalign=0)
-            text.set_markup(
-                f"<b>{GLib.markup_escape_text(account.display_name)}</b>\n"
-                f"<small>{account.provider.label}"
-                f"{(' · ' + GLib.markup_escape_text(account.login_name)) if account.login_name else ''}"
-                f" · {account_state}</small>"
-            )
+            text.set_markup(_account_card_markup(account, account_state))
             menu = Gtk.MenuButton()
             menu.set_image(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
             popup = Gtk.Menu()
-            if account.login_name:
-                login = Gtk.MenuItem(label=f"Signed in as {account.login_name}")
-                login.set_sensitive(False)
-                popup.append(login)
-                popup.append(Gtk.SeparatorMenuItem())
+            identity_label, identity = _account_identity_display(account)
+            login = Gtk.MenuItem(label=f"{identity_label}: {identity}")
+            login.set_sensitive(False)
+            popup.append(login)
+            popup.append(Gtk.SeparatorMenuItem())
             online = Gtk.MenuItem(label=tr("peer_settings") if account.provider is Provider.PEER else tr("open_online"))
             online.connect("activate", self._open_online, account)
             reconnect = Gtk.MenuItem(label=tr("reconnect"))
@@ -6293,7 +6306,10 @@ class TuxInDriveApplication(Gtk.Application):
         if self.window:
             self.window.refresh()
             self.window.message(f"{account.display_name} connected successfully.")
-        if account.provider.browser_oauth:
+        if (
+            account.backend == "rclone"
+            and account.provider not in {Provider.GITHUB, Provider.PEER, Provider.VAULT}
+        ):
             _run_thread(
                 self.rclone.account_login,
                 lambda result, error: self._account_login_ready(
@@ -6302,6 +6318,7 @@ class TuxInDriveApplication(Gtk.Application):
                 account.remote,
                 account.provider,
             )
+        if account.provider.browser_oauth:
             _run_thread(self.profiles.available, self._profile_checked, account.remote)
 
     def _account_login_ready(
@@ -6882,16 +6899,17 @@ class TuxInDriveApplication(Gtk.Application):
         if self.window:
             self.window.refresh()
             self.window.message(tr("loaded"))
-        oauth_accounts = tuple(
+        identity_accounts = tuple(
             (item.remote, item.provider)
             for item in self.config.accounts
-            if item.provider.browser_oauth
+            if item.backend == "rclone"
+            and item.provider not in {Provider.GITHUB, Provider.PEER, Provider.VAULT}
         )
-        if oauth_accounts:
+        if identity_accounts:
             _run_thread(
                 self._load_account_logins,
                 self._account_logins_loaded,
-                oauth_accounts,
+                identity_accounts,
             )
         profile_accounts = [item for item in self.config.accounts if item.provider.browser_oauth]
         if profile_accounts:

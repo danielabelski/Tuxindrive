@@ -1,3 +1,11 @@
+tuxindrive (0.26.43-1) unstable; urgency=medium
+
+  * Show provider state and account identity on separate readable lines.
+  * Backfill identities across supported OAuth and username-based providers.
+  * Keep provider tokens confined to encrypted credential storage.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sun, 20 Sep 2026 21:00:00 +0200
+
 tuxindrive (0.26.42-1) unstable; urgency=medium
 
   * Publish the authenticated-account identity update as a fresh package build.

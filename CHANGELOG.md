@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.43 — complete account identity cards
+
+- Put the provider state and account login on separate card lines so long
+  identities remain readable and multiple accounts are easy to distinguish.
+- Backfill identities for Google Drive, OneDrive, Dropbox, Box, pCloud and
+  username-based rclone providers, with accurate GitHub identity labels.
+- Keep OAuth tokens out of URLs, UI, logs and TuxInDrive configuration; when a
+  provider exposes no identity, show the non-secret local account key instead.
+
 ## 0.26.42 — account-identity release build
 
 - Publish the authenticated-account identity display from 0.26.41 as a fresh,
