@@ -2,6 +2,13 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.42 — account-identity release build
+
+- Publish the authenticated-account identity display from 0.26.41 as a fresh,
+  consistently versioned desktop, Android, Debian, Windows and Snap build.
+- No synchronization behavior, provider authorization, or credential storage
+  semantics changed from 0.26.41.
+
 ## 0.26.41 — visible authenticated account identities
 
 - Show the provider login identity on connected-account cards and at the top
