@@ -66,11 +66,14 @@ from .models import (
 )
 from .github_sync import GitHubSyncError, parse_repository_url, repository_item_url, validate_branch
 from .folder_layout import (
+    account_drag_payload,
+    account_remote_from_drag_payload,
     cloud_selection_paths,
     initial_cloud_paths,
     job_drag_payload,
     job_id_from_drag_payload,
     move_job,
+    move_account,
     toggle_cloud_selection,
 )
 from .peer import DiscoveredPeer, PeerError, PeerInvitation, PeerManager, key_fingerprint, local_network_address, normalize_public_key, validate_host, validate_port
@@ -4275,6 +4278,15 @@ class MainWindow(Gtk.ApplicationWindow):
                 account_state = tr("connected")
             icon = Gtk.Image.new_from_icon_name(account.provider.icon_name, Gtk.IconSize.DND)
             icon.set_tooltip_text(f"{account.provider.label} · {account_state}")
+            drag_handle = Gtk.EventBox()
+            drag_handle.get_style_context().add_class("drag-handle")
+            drag_handle.set_visible_window(False)
+            drag_handle.set_above_child(True)
+            drag_handle.set_size_request(32, 32)
+            drag_handle.add(
+                Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON)
+            )
+            drag_handle.set_tooltip_text(tr("drag_account_hint"))
             text = Gtk.Label(xalign=0)
             text.set_markup(_account_card_markup(account, account_state))
             menu = Gtk.MenuButton()
@@ -4285,22 +4297,28 @@ class MainWindow(Gtk.ApplicationWindow):
             login.set_sensitive(False)
             popup.append(login)
             popup.append(Gtk.SeparatorMenuItem())
+            rename = Gtk.MenuItem(label=tr("rename_account"))
+            rename.connect("activate", self._rename_account, account)
             online = Gtk.MenuItem(label=tr("peer_settings") if account.provider is Provider.PEER else tr("open_online"))
             online.connect("activate", self._open_online, account)
             reconnect = Gtk.MenuItem(label=tr("reconnect"))
             reconnect.connect("activate", self._reconnect, account)
             remove = Gtk.MenuItem(label=tr("remove_account"))
             remove.connect("activate", self._remove_account, account)
+            popup.append(rename)
             popup.append(online)
             popup.append(reconnect)
             popup.append(remove)
             popup.show_all()
             menu.set_popup(popup)
             self._account_widgets[account.remote] = {"label": text, "icon": icon}
+            box.pack_start(drag_handle, False, False, 0)
             box.pack_start(icon, False, False, 0)
             box.pack_start(text, True, True, 0)
             box.pack_end(menu, False, False, 0)
             row.add(box)
+            self._enable_account_drag_source(drag_handle, account)
+            self._enable_account_drop_target(row, account)
             self.account_list.add(row)
 
         for child in self.job_list.get_children():
@@ -4330,6 +4348,68 @@ class MainWindow(Gtk.ApplicationWindow):
         self.show_all()
         self.apply_visual_theme(self.controller.config.settings.visual_theme)
         self.infobar.hide()
+
+    @staticmethod
+    def _account_drag_targets() -> list[Gtk.TargetEntry]:
+        return [Gtk.TargetEntry.new(JOB_DND_TARGET, Gtk.TargetFlags.SAME_APP, 0)]
+
+    def _enable_account_drag_source(self, widget: Gtk.Widget, account: Account) -> None:
+        widget.drag_source_set(
+            Gdk.ModifierType.BUTTON1_MASK,
+            self._account_drag_targets(),
+            Gdk.DragAction.MOVE,
+        )
+        widget.drag_source_set_icon_name(account.provider.icon_name)
+        widget.connect("drag-data-get", self._account_drag_data_get, account.remote)
+
+    def _enable_account_drop_target(
+        self, row: Gtk.ListBoxRow, anchor: Account
+    ) -> None:
+        row.drag_dest_set(
+            Gtk.DestDefaults.ALL,
+            self._account_drag_targets(),
+            Gdk.DragAction.MOVE,
+        )
+        row.connect("drag-data-received", self._account_drag_data_received, anchor)
+
+    def _account_drag_data_get(
+        self,
+        _widget: Gtk.Widget,
+        _context: Gdk.DragContext,
+        selection: Gtk.SelectionData,
+        _info: int,
+        _time: int,
+        remote: str,
+    ) -> None:
+        payload = account_drag_payload(remote)
+        if payload:
+            selection.set_text(payload, -1)
+
+    def _account_drag_data_received(
+        self,
+        row: Gtk.ListBoxRow,
+        context: Gdk.DragContext,
+        _x: int,
+        y: int,
+        selection: Gtk.SelectionData,
+        _info: int,
+        time: int,
+        anchor: Account,
+    ) -> None:
+        remote = account_remote_from_drag_payload(selection.get_text())
+        valid = any(account.remote == remote for account in self.controller.config.accounts)
+        changed = False
+        if valid:
+            changed = move_account(
+                self.controller.config.accounts,
+                remote,
+                anchor.remote,
+                after=y >= max(row.get_allocated_height(), 1) / 2,
+            )
+        Gtk.drag_finish(context, valid, False, time)
+        if changed:
+            self.controller.save()
+            self.refresh()
 
     def _group_row(self, group: FolderGroup | None) -> Gtk.ListBoxRow:
         row = Gtk.ListBoxRow()
@@ -4945,6 +5025,37 @@ class MainWindow(Gtk.ApplicationWindow):
         self.controller.save()
         self.controller.reconfigure_callbacks()
         self.refresh()
+
+    def _rename_account(self, _item: Gtk.MenuItem, account: Account) -> None:
+        dialog = ResponsiveDialog(title=tr("rename_account"), transient_for=self, modal=True)
+        area = dialog.get_content_area()
+        area.set_border_width(20)
+        area.set_spacing(10)
+        explanation = Gtk.Label(
+            label=tr("rename_account_hint"),
+            xalign=0,
+        )
+        explanation.set_line_wrap(True)
+        entry = Gtk.Entry()
+        entry.set_text(account.display_name)
+        entry.set_max_length(120)
+        entry.set_activates_default(True)
+        area.pack_start(explanation, False, False, 0)
+        area.pack_start(entry, False, False, 0)
+        dialog.add_button(tr("cancel"), Gtk.ResponseType.CANCEL)
+        save = dialog.add_button(tr("rename"), Gtk.ResponseType.OK)
+        save.get_style_context().add_class("suggested-action")
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        dialog.show_all()
+        if dialog.run() == Gtk.ResponseType.OK:
+            name = " ".join(entry.get_text().split())
+            if name:
+                account.display_name = name
+                self.controller.save()
+                self.refresh()
+            else:
+                self.message(tr("account_name_required"), Gtk.MessageType.WARNING)
+        dialog.destroy()
 
     def _remove_account(self, _item: Gtk.MenuItem, account: Account) -> None:
         if any(job.account_remote == account.remote for job in self.controller.config.jobs):

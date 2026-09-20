@@ -1,15 +1,18 @@
 import unittest
 
 from tuxindrive.folder_layout import (
+    account_drag_payload,
+    account_remote_from_drag_payload,
     cloud_selection_paths,
     initial_cloud_paths,
     job_drag_payload,
     job_id_from_drag_payload,
     move_job,
+    move_account,
     toggle_cloud_selection,
     valid_group_id,
 )
-from tuxindrive.models import FolderGroup, SyncJob
+from tuxindrive.models import Account, FolderGroup, Provider, SyncJob
 
 
 def job(name: str, group_id: str = "") -> SyncJob:
@@ -76,6 +79,32 @@ class FolderLayoutTests(unittest.TestCase):
         self.assertEqual(job_id_from_drag_payload(b"\xff"), "")
         self.assertEqual(job_id_from_drag_payload("tuxindrive-job:"), "")
         self.assertEqual(job_drag_payload("bad\x00id"), "")
+
+    def test_reorders_account_cards_without_changing_account_identity(self):
+        accounts = [
+            Account("google", Provider.GOOGLE_DRIVE, "Personal"),
+            Account("work", Provider.ONEDRIVE, "Work"),
+            Account("archive", Provider.DROPBOX, "Archive"),
+        ]
+        self.assertTrue(move_account(accounts, "archive", "google"))
+        self.assertEqual([item.remote for item in accounts], ["archive", "google", "work"])
+        self.assertEqual(accounts[0].display_name, "Archive")
+        self.assertTrue(move_account(accounts, "archive", "work", after=True))
+        self.assertEqual([item.remote for item in accounts], ["google", "work", "archive"])
+
+    def test_account_drag_payload_is_distinct_and_bounded(self):
+        payload = account_drag_payload("google-main")
+        self.assertEqual(payload, "tuxindrive-account:google-main")
+        self.assertEqual(account_remote_from_drag_payload(payload), "google-main")
+        self.assertEqual(account_remote_from_drag_payload(payload.encode("utf-8")), "google-main")
+        self.assertEqual(account_remote_from_drag_payload(job_drag_payload("folder-id")), "")
+        self.assertEqual(account_drag_payload("bad\x00remote"), "")
+
+    def test_unknown_or_self_account_drop_is_noop(self):
+        accounts = [Account("google", Provider.GOOGLE_DRIVE, "Personal")]
+        self.assertFalse(move_account(accounts, "google", "google"))
+        self.assertFalse(move_account(accounts, "missing", "google"))
+        self.assertEqual([item.remote for item in accounts], ["google"])
 
     def test_cloud_selection_survives_before_async_tree_row_is_rendered(self):
         selected = cloud_selection_paths(["Documents/Projects"])

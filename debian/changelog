@@ -1,3 +1,11 @@
+tuxindrive (0.26.44-1) unstable; urgency=medium
+
+  * Add non-destructive cloud-account display-name editing.
+  * Persist drag-and-drop account ordering in the sidebar.
+  * Localize and document account organization controls.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Sun, 20 Sep 2026 22:00:00 +0200
+
 tuxindrive (0.26.43-1) unstable; urgency=medium
 
   * Show provider state and account identity on separate readable lines.

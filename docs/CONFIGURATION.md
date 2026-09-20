@@ -1,7 +1,7 @@
 # TuxInDrive configuration reference
 
 This reference describes the persisted desktop configuration in TuxInDrive
-0.26.43. Normal changes should be made in **Settings**, **Connect account**, or
+0.26.44. Normal changes should be made in **Settings**, **Connect account**, or
 **Add/Edit folder**. Stop TuxInDrive and make a backup before manually editing
 JSON; a syntactically valid but inconsistent mapping can still synchronize the
 wrong location.
@@ -188,7 +188,7 @@ not what is deleted from either endpoint when a rule is later narrowed.
 
 `remote_scope` is a provider-selected root (for example a Shared Drive), while
 `remote_path` is relative to it. Google locations use explicit scopes for My
-Drive, Shared with me, and every Shared Drive. Version 0.26.43 also identifies
+Drive, Shared with me, and every Shared Drive. Version 0.26.44 also identifies
 the effective configured base root from rclone's redacted configuration; no
 credential or provider identifier is displayed or stored for this purpose. A
 legacy `Previously configured root` label is shown as requiring verification.

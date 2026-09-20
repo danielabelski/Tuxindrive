@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 
-from .models import FolderGroup, SyncJob
+from .models import Account, FolderGroup, SyncJob
 
 
 JOB_DRAG_PREFIX = "tuxindrive-job:"
 MAX_JOB_DRAG_ID_LENGTH = 256
+ACCOUNT_DRAG_PREFIX = "tuxindrive-account:"
+MAX_ACCOUNT_DRAG_ID_LENGTH = 256
 
 
 def cloud_selection_paths(selected: Iterable[str] | None = None) -> set[str]:
@@ -57,6 +59,43 @@ def job_id_from_drag_payload(payload: str | bytes | None) -> str:
     if not job_id or len(job_id) > MAX_JOB_DRAG_ID_LENGTH or "\x00" in job_id:
         return ""
     return job_id
+
+
+def account_drag_payload(remote: str) -> str:
+    """Return a bounded text payload for an in-process account-card drag."""
+    if not remote or len(remote) > MAX_ACCOUNT_DRAG_ID_LENGTH or "\x00" in remote:
+        return ""
+    return f"{ACCOUNT_DRAG_PREFIX}{remote}"
+
+
+def account_remote_from_drag_payload(payload: str | bytes | None) -> str:
+    """Decode only a well-formed TuxInDrive account-card text payload."""
+    if isinstance(payload, bytes):
+        try:
+            payload = payload.decode("utf-8")
+        except UnicodeDecodeError:
+            return ""
+    if not isinstance(payload, str) or not payload.startswith(ACCOUNT_DRAG_PREFIX):
+        return ""
+    remote = payload[len(ACCOUNT_DRAG_PREFIX):]
+    if not remote or len(remote) > MAX_ACCOUNT_DRAG_ID_LENGTH or "\x00" in remote:
+        return ""
+    return remote
+
+
+def move_account(
+    accounts: list[Account], remote: str, anchor_remote: str, *, after: bool = False
+) -> bool:
+    """Reorder account cards without changing remotes, credentials, or jobs."""
+    source = next((account for account in accounts if account.remote == remote), None)
+    anchor = next((account for account in accounts if account.remote == anchor_remote), None)
+    if source is None or anchor is None or source is anchor:
+        return False
+    previous_index = accounts.index(source)
+    accounts.pop(previous_index)
+    index = accounts.index(anchor) + (1 if after else 0)
+    accounts.insert(index, source)
+    return previous_index != accounts.index(source)
 
 
 def valid_group_id(group_id: str, groups: Sequence[FolderGroup]) -> str:

@@ -2,6 +2,14 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.44 — customizable cloud account list
+
+- Add **Rename account** to every cloud-account menu; it changes only the
+  friendly sidebar label and leaves provider identity and synchronization intact.
+- Add account-card drag handles for persistent visual reordering above or below
+  another account without changing remote keys, credentials, jobs or files.
+- Localize the new controls and document their non-destructive behavior.
+
 ## 0.26.43 — complete account identity cards
 
 - Put the provider state and account login on separate card lines so long

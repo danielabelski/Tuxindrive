@@ -6,10 +6,27 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tuxindrive.config import ConfigStore, branded_root, cache_home, config_home, data_home
+from tuxindrive.folder_layout import move_account
 from tuxindrive.models import Account, AppConfig, ConflictPolicy, FolderGroup, PeerShare, Provider, SyncJob, SyncMode
 
 
 class ConfigStoreTests(unittest.TestCase):
+    def test_account_display_name_and_visual_order_survive_restart(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            store = ConfigStore(Path(temporary) / "config.json")
+            config = AppConfig(accounts=[
+                Account("personal", Provider.GOOGLE_DRIVE, "Google Drive"),
+                Account("work", Provider.ONEDRIVE, "Microsoft OneDrive"),
+            ])
+            config.accounts[1].display_name = "Company files"
+            self.assertTrue(move_account(config.accounts, "work", "personal"))
+            store.save(config)
+            loaded = store.load()
+            self.assertEqual(
+                [(item.remote, item.display_name) for item in loaded.accounts],
+                [("work", "Company files"), ("personal", "Google Drive")],
+            )
+
     def test_native_desktop_directories_are_used_outside_linux(self):
         with patch("tuxindrive.config.platform.system", return_value="Windows"), patch.dict(
             os.environ, {"APPDATA": "C:/Users/test/AppData/Roaming", "LOCALAPPDATA": "C:/Users/test/AppData/Local"}
