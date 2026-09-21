@@ -1,8 +1,8 @@
 {
-  "version": "0.26.45",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.45/TuxInDrive-0.26.45-macos-arm64.dmg",
-  "sha256": "8558ae58f2a45870754d37473eaf87cc49920c5c6e87a799553ccaee1fb81b3c",
-  "notes": "Reliable two-way sync completion verification and safer endpoint recovery",
-  "expires_at": "2026-12-19T20:40:12.069470+00:00",
-  "signature": "oGjCsjRBUSRNBbH/ftX52rSPRgMYInpgcTHuk9VgDiSsJpDT7sfWsVWWN0najB3XbSj3LSY6LODUyXiAsup0Cg=="
+  "version": "0.26.46",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.46/TuxInDrive-0.26.46-macos-arm64.dmg",
+  "sha256": "a5982aaf3b656cd2f0885e5bdb2b638210f555968f81ab0f048f1d0424fa227d",
+  "notes": "Automatic preservation of duplicate cloud objects under unique synchronized names",
+  "expires_at": "2026-12-20T06:26:42.208567+00:00",
+  "signature": "nk3M7mDusy/ThrvP37h/6MBb0Xuz0pEVGO4FatPLgkR9f1BSCNYRVUpzC/CwXOGf0GShqoNFSPWrNLhQL1cfBg=="
 }

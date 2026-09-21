@@ -1,8 +1,8 @@
 {
-  "version": "0.26.45",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.45/TuxInDrive-0.26.45-android.apk",
-  "sha256": "11aad924791e8b558d832eed92fc8932113214b5667bb407b1a309a5e5bf46bd",
-  "notes": "Reliable two-way sync completion verification and safer endpoint recovery",
-  "expires_at": "2026-12-19T20:40:12.330517+00:00",
-  "signature": "NTaXbhDEY1V+aZqkAYhh4qx9zUkngVTs//iSdOiSIzdlEiK4f7egymhZ5Ru31GY6jIX7UUoCTeUVsu7+c9HPBw=="
+  "version": "0.26.46",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.46/TuxInDrive-0.26.46-android.apk",
+  "sha256": "2665b33d84a31437c36c767de46fca56ee36a6572a95428055d36643027da358",
+  "notes": "Automatic preservation of duplicate cloud objects under unique synchronized names",
+  "expires_at": "2026-12-20T06:26:42.478616+00:00",
+  "signature": "KxwMUIyzwsBNp3hTd2+GSndajR5flGJSpD+/YjrG8chRTdBlO5GF2l3/tCGSx6VsKy7PRbUjPuxiKK7IGRrCBA=="
 }

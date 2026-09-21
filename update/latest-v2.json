@@ -1,8 +1,8 @@
 {
-  "version": "0.26.45",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.45/tuxindrive_0.26.45_all.deb",
-  "sha256": "addc99784e04ac30eb402c425492c1d468fe0c2fe0afc1a4a1d4c3279d8f6d48",
-  "notes": "Reliable two-way sync completion verification and safer endpoint recovery",
-  "expires_at": "2026-12-19T20:40:11.909445+00:00",
-  "signature": "ZjfOS229KXwfpnFKsnw4avWZnyErvBlGyDEOJoseRwujUhLxJgdmjx6cglgJSUvMYnGBqgoYGv64zQNJ/KwKCg=="
+  "version": "0.26.46",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.46/tuxindrive_0.26.46_all.deb",
+  "sha256": "0143674ad00671bd31c210d045db4db7fcc6233a98a05f23b009e303bc1e7c0a",
+  "notes": "Automatic preservation of duplicate cloud objects under unique synchronized names",
+  "expires_at": "2026-12-20T06:26:42.040032+00:00",
+  "signature": "G5Vm3upsjdGQS3We+uoebzcP6D9c/1mcPt6FJ2/oqKgBLs0cTjfW/pRFxA/s/gYSydMW4rpyUmzFdV8dXhvAAQ=="
 }

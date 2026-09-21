@@ -1,8 +1,8 @@
 {
-  "version": "0.26.45",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.45/TuxInDrive-0.26.45-windows-x64-setup.exe",
-  "sha256": "821f518958eb09e30db61e3cfe4b5caa5d359ae645390c2f75f6d133895ebeaf",
-  "notes": "Reliable two-way sync completion verification and safer endpoint recovery",
-  "expires_at": "2026-12-19T20:40:11.984710+00:00",
-  "signature": "qiaMWPzPwgX4/axeGpYKt0QuI93SuECrK+eaDESUTKGwJaonCETHLWIOqrebrS/OUC5RmEirHhyaJE1FVt16CA=="
+  "version": "0.26.46",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.46/TuxInDrive-0.26.46-windows-x64-setup.exe",
+  "sha256": "812d7b2490f0cf9dc743610834b335b2dcbf2ac2903ca1ed9e9cb9e2f2a0d18f",
+  "notes": "Automatic preservation of duplicate cloud objects under unique synchronized names",
+  "expires_at": "2026-12-20T06:26:42.118916+00:00",
+  "signature": "JCKmVZZaCcVJCzpXwyc7ff1ZaEd4II817+SrAAHVf74PNIed4jQJBbYqRwEjIbpUUUmXnyXc1uE3RaWixveEBA=="
 }
