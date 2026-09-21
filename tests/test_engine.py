@@ -133,7 +133,84 @@ class SyncEngineCommandTests(unittest.TestCase):
             issue = self.engine._successful_run_log_issue(log, offset)
         self.assertIsNone(issue)
 
-    def test_exit_zero_duplicate_pauses_job_without_forcing_resync(self):
+    def test_duplicate_destination_preserves_parent_and_extension(self):
+        destination = self.engine._duplicate_destination(
+            "Final pitch presentations/Nukib1.pptx.pptx"
+        )
+        self.assertTrue(destination.startswith("Final pitch presentations/Nukib1.pptx"))
+        self.assertIn("TuxInDrive duplicate", destination)
+        self.assertTrue(destination.endswith(".pptx"))
+
+    def test_unsafe_duplicate_path_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            self.engine._duplicate_destination("../outside.txt")
+
+    def test_cloud_duplicate_rename_uses_exact_source_and_unique_destination(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            job = SyncJob(
+                account_remote="google",
+                remote_path="My Drive",
+                local_path=f"{temporary}/local",
+            )
+            completed = MagicMock(returncode=0, stdout="", stderr="")
+            log = Path(temporary) / "sync.log"
+            with patch("tuxindrive.engine.subprocess.run", return_value=completed) as run:
+                renamed, error = self.engine._rename_cloud_duplicate(
+                    job, "Folder/report.xlsx", log
+                )
+        self.assertEqual(error, "")
+        self.assertIsNotNone(renamed)
+        self.assertIn("TuxInDrive duplicate", renamed)
+        command = run.call_args.args[0]
+        self.assertEqual(command[:2], ["/usr/bin/rclone", "moveto"])
+        self.assertEqual(command[2], "google:My Drive/Folder/report.xlsx")
+        self.assertEqual(command[3], f"google:My Drive/{renamed}")
+
+    def test_exit_zero_duplicate_is_renamed_then_safely_resynced(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ,
+            {"XDG_DATA_HOME": f"{temporary}/data", "XDG_CACHE_HOME": f"{temporary}/cache"},
+        ):
+            job = SyncJob(
+                account_remote="one",
+                local_path=f"{temporary}/local",
+                initialized=False,
+            )
+            Path(job.local_path).mkdir()
+            completed = []
+            commands = []
+
+            def process_with_duplicate(command, **kwargs):
+                commands.append(command)
+                if len(commands) == 1:
+                    kwargs["stdout"].write(
+                        "NOTICE: DPH/August2026/report.xlsx: "
+                        "Duplicate object found in destination - ignoring\n"
+                    )
+                else:
+                    kwargs["stdout"].write("Synchronization successful\n")
+                process = MagicMock()
+                process.wait.return_value = 0
+                return process
+
+            with patch("tuxindrive.engine.resolve_rclone", return_value="/usr/bin/rclone"), \
+                 patch("tuxindrive.engine.subprocess.Popen", side_effect=process_with_duplicate), \
+                 patch.object(
+                     self.engine,
+                     "_rename_cloud_duplicate",
+                     return_value=("DPH/August2026/report (TuxInDrive duplicate).xlsx", ""),
+                 ) as rename, \
+                 patch.object(self.engine, "_verified_remote_snapshot", return_value={}):
+                self.engine._run_worker(
+                    job, Path(temporary) / "sync.log", completed.append, False
+                )
+        self.assertTrue(completed[0].success)
+        self.assertIn("unique local name", completed[0].message)
+        self.assertEqual(len(commands), 2)
+        self.assertIn("--resync", commands[1])
+        rename.assert_called_once()
+
+    def test_failed_duplicate_rename_pauses_with_exact_source(self):
         with tempfile.TemporaryDirectory() as temporary, patch.dict(
             os.environ,
             {"XDG_DATA_HOME": f"{temporary}/data", "XDG_CACHE_HOME": f"{temporary}/cache"},
@@ -148,21 +225,26 @@ class SyncEngineCommandTests(unittest.TestCase):
 
             def process_with_duplicate(_command, **kwargs):
                 kwargs["stdout"].write(
-                    "NOTICE: DPH/August2026: Duplicate object found in destination - ignoring\n"
+                    "NOTICE: DPH/report.xlsx: Duplicate object found in destination - ignoring\n"
                 )
                 process = MagicMock()
                 process.wait.return_value = 0
                 return process
 
             with patch("tuxindrive.engine.resolve_rclone", return_value="/usr/bin/rclone"), \
-                 patch("tuxindrive.engine.subprocess.Popen", side_effect=process_with_duplicate):
+                 patch("tuxindrive.engine.subprocess.Popen", side_effect=process_with_duplicate), \
+                 patch.object(
+                     self.engine,
+                     "_rename_cloud_duplicate",
+                     return_value=(None, "provider refused rename"),
+                 ):
                 self.engine._run_worker(
                     job, Path(temporary) / "sync.log", completed.append, False
                 )
         self.assertFalse(completed[0].success)
         self.assertTrue(completed[0].verification_blocked)
-        self.assertFalse(completed[0].requires_resync)
-        self.assertEqual(completed[0].error_source, "DPH/August2026")
+        self.assertEqual(completed[0].error_source, "DPH/report.xlsx")
+        self.assertIn("provider refused rename", completed[0].message)
 
     def test_remote_timestamp_formats_compare_equally(self):
         self.assertEqual(

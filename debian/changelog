@@ -1,3 +1,11 @@
+tuxindrive (0.26.46-1) unstable; urgency=medium
+
+  * Preserve duplicate provider objects under unique synchronized names.
+  * Run a controlled resync after automatic duplicate recovery.
+  * Bound recovery attempts and retain exact failure paths in diagnostics.
+
+ -- Tomas Pluharik <tpluharik@gmail.com>  Mon, 21 Sep 2026 00:30:00 +0200
+
 tuxindrive (0.26.45-1) unstable; urgency=medium
 
   * Verify final two-way file and directory topology before reporting success.

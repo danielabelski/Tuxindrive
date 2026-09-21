@@ -68,6 +68,7 @@ class MountLifecycle:
 
 class SyncEngine:
     _MAX_ACTIVE_TRANSFERS = 2
+    _MAX_DUPLICATE_RECOVERY_ATTEMPTS = 5
     _ORPHANED_BISYNC_LOCK_GRACE_SECONDS = 120.0
     _OFFLINE_READ_INACTIVITY_TIMEOUT = 60.0
     _OFFLINE_READ_ATTEMPTS = 2
@@ -656,6 +657,79 @@ class SyncEngine:
                 "Resolve or rename the duplicate before retrying."
             )
         return None
+
+    @staticmethod
+    def _duplicate_destination(relative: str) -> str:
+        """Return a unique, locally representable name for one cloud duplicate."""
+        normalized = normalize_remote_path(relative)
+        if (
+            not normalized
+            or normalized.startswith("/")
+            or "\n" in normalized
+            or "\r" in normalized
+            or ".." in Path(normalized).parts
+        ):
+            raise ValueError("the duplicate path is unsafe")
+        parent, separator, name = normalized.rpartition("/")
+        if not name:
+            name = parent
+            parent = ""
+            separator = ""
+        suffix = Path(name).suffix
+        stem = name[:-len(suffix)] if suffix else name
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        marker = f" (TuxInDrive duplicate {stamp})"
+        # Keep the resulting component below common 255-byte local limits.
+        while stem and len(f"{stem}{marker}{suffix}".encode("utf-8")) > 240:
+            stem = stem[:-1]
+        if not stem:
+            stem = "duplicate"
+        renamed = f"{stem}{marker}{suffix}"
+        return f"{parent}{separator}{renamed}" if parent else renamed
+
+    def _rename_cloud_duplicate(
+        self, job: SyncJob, relative: str, log_path: Path
+    ) -> tuple[str | None, str]:
+        """Rename one ambiguous cloud object so both versions can exist locally."""
+        try:
+            source = normalize_remote_path(relative)
+            destination = self._duplicate_destination(source)
+            remote_root = job.remote_spec.rstrip("/")
+            command = [
+                self.rclone_path,
+                "moveto",
+                f"{remote_root}/{source}",
+                f"{remote_root}/{destination}",
+                "--log-level",
+                "INFO",
+                *self.bandwidth.rclone_args(job.bandwidth_limit),
+            ]
+            completed = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            self._record_network(job.id)
+            with log_path.open("a", encoding="utf-8") as log:
+                log.write(
+                    "Automatic duplicate recovery: renaming one cloud object "
+                    f"from {source!r} to {destination!r}.\n"
+                )
+                if completed.stdout:
+                    log.write(completed.stdout)
+                if completed.stderr:
+                    log.write(completed.stderr)
+                log.write(
+                    "Automatic duplicate recovery exit "
+                    f"{completed.returncode}.\n"
+                )
+            if completed.returncode:
+                return None, f"rclone exit {completed.returncode}"
+            return destination, ""
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+            return None, str(exc)
 
     def _verified_remote_snapshot(self, job: SyncJob) -> dict[str, FileState] | None:
         """Read the provider in the same representation used by callbacks.
@@ -2031,6 +2105,9 @@ class SyncEngine:
         log_path: Path,
         callback: Callable[[JobResult], None],
         dry_run: bool,
+        duplicate_recovery_attempts: int = 0,
+        force_resync: bool = False,
+        recovered_duplicates: tuple[str, ...] = (),
     ) -> None:
         if job.is_git:
             callback(self._run_git_sync(job, log_path, dry_run))
@@ -2133,7 +2210,7 @@ class SyncEngine:
             command = self.command_for_job(
                 job,
                 dry_run=dry_run,
-                force_resync=auto_reinitialize,
+                force_resync=auto_reinitialize or force_resync,
             )
             prepare_private_file(log_path)
             run_log_offset = log_path.stat().st_size if log_path.exists() else 0
@@ -2170,13 +2247,50 @@ class SyncEngine:
                     log_issue = self._successful_run_log_issue(
                         log_path, run_log_offset
                     )
-                    listing_issue = (
-                        None if log_issue is not None
-                        else self._post_sync_listing_issue(job)
-                    )
-                    verification_issue = log_issue or listing_issue
-                    if verification_issue is not None:
-                        source, message = verification_issue
+                    if log_issue is not None:
+                        source, message = log_issue
+                        if (
+                            duplicate_recovery_attempts
+                            >= self._MAX_DUPLICATE_RECOVERY_ATTEMPTS
+                        ):
+                            result = JobResult(
+                                job.id,
+                                False,
+                                f"{message} Automatic rename stopped after "
+                                f"{self._MAX_DUPLICATE_RECOVERY_ATTEMPTS} attempts.",
+                                log_path,
+                                error_source=source,
+                                verification_blocked=True,
+                            )
+                        else:
+                            renamed, rename_error = self._rename_cloud_duplicate(
+                                job, source, log_path
+                            )
+                            if renamed is None:
+                                result = JobResult(
+                                    job.id,
+                                    False,
+                                    f"{message} Automatic rename failed: {rename_error}.",
+                                    log_path,
+                                    error_source=source,
+                                    verification_blocked=True,
+                                )
+                            else:
+                                self._run_worker(
+                                    job,
+                                    log_path,
+                                    callback,
+                                    dry_run,
+                                    duplicate_recovery_attempts + 1,
+                                    True,
+                                    (*recovered_duplicates, renamed),
+                                )
+                                return
+                    listing_issue = None
+                    if log_issue is None:
+                        listing_issue = self._post_sync_listing_issue(job)
+                    if log_issue is None and listing_issue is not None:
+                        source, message = listing_issue
                         result = JobResult(
                             job.id,
                             False,
@@ -2186,7 +2300,7 @@ class SyncEngine:
                             error_source=source,
                             verification_blocked=log_issue is not None,
                         )
-                    else:
+                    elif log_issue is None:
                         baseline = (
                             (None if auto_reinitialize else self._verified_remote_snapshot(job))
                             or self._bisync_remote_snapshot(job)
@@ -2197,6 +2311,9 @@ class SyncEngine:
                         message = (
                             "Synchronization complete; sync state was reinitialized automatically"
                             if auto_reinitialize
+                            else "Synchronization complete; cloud duplicate was preserved under "
+                            f"a unique local name: {recovered_duplicates[-1]}"
+                            if recovered_duplicates
                             else "Synchronization complete"
                         )
                         result = JobResult(job.id, True, message, log_path)

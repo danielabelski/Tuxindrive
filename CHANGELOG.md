@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.46 — automatic duplicate preservation
+
+- Preserve cloud objects that share the same provider path by renaming one to
+  a unique, locally representable name instead of deleting or ignoring it.
+- Run one controlled Bisync resynchronization after each automatic rename so
+  both versions materialize locally under distinct names.
+- Bound automatic duplicate recovery to five attempts and keep the exact path
+  in Error details if the provider refuses a rename or duplication persists.
+
 ## 0.26.45 — verified two-way completion and endpoint safety
 
 - Verify the final local/cloud Bisync listings, including directory topology,
