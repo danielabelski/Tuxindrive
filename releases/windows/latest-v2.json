@@ -1,8 +1,8 @@
 {
-  "version": "0.26.47",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.47/TuxInDrive-0.26.47-windows-x64-setup.exe",
-  "sha256": "67e0060619fe676d6d67fb7de3bbe325496f9c279619d1185af031a6d6973bbb",
-  "notes": "Complete Midnight Sync dark mode and provider duplicate reliability fixes",
-  "expires_at": "2026-12-23T04:40:58.847134+00:00",
-  "signature": "WWgs1QMrp8YxrcKJBIL2e0usKVgSPC1F2Cw0zWBO/Wj6CCVonT3mDB2anbe2WFyZ6dPO8YnTsU3yjfCYA2EdBA=="
+  "version": "0.26.48",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.48/TuxInDrive-0.26.48-windows-x64-setup.exe",
+  "sha256": "76822fe243d197fbdacd27b73ba1dac56bcabb989c5c064c8fdf483b8cb3ce17",
+  "notes": "System-aware dark mode across all visual layouts",
+  "expires_at": "2026-12-23T05:11:08.436655+00:00",
+  "signature": "A1cAGIXJBtmZLhKzoAy4cbqwL0OjtiINFJaX9UeTWGDQ7pOXCwYIwquU3azqN/m2mSaPeRgw8pjEvhVeA4hSCg=="
 }

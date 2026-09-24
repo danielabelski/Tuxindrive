@@ -1,8 +1,8 @@
 {
-  "version": "0.26.47",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.47/TuxInDrive-0.26.47-android.apk",
-  "sha256": "6815cde8b2868813fbf4ba880bdf3baa5a3cc0f11cd3a43c7b55e308792600a6",
-  "notes": "Complete Midnight Sync dark mode and provider duplicate reliability fixes",
-  "expires_at": "2026-12-23T04:40:56.677850+00:00",
-  "signature": "Js6F//uh45BxkSaR08WmMvzbEhKVfwctCvb/5S/I8JOn5ZKcTPr23lReX9EmAf2SQ/3uL+kiD6jWkU44gqjPBA=="
+  "version": "0.26.48",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.48/TuxInDrive-0.26.48-android.apk",
+  "sha256": "ced41792a250e0dd078aa0848a4d3913267ca304838b9c052c1e3732dfed6a78",
+  "notes": "System-aware dark mode across all visual layouts",
+  "expires_at": "2026-12-23T05:11:08.769311+00:00",
+  "signature": "Cas2RDxYB8bW9uuDfedjS4kIamtG7IL3FSgxJzaLyptdOXs1a8kFCoZFYVvVGscazwKE22o1aE4VvAug3I8RAQ=="
 }

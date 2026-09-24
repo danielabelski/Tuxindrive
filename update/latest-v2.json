@@ -1,8 +1,8 @@
 {
-  "version": "0.26.47",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.47/tuxindrive_0.26.47_all.deb",
-  "sha256": "5e63219d29e67934c3f9c316f341aa4498b9ef2555f8ebe13ef711eff840b968",
-  "notes": "Complete Midnight Sync dark mode and provider duplicate reliability fixes",
-  "expires_at": "2026-12-23T04:40:58.762536+00:00",
-  "signature": "TUF0S18jJCaUy1A5b6bwiY3mSiRu31g8BRdJgupgwJm2i6jRH4Xnhff3sL2oPmLbby/zKyoKRuq/NsbhzINkBg=="
+  "version": "0.26.48",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.48/tuxindrive_0.26.48_all.deb",
+  "sha256": "18569bc9af69954108be1760114e9289a42e2a05502c518f3d1c543330eada5f",
+  "notes": "System-aware dark mode across all visual layouts",
+  "expires_at": "2026-12-23T05:11:08.364094+00:00",
+  "signature": "O4x8lv84PpBmeYI0ahOSkh7beHqwLKq2MZ/2Xth6YKRwlMGrF5Ja1a1VNf/ZAvGvL+8uxuNKkMwZq9COgQ0sDA=="
 }

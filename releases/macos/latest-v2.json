@@ -1,8 +1,8 @@
 {
-  "version": "0.26.47",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.47/TuxInDrive-0.26.47-macos-arm64.dmg",
-  "sha256": "7a66c77236e2e88ad5a0f86b5983487288ec09db1b61471d58d12ebf9cac0627",
-  "notes": "Complete Midnight Sync dark mode and provider duplicate reliability fixes",
-  "expires_at": "2026-12-23T04:40:57.182182+00:00",
-  "signature": "TyaYKVCc/rbruRVhrZbypJZEE16v8L0Jv6kQUPYmmUgng39V4PKxHgWd2eza3oH3cS33vlrYIWK766Aq2pBJBg=="
+  "version": "0.26.48",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.48/TuxInDrive-0.26.48-macos-arm64.dmg",
+  "sha256": "10c6b0932dabae48f0dcc9b1994e9f79b75cee42ae7813fa0758425199061b31",
+  "notes": "System-aware dark mode across all visual layouts",
+  "expires_at": "2026-12-23T05:11:08.521144+00:00",
+  "signature": "sQFfbT4L5rWEigWg0oYxazQs825d2W2xdyWeGgNqUYokps4Xz02UtkgUEhghAgQvjGrBxHfEmRftbSrBldrqBw=="
 }
