@@ -1,8 +1,8 @@
 {
-  "version": "0.26.49",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.49/TuxInDrive-0.26.49-macos-arm64.dmg",
-  "sha256": "5c13af62f6c66ff2aaeaaf7e35f6bd73771dffe7dbd499f16e39009b399615fe",
-  "notes": "Readable dark summaries and export-safe verification",
-  "expires_at": "2026-12-23T08:56:34.153109+00:00",
-  "signature": "V60M6U0l4eMbAdfhgoNNPNdlfY182uwA6G5ok38F1379efi6GJyVCC0ikrNPywye9cW9wp+BsXAVg7nxs4RSAQ=="
+  "version": "0.26.50",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.50/TuxInDrive-0.26.50-macos-arm64.dmg",
+  "sha256": "b2cbfaf6a629354af16a851bd26b76bd2f89435ff24fcc87fd6264033ceaccc4",
+  "notes": "Readable dark settings dialogs",
+  "expires_at": "2026-12-23T11:57:43.567107+00:00",
+  "signature": "nb6VI/H3Mp03laIjF+Ki4nms1CKH7HcyXlmTFBbNQcwDNnusgSYgQw33njVuHl+8lRNLf4fcOdQGgvUmJtFiBA=="
 }
