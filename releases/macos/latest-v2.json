@@ -1,8 +1,8 @@
 {
-  "version": "0.26.46",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.46/TuxInDrive-0.26.46-macos-arm64.dmg",
-  "sha256": "a5982aaf3b656cd2f0885e5bdb2b638210f555968f81ab0f048f1d0424fa227d",
-  "notes": "Automatic preservation of duplicate cloud objects under unique synchronized names",
-  "expires_at": "2026-12-20T06:26:42.208567+00:00",
-  "signature": "nk3M7mDusy/ThrvP37h/6MBb0Xuz0pEVGO4FatPLgkR9f1BSCNYRVUpzC/CwXOGf0GShqoNFSPWrNLhQL1cfBg=="
+  "version": "0.26.47",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.47/TuxInDrive-0.26.47-macos-arm64.dmg",
+  "sha256": "7a66c77236e2e88ad5a0f86b5983487288ec09db1b61471d58d12ebf9cac0627",
+  "notes": "Complete Midnight Sync dark mode and provider duplicate reliability fixes",
+  "expires_at": "2026-12-23T04:40:57.182182+00:00",
+  "signature": "TyaYKVCc/rbruRVhrZbypJZEE16v8L0Jv6kQUPYmmUgng39V4PKxHgWd2eza3oH3cS33vlrYIWK766Aq2pBJBg=="
 }
