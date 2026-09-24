@@ -1,8 +1,8 @@
 {
-  "version": "0.26.48",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.48/tuxindrive_0.26.48_all.deb",
-  "sha256": "18569bc9af69954108be1760114e9289a42e2a05502c518f3d1c543330eada5f",
-  "notes": "System-aware dark mode across all visual layouts",
-  "expires_at": "2026-12-23T05:11:08.364094+00:00",
-  "signature": "O4x8lv84PpBmeYI0ahOSkh7beHqwLKq2MZ/2Xth6YKRwlMGrF5Ja1a1VNf/ZAvGvL+8uxuNKkMwZq9COgQ0sDA=="
+  "version": "0.26.49",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.49/tuxindrive_0.26.49_all.deb",
+  "sha256": "8d2e61782b50a3cc611f1de824fe127bce3c5298d436b70b24c511c7fdb3af71",
+  "notes": "Readable dark summaries and export-safe verification",
+  "expires_at": "2026-12-23T08:56:33.995687+00:00",
+  "signature": "C6Av1D/MUwKCW+MT73zC8HuPCSIXjr4FG3KIu8PLXlo5+U7GC3uYJILs6CK8FBPi8MnAJUHyO08tQ2LbwbzlBw=="
 }
