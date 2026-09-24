@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.50 — readable dark settings dialogs
+
+- Override inherited light-theme foregrounds for every label in dark dialogs,
+  including settings controls, check boxes and explanatory text.
+- Give dialog header titles and disabled labels explicit high-contrast dark-mode
+  colors so their state remains distinguishable without becoming unreadable.
+- Cover Bento Cloud and Nordic Glass when they follow the system dark-mode
+  preference with a regression test that verifies dark rules win the cascade.
+
 ## 0.26.49 — readable dark summaries and export-safe verification
 
 - Give all Bento Cloud summary tiles explicit high-contrast dark variants so

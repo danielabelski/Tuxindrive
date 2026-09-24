@@ -238,7 +238,10 @@ headerbar.tuxindrive-header {
   box-shadow: 0 3px 14px alpha(#000000, 0.35);
 }
 .tuxindrive-root { background-color: #08111f; color: #d7e3f3; }
-.tuxindrive-root label { color: #d7e3f3; }
+.tuxindrive-root label,
+dialog.tuxindrive-dialog label { color: #d7e3f3; }
+dialog.tuxindrive-dialog headerbar label { color: #e7eef9; }
+dialog.tuxindrive-dialog label:disabled { color: #708199; }
 .tuxindrive-root scrolledwindow,
 .tuxindrive-root viewport,
 .tuxindrive-root list,

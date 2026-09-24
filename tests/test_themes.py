@@ -71,6 +71,25 @@ class VisualThemeTests(unittest.TestCase):
             self.assertIn(b"background-color: #10253a", rendered)
             self.assertIn(b"background-color: #13281f", rendered)
 
+    def test_system_dark_palette_overrides_light_dialog_label_colors(self):
+        light_rule = b"dialog.tuxindrive-dialog label { color: #211a35; }"
+        dark_rule = b"dialog.tuxindrive-dialog label { color: #d7e3f3; }"
+        for rendered in (
+            css_for_theme("bento_cloud", prefer_dark=True),
+            css_for_theme("nordic_glass", prefer_dark=True),
+        ):
+            self.assertIn(dark_rule, rendered)
+            if light_rule in rendered:
+                self.assertGreater(rendered.rfind(dark_rule), rendered.find(light_rule))
+            self.assertIn(
+                b"dialog.tuxindrive-dialog headerbar label { color: #e7eef9; }",
+                rendered,
+            )
+            self.assertIn(
+                b"dialog.tuxindrive-dialog label:disabled { color: #708199; }",
+                rendered,
+            )
+
     def test_light_palettes_pin_readable_label_colors(self):
         self.assertIn(
             b"dialog.tuxindrive-dialog label { color: #172033; }",
