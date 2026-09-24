@@ -527,6 +527,7 @@ class AppSettings:
     nautilus_integration: bool = True
     language: str = "en"
     visual_theme: str = "nordic_glass"
+    follow_system_dark_mode: bool = True
     network_policy: str = "controlled"
     global_bandwidth_limit: str = "10M"
     automatic_bandwidth_control: bool = True
@@ -556,6 +557,9 @@ class AppSettings:
         allowed = set(cls.__dataclass_fields__)
         data = {key: item for key, item in value.items() if key in allowed}
         data["visual_theme"] = normalize_theme(data.get("visual_theme"))
+        data["follow_system_dark_mode"] = bool(
+            data.get("follow_system_dark_mode", True)
+        )
         try:
             data["global_bandwidth_limit"] = normalize_bandwidth_limit(
                 data.get("global_bandwidth_limit", "10M")

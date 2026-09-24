@@ -5192,6 +5192,15 @@ class MainWindow(Gtk.ApplicationWindow):
         theme_description = Gtk.Label(xalign=0)
         theme_description.set_line_wrap(True)
         theme_description.get_style_context().add_class("theme-description")
+        follow_system_dark = Gtk.CheckButton(
+            label="Follow the system dark-mode preference"
+        )
+        follow_system_dark.set_active(
+            self.controller.config.settings.follow_system_dark_mode
+        )
+        follow_system_dark.set_tooltip_text(
+            "Keeps the selected layout while switching its palette when the desktop enters dark mode"
+        )
 
         def update_theme_description(combo: Gtk.ComboBoxText) -> None:
             selected = theme_by_key(combo.get_active_id())
@@ -5200,6 +5209,7 @@ class MainWindow(Gtk.ApplicationWindow):
         theme.connect("changed", update_theme_description)
         update_theme_description(theme)
         theme_box.pack_start(theme, False, False, 0)
+        theme_box.pack_start(follow_system_dark, False, False, 0)
         theme_box.pack_start(theme_description, False, False, 0)
         theme_frame.add(theme_box)
         policy = Gtk.ComboBoxText()
@@ -5401,8 +5411,15 @@ class MainWindow(Gtk.ApplicationWindow):
             self.controller.config.settings.server_url = server_url_value
             self.controller.config.settings.server_ca_file = server_ca.get_text().strip()
             selected_theme = normalize_theme(theme.get_active_id())
-            theme_changed = selected_theme != self.controller.config.settings.visual_theme
+            theme_changed = (
+                selected_theme != self.controller.config.settings.visual_theme
+                or follow_system_dark.get_active()
+                != self.controller.config.settings.follow_system_dark_mode
+            )
             self.controller.config.settings.visual_theme = selected_theme
+            self.controller.config.settings.follow_system_dark_mode = (
+                follow_system_dark.get_active()
+            )
             self.controller.config.settings.network_policy = policy.get_active_id() or "controlled"
             self.controller.config.settings.allow_metered_networks = metered.get_active()
             self.controller.config.settings.global_bandwidth_limit = bandwidth_value
@@ -5854,6 +5871,8 @@ class TuxInDriveApplication(Gtk.Application):
         self._last_full_completed: dict[str, datetime] = {}
         self._mount_failures: dict[str, list[datetime]] = {}
         self._css_provider: Gtk.CssProvider | None = None
+        self._desktop_interface_settings: Gio.Settings | None = None
+        self._desktop_theme_handler = 0
         self._last_nautilus_state: bytes | None = None
         self._last_cache_maintenance = 0.0
         self._cache_maintenance_running = False
@@ -5885,6 +5904,7 @@ class TuxInDriveApplication(Gtk.Application):
         Gtk.Application.do_startup(self)
         self.hold()
         LOGGER.info("GTK application startup completed")
+        self._watch_system_theme()
         host_report = inspect_host()
         for line in format_report(host_report).splitlines():
             LOGGER.info("Host capability: %s", line)
@@ -7089,7 +7109,13 @@ class TuxInDriveApplication(Gtk.Application):
             Gtk.StyleContext.remove_provider_for_screen(screen, self._css_provider)
         provider = Gtk.CssProvider()
         selected = theme_by_key(self.config.settings.visual_theme)
-        provider.load_from_data(css_for_theme(selected.key))
+        effective_dark = selected.dark or (
+            self.config.settings.follow_system_dark_mode
+            and self._system_prefers_dark()
+        )
+        provider.load_from_data(
+            css_for_theme(selected.key, prefer_dark=effective_dark)
+        )
         if screen is not None:
             Gtk.StyleContext.add_provider_for_screen(
                 screen,
@@ -7099,10 +7125,62 @@ class TuxInDriveApplication(Gtk.Application):
         self._css_provider = provider
         gtk_settings = Gtk.Settings.get_default()
         if gtk_settings is not None:
-            gtk_settings.set_property("gtk-application-prefer-dark-theme", selected.dark)
+            gtk_settings.set_property(
+                "gtk-application-prefer-dark-theme", effective_dark
+            )
+
+    def _watch_system_theme(self) -> None:
+        """Observe the GNOME color preference without assuming its schema exists."""
+        source = Gio.SettingsSchemaSource.get_default()
+        schema = (
+            source.lookup("org.gnome.desktop.interface", True)
+            if source is not None
+            else None
+        )
+        if schema is None or not schema.has_key("color-scheme"):
+            return
+        self._desktop_interface_settings = Gio.Settings.new_full(
+            schema, None, None
+        )
+        self._desktop_theme_handler = self._desktop_interface_settings.connect(
+            "changed::color-scheme", self._system_theme_changed
+        )
+
+    def _system_prefers_dark(self) -> bool:
+        if self._desktop_interface_settings is not None:
+            value = self._desktop_interface_settings.get_string(
+                "color-scheme"
+            ).strip().lower()
+            if value == "prefer-dark":
+                return True
+            if value == "prefer-light":
+                return False
+        gtk_settings = Gtk.Settings.get_default()
+        if gtk_settings is None:
+            return False
+        theme_name = str(gtk_settings.get_property("gtk-theme-name") or "")
+        return "dark" in theme_name.casefold()
+
+    def _system_theme_changed(self, *_args) -> None:
+        if not self.config.settings.follow_system_dark_mode:
+            return
+        self._install_css()
+        if self.window is not None:
+            self.window.queue_draw()
+        LOGGER.info(
+            "System color scheme changed; dark=%s", self._system_prefers_dark()
+        )
 
     def do_shutdown(self) -> None:
         LOGGER.info("TuxInDrive shutting down")
+        if (
+            self._desktop_interface_settings is not None
+            and self._desktop_theme_handler
+        ):
+            self._desktop_interface_settings.disconnect(
+                self._desktop_theme_handler
+            )
+            self._desktop_theme_handler = 0
         self._stop_tray_animation()
         if self.activity_indicator is not None and AyatanaAppIndicator3 is not None:
             self.activity_indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.PASSIVE)

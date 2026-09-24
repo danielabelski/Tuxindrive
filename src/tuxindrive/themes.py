@@ -147,6 +147,8 @@ headerbar.tuxindrive-header {
   box-shadow: 0 2px 10px alpha(#17324d, 0.10);
 }
 .tuxindrive-root { background-color: #edf3f8; color: #172033; }
+.tuxindrive-root label,
+dialog.tuxindrive-dialog label { color: #172033; }
 .tuxindrive-root .sidebar {
   background-image: linear-gradient(to bottom, #f9fbfd, #f2f7fb);
   border-right-color: #d8e2ec;
@@ -189,6 +191,8 @@ headerbar.tuxindrive-header {
   box-shadow: 0 3px 14px alpha(#6d4aff, 0.10);
 }
 .tuxindrive-root { background-color: #fbf9ff; color: #211a35; }
+.tuxindrive-root label,
+dialog.tuxindrive-dialog label { color: #211a35; }
 .tuxindrive-root .sidebar {
   background-image: linear-gradient(to bottom, #f1edff, #faf8ff);
   border-right-color: #e2d8f7;
@@ -321,6 +325,13 @@ _THEME_CSS = {
 }
 
 
-def css_for_theme(value: object) -> bytes:
+def css_for_theme(value: object, *, prefer_dark: bool = False) -> bytes:
     key = normalize_theme(value)
-    return (_SHARED_CSS + _THEME_CSS[key]).encode("utf-8")
+    css = _SHARED_CSS + _THEME_CSS[key]
+    # Nordic Glass and Bento Cloud describe layout as well as palette.  Keep
+    # their layout when the desktop requests dark mode, then append the
+    # complete Midnight palette so GTK's dark text/control defaults cannot be
+    # mixed with their light surfaces.
+    if prefer_dark and not theme_by_key(key).dark:
+        css += _MIDNIGHT_SYNC_CSS
+    return css.encode("utf-8")

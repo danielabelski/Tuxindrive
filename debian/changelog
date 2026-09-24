@@ -1,3 +1,11 @@
+tuxindrive (0.26.48-1) unstable; urgency=medium
+
+  * Follow the desktop dark-mode preference across every visual layout.
+  * React to live GNOME color-scheme changes without restarting.
+  * Keep explicit light palettes readable under dark GTK themes.
+
+ -- TuxInDrive Maintainers <tpluharik@gmail.com>  Thu, 24 Sep 2026 06:50:00 +0200
+
 tuxindrive (0.26.47-1) unstable; urgency=medium
 
   * Render Midnight Sync dark surfaces consistently across nested GTK widgets.

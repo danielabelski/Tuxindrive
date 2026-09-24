@@ -56,6 +56,27 @@ class VisualThemeTests(unittest.TestCase):
         self.assertIn(b"background-image: none", rendered)
         self.assertIn(b"background-color: #08111f", rendered)
 
+    def test_system_dark_palette_overrides_light_theme_surfaces(self):
+        bento = css_for_theme("bento_cloud", prefer_dark=True)
+        nordic = css_for_theme("nordic_glass", prefer_dark=True)
+        for rendered in (bento, nordic):
+            self.assertIn(b"background-color: #08111f", rendered)
+            self.assertIn(b"background-color: #101c2e", rendered)
+            self.assertGreater(
+                rendered.rfind(b"#08111f"),
+                rendered.find(b"#fbf9ff") if b"#fbf9ff" in rendered else rendered.find(b"#edf3f8"),
+            )
+
+    def test_light_palettes_pin_readable_label_colors(self):
+        self.assertIn(
+            b"dialog.tuxindrive-dialog label { color: #172033; }",
+            css_for_theme("nordic_glass"),
+        )
+        self.assertIn(
+            b"dialog.tuxindrive-dialog label { color: #211a35; }",
+            css_for_theme("bento_cloud"),
+        )
+
     def test_configuration_keeps_theme_and_legacy_config_gets_default(self):
         restored = AppConfig.from_dict({"settings": {"visual_theme": "bento_cloud"}})
         self.assertEqual(restored.settings.visual_theme, "bento_cloud")
@@ -65,6 +86,7 @@ class VisualThemeTests(unittest.TestCase):
             DEFAULT_THEME,
         )
         self.assertEqual(AppSettings().visual_theme, DEFAULT_THEME)
+        self.assertTrue(AppSettings().follow_system_dark_mode)
 
 
 if __name__ == "__main__":

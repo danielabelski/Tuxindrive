@@ -2,6 +2,16 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.48 — system-aware dark mode
+
+- Make Nordic Glass and Bento Cloud automatically adopt a complete dark
+  palette when the desktop requests dark mode while preserving their selected
+  layout and component arrangement.
+- React to GNOME color-scheme changes without restarting the application and
+  fall back to the active GTK theme on desktops without the GNOME preference.
+- Add a Settings switch for following the system dark-mode preference and pin
+  readable foreground colors when a light palette is used explicitly.
+
 ## 0.26.47 — complete Midnight Sync dark mode
 
 - Override GTK theme background images on nested lists, rows, viewports,
