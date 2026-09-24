@@ -76,6 +76,8 @@ class ConfigStoreTests(unittest.TestCase):
             value.jobs[0].last_error_at = "2026-08-25T12:00:00+00:00"
             value.jobs[0].last_error_source = "Projects/report.pdf"
             value.jobs[0].last_error_log = "/tmp/job.log"
+            self.assertEqual(value.jobs[0].record_failure("Provider unavailable"), 1)
+            self.assertEqual(value.jobs[0].record_failure("Provider unavailable"), 2)
             store.save(value)
             loaded = store.load()
             self.assertEqual(loaded.accounts[0].provider, Provider.GOOGLE_DRIVE)
@@ -92,6 +94,14 @@ class ConfigStoreTests(unittest.TestCase):
             self.assertEqual(loaded.jobs[0].group_id, "customers")
             self.assertEqual(loaded.jobs[0].last_error_source, "Projects/report.pdf")
             self.assertEqual(loaded.jobs[0].last_error_log, "/tmp/job.log")
+            self.assertEqual(loaded.jobs[0].consecutive_failures, 2)
+            self.assertEqual(
+                loaded.jobs[0].last_failure_signature,
+                value.jobs[0].last_failure_signature,
+            )
+            loaded.jobs[0].clear_failures()
+            self.assertEqual(loaded.jobs[0].consecutive_failures, 0)
+            self.assertEqual(loaded.jobs[0].last_failure_signature, "")
             self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
             self.assertFalse(FolderGroup.from_dict({"name": "Legacy group", "id": "legacy"}).collapsed)
             self.assertFalse(FolderGroup.from_dict({"name": "Invalid", "collapsed": "false"}).collapsed)

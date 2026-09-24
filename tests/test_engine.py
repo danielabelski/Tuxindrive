@@ -350,6 +350,33 @@ class SyncEngineCommandTests(unittest.TestCase):
             self.assertTrue(completed[0].success)
             self.assertIn("reinitialized automatically", completed[0].message)
 
+    def test_incomplete_bisync_staging_is_removed_only_without_valid_baseline(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_DATA_HOME": temporary},
+        ):
+            job = SyncJob(account_remote="one", local_path="/data/One", initialized=True)
+            workdir = self.engine._prepare_bisync_workdir(job)
+            staging = [
+                workdir / "sync.path1.lst-new",
+                workdir / "sync.path2.lst-new",
+            ]
+            for item in staging:
+                item.write_text("", encoding="utf-8")
+            self.assertEqual(
+                sorted(self.engine._clear_incomplete_bisync_state(job, workdir)),
+                sorted(item.name for item in staging),
+            )
+            self.assertFalse(any(item.exists() for item in staging))
+
+            (workdir / "sync.path1.lst").write_text("local", encoding="utf-8")
+            (workdir / "sync.path2.lst").write_text("remote", encoding="utf-8")
+            for item in staging:
+                item.write_text("new", encoding="utf-8")
+            self.assertEqual(
+                self.engine._clear_incomplete_bisync_state(job, workdir), []
+            )
+            self.assertTrue(all(item.exists() for item in staging))
+
     def test_old_bisync_lock_with_dead_owner_is_removed(self):
         with tempfile.TemporaryDirectory() as temporary, patch.dict(
             os.environ, {"XDG_DATA_HOME": temporary},
@@ -1152,7 +1179,37 @@ class SyncEngineCommandTests(unittest.TestCase):
             with open(log, "w", encoding="utf-8") as handle:
                 handle.write("Usage:\nFatal error: unknown flag: --resilient\n")
             message = self.engine._failure_summary(Path(log), 1)
-        self.assertEqual(message, "Synchronization failed: unknown flag: --resilient")
+        self.assertEqual(
+            message,
+            "Synchronization failed (phase: engine; side: both; path: account root): "
+            "unknown flag: --resilient",
+        )
+
+    def test_failure_diagnostic_surfaces_provider_path_and_reason(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "ERROR : Projects/report.pdf: Failed to copy: access denied\n",
+                encoding="utf-8",
+            )
+            message, source = self.engine._failure_diagnostic(log, 1)
+        self.assertIn("phase: transfer", message)
+        self.assertIn("side: provider", message)
+        self.assertIn("path: Projects/report.pdf", message)
+        self.assertIn("access denied", message)
+        self.assertEqual(source, "Projects/report.pdf")
+
+    def test_shared_google_oauth_warning_is_actionable(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "NOTICE: This remote uses rclone's shared Google Drive client_id\n",
+                encoding="utf-8",
+            )
+            message, source = self.engine._failure_diagnostic(log, 1)
+        self.assertIn("phase: authorization", message)
+        self.assertIn("dedicated Google OAuth client ID and secret", message)
+        self.assertEqual(source, "account root")
 
     def test_google_abuse_failure_is_actionable_and_requires_recovery(self):
         with tempfile.TemporaryDirectory() as temporary:

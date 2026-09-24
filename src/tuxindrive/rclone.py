@@ -302,14 +302,20 @@ class RcloneClient:
         client_secret: str = "",
         session_id: str = "",
         credentials: dict[str, str] | None = None,
+        replace_existing: bool = False,
     ) -> ConfigResult:
         self._validate_remote_name(remote)
         if provider is Provider.PROTON_DRIVE:
             raise RcloneError(
                 "Proton Drive authorization is available only through Proton's official browser-authenticated CLI"
             )
-        args = ["config", "create", remote, provider.rclone_type]
-        args.extend(provider.initial_options)
+        args = (
+            ["config", "update", remote]
+            if replace_existing
+            else ["config", "create", remote, provider.rclone_type]
+        )
+        if not replace_existing:
+            args.extend(provider.initial_options)
         if client_id:
             args.extend(["client_id", client_id])
         if client_secret:

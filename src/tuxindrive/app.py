@@ -324,9 +324,10 @@ class OAuthWizard(ResponsiveDialog):
         grid.attach(Gtk.Label(label="Display name", xalign=0), 0, 1, 1, 1)
         grid.attach(self.display_entry, 1, 1, 1, 1)
         if provider.browser_oauth:
-            grid.attach(Gtk.Label(label="OAuth client ID (optional)", xalign=0), 0, 2, 1, 1)
+            required = "" if provider is Provider.GOOGLE_DRIVE else " (optional)"
+            grid.attach(Gtk.Label(label=f"OAuth client ID{required}", xalign=0), 0, 2, 1, 1)
             grid.attach(self.client_id, 1, 2, 1, 1)
-            grid.attach(Gtk.Label(label="OAuth client secret (optional)", xalign=0), 0, 3, 1, 1)
+            grid.attach(Gtk.Label(label=f"OAuth client secret{required}", xalign=0), 0, 3, 1, 1)
             grid.attach(self.client_secret, 1, 3, 1, 1)
         self.credential_entries: dict[str, Gtk.Entry] = {}
         for offset, (key, label, secret, _required) in enumerate(provider.credential_fields, start=2):
@@ -339,6 +340,18 @@ class OAuthWizard(ResponsiveDialog):
             grid.attach(entry, 1, offset, 1, 1)
             self.credential_entries[key] = entry
         content.pack_start(grid, False, False, 0)
+        if provider is Provider.GOOGLE_DRIVE:
+            google_notice = Gtk.Label(
+                label=(
+                    "Google is retiring rclone's shared OAuth client during 2026. "
+                    "Enter your own Desktop OAuth client ID and secret so this "
+                    "account keeps working."
+                ),
+                xalign=0,
+            )
+            google_notice.set_line_wrap(True)
+            google_notice.get_style_context().add_class("dim-label")
+            content.pack_start(google_notice, False, False, 0)
 
         self.question_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.help_label = Gtk.Label(xalign=0)
@@ -376,6 +389,16 @@ class OAuthWizard(ResponsiveDialog):
                 self._set_error("Account key may contain only letters, numbers, dot, dash, and underscore.")
                 return
             self.remote = remote
+            client_id = self.client_id.get_text().strip()
+            client_secret = self.client_secret.get_text().strip()
+            if self.provider is Provider.GOOGLE_DRIVE and (
+                not client_id or not client_secret
+            ):
+                self._set_error(
+                    "Google Drive requires your own Desktop OAuth client ID and "
+                    "secret because the shared rclone client is being retired."
+                )
+                return
             credentials = {
                 key: entry.get_text().strip()
                 for key, entry in self.credential_entries.items()
@@ -393,10 +416,11 @@ class OAuthWizard(ResponsiveDialog):
                 self._step_ready,
                 remote,
                 self.provider,
-                self.client_id.get_text().strip(),
-                self.client_secret.get_text().strip(),
+                client_id,
+                client_secret,
                 self.session_id,
                 credentials,
+                self.existing is not None,
             )
         else:
             answer = self._answer()
@@ -5124,6 +5148,12 @@ class MainWindow(Gtk.ApplicationWindow):
                 existing=account,
             )
             return
+        if account.provider is Provider.GOOGLE_DRIVE:
+            OAuthWizard(
+                self, self.controller.rclone, account.provider,
+                self.controller.add_account, existing=account,
+            )
+            return
         if not account.provider.browser_oauth:
             OAuthWizard(
                 self, self.controller.rclone, account.provider,
@@ -6518,6 +6548,7 @@ class TuxInDriveApplication(Gtk.Application):
         self.engine.configure_jobs(self.config.jobs, self.config.accounts)
         if not job.enabled and not quiet:
             job.enabled = True
+            job.clear_failures()
         if job.id in self.engine.running_jobs:
             if self.window and not quiet:
                 self.window.message(f"{job.name} is already synchronizing.")
@@ -6621,6 +6652,11 @@ class TuxInDriveApplication(Gtk.Application):
             result.error_source or result.blocked_path
         )
         job.last_error_log = "" if result.success else str(result.log_path)
+        failure_count = 0
+        if result.success:
+            job.clear_failures()
+        elif not result.cancelled:
+            failure_count = job.record_failure(result.message)
         if result.requires_resync:
             job.initialized = False
             job.enabled = False
@@ -6635,6 +6671,14 @@ class TuxInDriveApplication(Gtk.Application):
             job.last_status = (
                 f"{result.message} Automatic sync paused until the reported provider "
                 "problem is resolved."
+            )
+            job.last_error = job.last_status
+        if failure_count >= 3 and job.enabled:
+            job.enabled = False
+            job.last_status = (
+                f"{result.message} Automatic sync paused after 3 identical "
+                "failures; review Error details and manually retry after "
+                "resolving the cause."
             )
             job.last_error = job.last_status
         if result.success and job.mode is not SyncMode.VIRTUAL_DRIVE:

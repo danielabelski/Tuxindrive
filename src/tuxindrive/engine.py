@@ -38,6 +38,7 @@ from .proton import ProtonDriveClient, ProtonDriveError
 from .process_control import new_process_group, terminate_process
 from .file_permissions import private_descriptor
 from .bandwidth import GlobalBandwidthController
+from .error_details import redact_error_text
 
 
 @dataclass(slots=True)
@@ -409,6 +410,51 @@ class SyncEngine:
             shutil.copytree(legacy, workdir, dirs_exist_ok=True)
         ensure_private_directory(workdir)
         return workdir
+
+    def _clear_incomplete_bisync_state(
+        self, job: SyncJob, workdir: Path
+    ) -> list[str]:
+        """Remove abandoned staging listings before a safe reinitialization.
+
+        A completed baseline is never touched. Rclone writes ``*.lst-new``
+        while building a replacement pair; after a crash or provider failure
+        those files can make every later ``--resync`` reuse an impossible
+        half-finished session. Only regular, same-user files inside the exact
+        per-job work directory are eligible.
+        """
+        if self._has_bisync_baselines(workdir):
+            return []
+        if workdir.resolve() != self._bisync_workdir(job).resolve():
+            return []
+        removed: list[str] = []
+        getuid = getattr(os, "getuid", None)
+        for candidate in workdir.glob("*.lst-new"):
+            descriptor = -1
+            try:
+                descriptor = os.open(
+                    candidate,
+                    os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                )
+                metadata = os.fstat(descriptor)
+                if not stat.S_ISREG(metadata.st_mode):
+                    continue
+                if getuid is not None and metadata.st_uid != getuid():
+                    continue
+                current = candidate.lstat()
+                if (
+                    not stat.S_ISREG(current.st_mode)
+                    or current.st_dev != metadata.st_dev
+                    or current.st_ino != metadata.st_ino
+                ):
+                    continue
+                unlink_confined(workdir, candidate.name)
+                removed.append(candidate.name)
+            except OSError:
+                continue
+            finally:
+                if descriptor >= 0:
+                    os.close(descriptor)
+        return removed
 
     @staticmethod
     def _process_is_alive(pid: int) -> bool:
@@ -2171,6 +2217,7 @@ class SyncEngine:
         cancelled = False
         auto_reinitialize = False
         recovered_locks: list[str] = []
+        cleared_incomplete_state: list[str] = []
         try:
             resolved = resolve_rclone(self.rclone_path)
             if resolved is None:
@@ -2185,6 +2232,10 @@ class SyncEngine:
                     not dry_run
                     and not self._has_bisync_baselines(workdir)
                 )
+                if auto_reinitialize:
+                    cleared_incomplete_state = self._clear_incomplete_bisync_state(
+                        job, workdir
+                    )
             if job.peer_leases and not dry_run:
                 active = self.leases.foreign_leases(job)
                 if active:
@@ -2236,6 +2287,13 @@ class SyncEngine:
                     log.write(
                         "Bisync baseline was missing or incomplete; "
                         "starting automatic safe reinitialization.\n"
+                    )
+                if cleared_incomplete_state:
+                    log.write(
+                        "Removed abandoned Bisync staging listings before safe "
+                        "reinitialization: "
+                        + ", ".join(cleared_incomplete_state)
+                        + "\n"
                     )
                 if recovered_locks:
                     log.write(
@@ -2335,15 +2393,19 @@ class SyncEngine:
             elif cancelled:
                 result = JobResult(job.id, False, "Synchronization cancelled", log_path, True)
             else:
-                requires_resync = self._requires_resync(log_path)
+                requires_resync = auto_reinitialize or self._requires_resync(log_path)
                 blocked_path = self._blocked_google_path(log_path)
+                message, error_source = self._failure_diagnostic(
+                    log_path, return_code
+                )
                 result = JobResult(
                     job.id,
                     False,
-                    self._failure_summary(log_path, return_code),
+                    message,
                     log_path,
                     requires_resync=requires_resync,
                     blocked_path=blocked_path,
+                    error_source=error_source,
                 )
         except (OSError, RuntimeError) as exc:
             result = JobResult(job.id, False, f"Synchronization could not start: {exc}", log_path)
@@ -2661,6 +2723,10 @@ class SyncEngine:
 
     @staticmethod
     def _failure_summary(log_path: Path, return_code: int) -> str:
+        return SyncEngine._failure_diagnostic(log_path, return_code)[0]
+
+    @staticmethod
+    def _failure_diagnostic(log_path: Path, return_code: int) -> tuple[str, str]:
         try:
             lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
@@ -2674,16 +2740,50 @@ class SyncEngine:
         if abusive:
             match = re.search(r"(?:ERROR\s+:\s+)?(.+?): Failed to copy", abusive)
             blocked = match.group(1) if match else "a file"
-            return (
+            return ((
                 f"Google blocked {blocked} as suspected malware or spam. "
                 "Exclude it, or edit this job and explicitly allow flagged downloads."
-            )[:500]
+            )[:500], redact_error_text(blocked)[:1000])
+        shared_google_client = any(
+            "uses rclone's shared google drive client_id" in line.lower()
+            for line in cleaned_lines
+        )
         for cleaned in reversed(cleaned_lines):
             lowered = cleaned.lower()
             if lowered.startswith(("fatal error:", "bisync critical error:")):
-                detail = cleaned.split(":", 1)[1].strip()
-                return f"Synchronization failed: {detail[:300]}"
-        return f"Synchronization failed (rclone exit {return_code}); see log"
+                detail = redact_error_text(cleaned.split(":", 1)[1].strip())
+                return (
+                    "Synchronization failed (phase: engine; side: both; "
+                    f"path: account root): {detail[:300]}",
+                    "account root",
+                )
+            match = re.search(
+                r"(?i)\b(?:ERROR|NOTICE)\s*:\s*(?:(.+?):\s+)?"
+                r"((?:failed|error|cannot|could not|invalid_grant|access denied|"
+                r"forbidden|rate limit|quota).+)",
+                cleaned,
+            )
+            if match:
+                source = redact_error_text((match.group(1) or "account root").strip())
+                detail = redact_error_text(match.group(2).strip())
+                return (
+                    "Synchronization failed (phase: transfer; side: provider; "
+                    f"path: {source[:300]}): {detail[:500]}",
+                    source[:1000],
+                )
+        if shared_google_client:
+            return (
+                "Synchronization failed (phase: authorization; side: provider; "
+                "path: account root): this Google Drive account uses rclone's "
+                "retiring shared OAuth client. Reconnect it with a dedicated "
+                "Google OAuth client ID and secret.",
+                "account root",
+            )
+        return (
+            f"Synchronization failed (phase: transfer; side: provider; path: "
+            f"account root): rclone exited with code {return_code}; see log",
+            "account root",
+        )
 
     @staticmethod
     def _blocked_google_path(log_path: Path) -> str:

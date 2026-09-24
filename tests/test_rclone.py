@@ -162,6 +162,33 @@ class RcloneClientTests(unittest.TestCase):
         self.assertFalse(result.complete)
         self.assertEqual(result.question.name, "config_is_local")
 
+    def test_google_reconnect_updates_remote_with_dedicated_oauth_client(self):
+        client = RcloneClient()
+        with patch.object(
+            client,
+            "_run_oauth",
+            return_value=subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+        ) as run:
+            result = client.begin_oauth(
+                "work",
+                Provider.GOOGLE_DRIVE,
+                "desktop-client-id",
+                "desktop-client-secret",
+                replace_existing=True,
+            )
+        self.assertTrue(result.complete)
+        command = run.call_args.args[0]
+        self.assertEqual(command[:3], ["config", "update", "work"])
+        self.assertNotIn("create", command)
+        self.assertNotIn("drive", command[:4])
+        self.assertEqual(
+            command[command.index("client_id") + 1], "desktop-client-id"
+        )
+        self.assertEqual(
+            command[command.index("client_secret") + 1],
+            "desktop-client-secret",
+        )
+
     def test_oauth_address_in_use_error_is_concise(self):
         verbose = "Usage:\n" + ("flags\n" * 100) + "Fatal error: listen tcp 127.0.0.1:53682: bind: address already in use"
         message = RcloneClient._friendly_oauth_error(verbose)

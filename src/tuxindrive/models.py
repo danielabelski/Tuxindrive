@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
+import hashlib
 from pathlib import Path
 import time
 from typing import Any
@@ -437,6 +438,8 @@ class SyncJob:
     last_error_at: str = ""
     last_error_source: str = ""
     last_error_log: str = ""
+    consecutive_failures: int = 0
+    last_failure_signature: str = ""
 
     @property
     def remote_spec(self) -> str:
@@ -499,6 +502,21 @@ class SyncJob:
                 return False
         return True
 
+    def record_failure(self, message: str) -> int:
+        """Count repeated equivalent failures without storing sensitive text."""
+        normalized = " ".join(str(message).casefold().split())[:4000]
+        signature = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        if signature == self.last_failure_signature:
+            self.consecutive_failures += 1
+        else:
+            self.last_failure_signature = signature
+            self.consecutive_failures = 1
+        return self.consecutive_failures
+
+    def clear_failures(self) -> None:
+        self.consecutive_failures = 0
+        self.last_failure_signature = ""
+
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "SyncJob":
         data = dict(value)
@@ -513,6 +531,16 @@ class SyncJob:
             data.get("conflict_policy", ConflictPolicy.KEEP_BOTH.value)
         )
         data["peer_role"] = PeerRole(data.get("peer_role", PeerRole.READ_WRITE.value))
+        data["consecutive_failures"] = max(
+            0, int(data.get("consecutive_failures", 0) or 0)
+        )
+        signature = str(data.get("last_failure_signature", ""))
+        data["last_failure_signature"] = (
+            signature
+            if len(signature) == 64
+            and all(char in "0123456789abcdef" for char in signature)
+            else ""
+        )
         allowed = set(cls.__dataclass_fields__)
         return cls(**{key: item for key, item in data.items() if key in allowed})
 

@@ -1,3 +1,3 @@
 """TuxInDrive desktop cloud synchronization client."""
 
-__version__ = "0.26.50"
+__version__ = "0.26.51"

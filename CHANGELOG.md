@@ -2,6 +2,17 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.51 — self-healing Bisync and bounded retries
+
+- Remove only abandoned Bisync staging listings when no complete baseline
+  exists, then perform one controlled safe reinitialization.
+- Pause automatic synchronization when recovery fails or after three identical
+  failures, preventing an unrecoverable provider error from looping forever.
+- Show redacted phase, side, provider path and underlying rclone reason in
+  **Error details** instead of a generic exit-code message.
+- Require a dedicated Desktop OAuth client ID and secret for new or reconnected
+  Google Drive accounts ahead of rclone's shared-client retirement.
+
 ## 0.26.50 — readable dark settings dialogs
 
 - Override inherited light-theme foregrounds for every label in dark dialogs,
