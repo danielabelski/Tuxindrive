@@ -2,6 +2,16 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.47 — complete Midnight Sync dark mode
+
+- Override GTK theme background images on nested lists, rows, viewports,
+  scrollers, cards and dialogs so Midnight Sync remains dark throughout the
+  application instead of rendering light surfaces with unreadable light text.
+- Give selected account, group and synchronization rows explicit dark surfaces,
+  and keep the activity log, form views and scrollbars consistently legible.
+- Treat ignored duplicate objects or directories reported on either provider
+  side as actionable failures rather than false successful synchronization.
+
 ## 0.26.46 — automatic duplicate preservation
 
 - Preserve cloud objects that share the same provider path by renaming one to

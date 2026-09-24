@@ -1,3 +1,10 @@
+tuxindrive (0.26.47-1) unstable; urgency=medium
+
+  * Render Midnight Sync dark surfaces consistently across nested GTK widgets.
+  * Detect ignored source-side provider duplicates as incomplete synchronization.
+
+ -- TuxInDrive Maintainers <tpluharik@gmail.com>  Thu, 24 Sep 2026 07:00:00 +0200
+
 tuxindrive (0.26.46-1) unstable; urgency=medium
 
   * Preserve duplicate provider objects under unique synchronized names.

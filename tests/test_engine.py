@@ -120,6 +120,21 @@ class SyncEngineCommandTests(unittest.TestCase):
         self.assertEqual(source, "DPH/August2026/report.xlsx")
         self.assertIn("phase: provider listing", message)
 
+    def test_source_duplicate_notice_is_not_reported_as_complete(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "2026/09/21 08:38:30 NOTICE: Takeout: "
+                "Duplicate directory found in source - ignoring\n",
+                encoding="utf-8",
+            )
+            issue = self.engine._successful_run_log_issue(log, 0)
+        self.assertIsNotNone(issue)
+        source, message = issue
+        self.assertEqual(source, "Takeout")
+        self.assertIn("side: cloud", message)
+        self.assertIn("duplicate cloud object", message)
+
     def test_historical_duplicate_notice_does_not_poison_later_run(self):
         with tempfile.TemporaryDirectory() as temporary:
             log = Path(temporary) / "sync.log"

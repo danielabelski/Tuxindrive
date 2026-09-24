@@ -46,6 +46,16 @@ class VisualThemeTests(unittest.TestCase):
         self.assertFalse(theme_by_key("bento_cloud").dark)
         self.assertTrue(theme_by_key("midnight_sync").dark)
 
+    def test_midnight_overrides_nested_gtk_surface_images(self):
+        rendered = css_for_theme("midnight_sync")
+        self.assertIn(b".tuxindrive-root scrolledwindow", rendered)
+        self.assertIn(b".tuxindrive-root viewport", rendered)
+        self.assertIn(b"row.account-card:selected", rendered)
+        self.assertIn(b"row.job-card:selected", rendered)
+        self.assertIn(b"dialog.tuxindrive-dialog textview text", rendered)
+        self.assertIn(b"background-image: none", rendered)
+        self.assertIn(b"background-color: #08111f", rendered)
+
     def test_configuration_keeps_theme_and_legacy_config_gets_default(self):
         restored = AppConfig.from_dict({"settings": {"visual_theme": "bento_cloud"}})
         self.assertEqual(restored.settings.visual_theme, "bento_cloud")

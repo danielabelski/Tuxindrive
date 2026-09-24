@@ -646,7 +646,8 @@ class SyncEngine:
         except OSError:
             return None
         duplicate = re.search(
-            r"(?im)^.*?NOTICE\s*:\s*(.+?):\s*Duplicate object found in destination\s*-\s*ignoring\s*$",
+            r"(?im)^.*?NOTICE\s*:\s*(.+?):\s*Duplicate (?:object|directory) found in "
+            r"(?:source|destination)\s*-\s*ignoring\s*$",
             text,
         )
         if duplicate:

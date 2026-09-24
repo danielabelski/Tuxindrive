@@ -72,6 +72,22 @@ dialog.tuxindrive-dialog button.suggested-action {
 .tuxindrive-root list row {
   background: transparent;
 }
+.tuxindrive-root,
+.tuxindrive-root .sidebar,
+.tuxindrive-root .workspace,
+.tuxindrive-root scrolledwindow,
+.tuxindrive-root viewport,
+.tuxindrive-root list,
+.tuxindrive-root list row,
+dialog.tuxindrive-dialog,
+dialog.tuxindrive-dialog scrolledwindow,
+dialog.tuxindrive-dialog viewport,
+dialog.tuxindrive-dialog list,
+dialog.tuxindrive-dialog list row,
+dialog.tuxindrive-dialog textview,
+dialog.tuxindrive-dialog textview text {
+  background-image: none;
+}
 .tuxindrive-root row.account-card,
 .tuxindrive-root row.group-card,
 .tuxindrive-root row.job-card,
@@ -219,6 +235,13 @@ headerbar.tuxindrive-header {
 }
 .tuxindrive-root { background-color: #08111f; color: #d7e3f3; }
 .tuxindrive-root label { color: #d7e3f3; }
+.tuxindrive-root scrolledwindow,
+.tuxindrive-root viewport,
+.tuxindrive-root list,
+.tuxindrive-root list row {
+  background-color: #08111f;
+  color: #d7e3f3;
+}
 .tuxindrive-root .sidebar {
   background-image: linear-gradient(to bottom, #0d1829, #0a1423);
   border-right-color: #263750;
@@ -234,7 +257,18 @@ headerbar.tuxindrive-header {
   box-shadow: 0 4px 14px alpha(#000000, 0.28);
   color: #d7e3f3;
 }
+.tuxindrive-root row.account-card,
+.tuxindrive-root row.account-card:selected,
+.tuxindrive-root row.group-card,
+.tuxindrive-root row.group-card:selected,
+.tuxindrive-root row.job-card,
+.tuxindrive-root row.job-card:selected {
+  background-image: none;
+  background-color: #101c2e;
+  color: #d7e3f3;
+}
 .tuxindrive-root row.group-card { background-color: #0e1a2b; }
+.tuxindrive-root row.group-card:selected { background-color: #0e1a2b; }
 .tuxindrive-root row.account-card:hover,
 .tuxindrive-root row.job-card:hover { border-color: #22d3ee; }
 .tuxindrive-root .drag-handle:hover { background-color: #1b2c45; }
@@ -246,12 +280,37 @@ dialog.tuxindrive-dialog button.suggested-action { background-image: linear-grad
 .tuxindrive-root switch { background-color: #25364f; border-color: #3c526f; }
 .tuxindrive-root switch:checked { background-color: #6657ed; border-color: #8b7cf6; }
 .tuxindrive-root .activity-log { background-color: #0b1626; color: #b9c9dd; caret-color: #22d3ee; }
+.tuxindrive-root textview.activity-log,
+.tuxindrive-root textview.activity-log text { background-color: #0b1626; color: #b9c9dd; }
 .tuxindrive-root .network-meter { background-color: #101c2e; border-color: #2a3b55; }
 .tuxindrive-root .network-value { color: #22d3ee; }
 .tuxindrive-root .dim-label,
 dialog.tuxindrive-dialog .theme-description { color: #91a3bb; }
 dialog.tuxindrive-dialog entry,
 dialog.tuxindrive-dialog combobox button { background-color: #142238; color: #d7e3f3; border-color: #344966; }
+dialog.tuxindrive-dialog scrolledwindow,
+dialog.tuxindrive-dialog viewport,
+dialog.tuxindrive-dialog list,
+dialog.tuxindrive-dialog list row,
+dialog.tuxindrive-dialog textview,
+dialog.tuxindrive-dialog textview text,
+dialog.tuxindrive-dialog treeview,
+dialog.tuxindrive-dialog treeview.view {
+  background-color: #0b1626;
+  color: #d7e3f3;
+}
+dialog.tuxindrive-dialog frame,
+dialog.tuxindrive-dialog notebook,
+dialog.tuxindrive-dialog notebook stack {
+  background-image: none;
+  background-color: #101c2e;
+  color: #d7e3f3;
+  border-color: #2a3b55;
+}
+.tuxindrive-root scrollbar,
+dialog.tuxindrive-dialog scrollbar { background-color: #0b1525; }
+.tuxindrive-root scrollbar slider,
+dialog.tuxindrive-dialog scrollbar slider { background-color: #344966; }
 """
 
 
