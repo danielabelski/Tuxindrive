@@ -288,6 +288,24 @@ dialog.tuxindrive-dialog button.suggested-action { background-image: linear-grad
 .tuxindrive-root textview.activity-log text { background-color: #0b1626; color: #b9c9dd; }
 .tuxindrive-root .network-meter { background-color: #101c2e; border-color: #2a3b55; }
 .tuxindrive-root .network-value { color: #22d3ee; }
+.tuxindrive-root #summary-services {
+  background-color: #171b36;
+  border-color: #554d8c;
+  color: #e4e3ff;
+}
+.tuxindrive-root #summary-active {
+  background-color: #10253a;
+  border-color: #315777;
+  color: #d9edff;
+}
+.tuxindrive-root #summary-protected {
+  background-color: #13281f;
+  border-color: #38634e;
+  color: #ddf7e7;
+}
+.tuxindrive-root #summary-services label,
+.tuxindrive-root #summary-active label,
+.tuxindrive-root #summary-protected label { color: inherit; }
 .tuxindrive-root .dim-label,
 dialog.tuxindrive-dialog .theme-description { color: #91a3bb; }
 dialog.tuxindrive-dialog entry,

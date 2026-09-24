@@ -66,6 +66,10 @@ class VisualThemeTests(unittest.TestCase):
                 rendered.rfind(b"#08111f"),
                 rendered.find(b"#fbf9ff") if b"#fbf9ff" in rendered else rendered.find(b"#edf3f8"),
             )
+            self.assertIn(b"#summary-services", rendered)
+            self.assertIn(b"background-color: #171b36", rendered)
+            self.assertIn(b"background-color: #10253a", rendered)
+            self.assertIn(b"background-color: #13281f", rendered)
 
     def test_light_palettes_pin_readable_label_colors(self):
         self.assertIn(

@@ -622,10 +622,22 @@ class SyncEngine:
                         "Post-sync verification failed (phase: final listing; side: both; "
                         f"path: {path}): the item type differs between local and cloud."
                     )
-                if local_kind == "-" and local_size != remote_size:
+                # Rclone deliberately records -1 when a provider cannot expose
+                # a stable byte size.  Google Workspace documents exported as
+                # Office files are a common example: their final export size is
+                # only known locally.  Unknown metadata must not be mistaken for
+                # a real zero/different size, while two known sizes still have
+                # to agree before the run can be reported as complete.
+                if (
+                    local_kind == "-"
+                    and local_size >= 0
+                    and remote_size >= 0
+                    and local_size != remote_size
+                ):
                     return path, (
                         "Post-sync verification failed (phase: final listing; side: both; "
-                        f"path: {path}): file sizes differ between local and cloud."
+                        f"path: {path}): file sizes differ between local "
+                        f"({local_size} bytes) and cloud ({remote_size} bytes)."
                     )
             return None
         except (OSError, ValueError):

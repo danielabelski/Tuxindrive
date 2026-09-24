@@ -2,6 +2,16 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.49 — readable dark summaries and export-safe verification
+
+- Give all Bento Cloud summary tiles explicit high-contrast dark variants so
+  their labels, values and symbolic icons remain readable in system dark mode.
+- Treat a provider listing size of `-1` as unknown instead of a real byte size,
+  preventing false post-sync failures for Google Workspace documents exported
+  locally as PowerPoint, Word or other Office formats.
+- Continue rejecting mismatches when both file sizes are known and include the
+  local and cloud byte counts in Error details.
+
 ## 0.26.48 — system-aware dark mode
 
 - Make Nordic Glass and Bento Cloud automatically adopt a complete dark

@@ -103,6 +103,44 @@ class SyncEngineCommandTests(unittest.TestCase):
             issue = self.engine._post_sync_listing_issue(job)
         self.assertIsNone(issue)
 
+    def test_post_sync_listing_accepts_unknown_provider_export_size(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_DATA_HOME": temporary},
+        ):
+            job = SyncJob(account_remote="google", local_path="/data/Drive")
+            workdir = self.engine._prepare_bisync_workdir(job)
+            (workdir / "sync.path1.lst").write_text(
+                '# bisync listing v1\n- 250525 - - 2026-01-01T00:00:00Z "slides.pptx"\n',
+                encoding="utf-8",
+            )
+            (workdir / "sync.path2.lst").write_text(
+                '# bisync listing v1\n- -1 - - 2026-01-01T00:00:00Z "slides.pptx"\n',
+                encoding="utf-8",
+            )
+            issue = self.engine._post_sync_listing_issue(job)
+        self.assertIsNone(issue)
+
+    def test_post_sync_listing_rejects_different_known_file_sizes(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_DATA_HOME": temporary},
+        ):
+            job = SyncJob(account_remote="google", local_path="/data/Drive")
+            workdir = self.engine._prepare_bisync_workdir(job)
+            (workdir / "sync.path1.lst").write_text(
+                '# bisync listing v1\n- 42 - - 2026-01-01T00:00:00Z "report.pdf"\n',
+                encoding="utf-8",
+            )
+            (workdir / "sync.path2.lst").write_text(
+                '# bisync listing v1\n- 41 - - 2026-01-01T00:00:00Z "report.pdf"\n',
+                encoding="utf-8",
+            )
+            issue = self.engine._post_sync_listing_issue(job)
+        self.assertIsNotNone(issue)
+        source, message = issue
+        self.assertEqual(source, "report.pdf")
+        self.assertIn("local (42 bytes)", message)
+        self.assertIn("cloud (41 bytes)", message)
+
     def test_exit_zero_duplicate_notice_is_not_reported_as_complete(self):
         with tempfile.TemporaryDirectory() as temporary:
             log = Path(temporary) / "sync.log"

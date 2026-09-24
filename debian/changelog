@@ -1,3 +1,11 @@
+tuxindrive (0.26.49-1) unstable; urgency=medium
+
+  * Render Bento summary tiles with readable dark-mode colors.
+  * Accept unknown provider sizes for exported Google Workspace documents.
+  * Retain strict comparison and detailed diagnostics for known sizes.
+
+ -- TuxInDrive Maintainers <tpluharik@gmail.com>  Thu, 24 Sep 2026 07:35:00 +0200
+
 tuxindrive (0.26.48-1) unstable; urgency=medium
 
   * Follow the desktop dark-mode preference across every visual layout.
