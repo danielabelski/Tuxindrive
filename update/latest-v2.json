@@ -1,8 +1,8 @@
 {
-  "version": "0.26.52",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.52/tuxindrive_0.26.52_all.deb",
-  "sha256": "ec90917bc223e1484fa7fbd06ec41d2c5c8ea4035277bc9fd1f893443d93033f",
-  "notes": "Newest-first live activity logs",
-  "expires_at": "2026-12-25T08:42:52.565658+00:00",
-  "signature": "TUegITmsQLn2h7M/wr2bqEmuCSjb6zmFvAFwtpePmVxSrSNmXDkZYgmEfXwnDxkY4hPdQt9jxFt8UK8i6eQ7Cg=="
+  "version": "0.26.53",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.53/tuxindrive_0.26.53_all.deb",
+  "sha256": "9a28014de587210b0b42f91ebd6179f4646a2f49608b4fcb864aa36585f73afa",
+  "notes": "Transfer integrity fault isolation and checksum-failure pausing",
+  "expires_at": "2026-12-25T09:20:38.793737+00:00",
+  "signature": "y8ylvfnzKy5jzs3z6PlmStaHNlQkeyVN6adm4vAKqSo7LLfuJ2/IcpNa1bMia3JOMy19CwlLOp/7qqSZsJEqCw=="
 }
