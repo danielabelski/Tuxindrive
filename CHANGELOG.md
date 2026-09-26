@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.53 — checksum-failure containment
+
+- Pause a job immediately after a failed transfer checksum instead of spending
+  bandwidth on repeated scheduled downloads of the same corrupt payload.
+- Remove rclone's random partial-file suffix from Error details and report the
+  exact provider path plus the number of affected downloads.
+- Report concurrent cloud duplicates separately and leave cloud objects
+  untouched while transfer integrity is uncertain.
+
 ## 0.26.52 — newest-first live activity log
 
 - Show the most recently updated log and newest activity records at the top so

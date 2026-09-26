@@ -338,6 +338,16 @@ class HeadlessAgent:
                         "provider problem is resolved."
                     )
                     job.last_error = job.last_status
+                if result.integrity_blocked:
+                    job.enabled = False
+                    recovery = (
+                        " A recovery sync is required." if result.requires_resync else ""
+                    )
+                    job.last_status = (
+                        f"{result.message} Automatic sync paused to prevent repeated "
+                        f"corrupt downloads.{recovery}"
+                    )
+                    job.last_error = job.last_status
                 self.store.save(self.config)
             self._results[result.job_id] = {
                 "success": result.success, "message": result.message,

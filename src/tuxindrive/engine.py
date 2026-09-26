@@ -55,6 +55,7 @@ class JobResult:
     mount_lost: bool = False
     mass_change_blocked: bool = False
     verification_blocked: bool = False
+    integrity_blocked: bool = False
     lease_blocked: bool = False
     network_sessions: int = 0
     payload_bytes: int = 0
@@ -716,6 +717,62 @@ class SyncEngine:
                 "Resolve or rename the duplicate before retrying."
             )
         return None
+
+    @staticmethod
+    def _failed_run_integrity_issue(
+        log_path: Path, start_offset: int
+    ) -> tuple[str, str] | None:
+        """Return an actionable checksum failure from only the current run.
+
+        Rclone removes a failed temporary copy, but an automatic scheduler can
+        otherwise download the same corrupt payload again indefinitely.  Keep
+        the original provider path (without rclone's random ``.partial``
+        suffix) and report all affected files before the controller pauses the
+        job.  Cloud duplicates are mentioned as a separate unresolved issue;
+        they are never mutated while transfer integrity is uncertain.
+        """
+        try:
+            with log_path.open("rb") as handle:
+                handle.seek(max(0, start_offset))
+                text = handle.read(8 * 1024 * 1024).decode(
+                    "utf-8", errors="replace"
+                )
+        except OSError:
+            return None
+        checksum_paths = {
+            match.group(1).strip()
+            for match in re.finditer(
+                r"(?im)^.*?ERROR\s*:\s*(.+?)\.[0-9a-f]{8,}\.partial:\s*"
+                r"corrupted on transfer:\s*(?:md5|sha1|sha256) hashes differ\b",
+                text,
+            )
+        }
+        if not checksum_paths:
+            return None
+        source = sorted(checksum_paths)[0]
+        duplicate_paths = {
+            match.group(1).strip()
+            for match in re.finditer(
+                r"(?im)^.*?NOTICE\s*:\s*(.+?):\s*Duplicate "
+                r"(?:object|directory) found in (?:source|destination)\s*-\s*ignoring\s*$",
+                text,
+            )
+        }
+        count = len(checksum_paths)
+        message = (
+            "Integrity verification failed (phase: transfer checksum; side: local; "
+            f"path: {source}): {count} downloaded "
+            f"{'file did' if count == 1 else 'files did'} not match the provider "
+            "checksum. The incomplete local copies were removed."
+        )
+        if duplicate_paths:
+            duplicate_count = len(duplicate_paths)
+            message += (
+                f" The cloud listing also contains {duplicate_count} unresolved "
+                f"duplicate {'path' if duplicate_count == 1 else 'paths'}; no cloud "
+                "object was renamed while transfer integrity was uncertain."
+            )
+        return source, message
 
     @staticmethod
     def _duplicate_destination(relative: str) -> str:
@@ -2395,9 +2452,15 @@ class SyncEngine:
             else:
                 requires_resync = auto_reinitialize or self._requires_resync(log_path)
                 blocked_path = self._blocked_google_path(log_path)
-                message, error_source = self._failure_diagnostic(
-                    log_path, return_code
+                integrity_issue = self._failed_run_integrity_issue(
+                    log_path, run_log_offset
                 )
+                if integrity_issue is not None:
+                    error_source, message = integrity_issue
+                else:
+                    message, error_source = self._failure_diagnostic(
+                        log_path, return_code
+                    )
                 result = JobResult(
                     job.id,
                     False,
@@ -2406,6 +2469,7 @@ class SyncEngine:
                     requires_resync=requires_resync,
                     blocked_path=blocked_path,
                     error_source=error_source,
+                    integrity_blocked=integrity_issue is not None,
                 )
         except (OSError, RuntimeError) as exc:
             result = JobResult(job.id, False, f"Synchronization could not start: {exc}", log_path)

@@ -6680,6 +6680,14 @@ class TuxInDriveApplication(Gtk.Application):
                 "problem is resolved."
             )
             job.last_error = job.last_status
+        if result.integrity_blocked:
+            job.enabled = False
+            recovery = " A recovery sync is required." if result.requires_resync else ""
+            job.last_status = (
+                f"{result.message} Automatic sync paused to prevent repeated corrupt "
+                f"downloads.{recovery}"
+            )
+            job.last_error = job.last_status
         if failure_count >= 3 and job.enabled:
             job.enabled = False
             job.last_status = (

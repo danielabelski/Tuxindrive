@@ -1,3 +1,11 @@
+tuxindrive (0.26.53-1) unstable; urgency=medium
+
+  * Pause immediately after failed transfer checksum verification.
+  * Report exact affected paths and remove incomplete local copies.
+  * Keep cloud duplicates untouched while transfer integrity is uncertain.
+
+ -- TuxInDrive Maintainers <tpluharik@gmail.com>  Sat, 26 Sep 2026 11:05:42 +0200
+
 tuxindrive (0.26.52-1) unstable; urgency=medium
 
   * Show the newest live activity records and latest log file first.

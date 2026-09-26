@@ -186,6 +186,74 @@ class SyncEngineCommandTests(unittest.TestCase):
             issue = self.engine._successful_run_log_issue(log, offset)
         self.assertIsNone(issue)
 
+    def test_checksum_cluster_reports_clean_path_and_duplicate_count(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text("ERROR : historical.txt: Failed to copy: old\n", encoding="utf-8")
+            offset = log.stat().st_size
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    "2026/09/26 11:00:55 ERROR : Google Photos/2016/IMG_0282.JPG."
+                    "e0bcf934.partial: corrupted on transfer: md5 hashes differ src x vs dst y\n"
+                    "2026/09/26 11:00:52 ERROR : Google Photos/2016/IMG_0281.JPG."
+                    "884a5932.partial: corrupted on transfer: md5 hashes differ src x vs dst y\n"
+                    "2026/09/26 10:58:20 NOTICE: DPH/report.pdf: Duplicate object "
+                    "found in source - ignoring\n"
+                )
+            issue = self.engine._failed_run_integrity_issue(log, offset)
+        self.assertIsNotNone(issue)
+        source, message = issue
+        self.assertEqual(source, "Google Photos/2016/IMG_0281.JPG")
+        self.assertNotIn(".partial", source)
+        self.assertIn("2 downloaded files", message)
+        self.assertIn("1 unresolved duplicate path", message)
+        self.assertIn("incomplete local copies were removed", message)
+
+    def test_historical_checksum_failure_does_not_poison_later_run(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "ERROR : old.jpg.12345678.partial: corrupted on transfer: md5 hashes differ\n",
+                encoding="utf-8",
+            )
+            offset = log.stat().st_size
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write("ERROR : report.pdf: Failed to copy: access denied\n")
+            issue = self.engine._failed_run_integrity_issue(log, offset)
+        self.assertIsNone(issue)
+
+    def test_failed_checksum_run_is_marked_for_immediate_pause(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ,
+            {"XDG_DATA_HOME": f"{temporary}/data", "XDG_CACHE_HOME": f"{temporary}/cache"},
+        ):
+            job = SyncJob(
+                account_remote="google",
+                local_path=f"{temporary}/local",
+                initialized=False,
+            )
+            Path(job.local_path).mkdir()
+            completed = []
+
+            def failed_process(_command, **kwargs):
+                kwargs["stdout"].write(
+                    "ERROR : Photos/image.jpg.1234abcd.partial: corrupted on transfer: "
+                    "md5 hashes differ src x vs dst y\n"
+                )
+                process = MagicMock()
+                process.wait.return_value = 1
+                return process
+
+            with patch("tuxindrive.engine.resolve_rclone", return_value="/usr/bin/rclone"), \
+                 patch("tuxindrive.engine.subprocess.Popen", side_effect=failed_process):
+                self.engine._run_worker(
+                    job, Path(temporary) / "sync.log", completed.append, False
+                )
+        self.assertFalse(completed[0].success)
+        self.assertTrue(completed[0].integrity_blocked)
+        self.assertEqual(completed[0].error_source, "Photos/image.jpg")
+        self.assertIn("incomplete local copies were removed", completed[0].message)
+
     def test_duplicate_destination_preserves_parent_and_extension(self):
         destination = self.engine._duplicate_destination(
             "Final pitch presentations/Nukib1.pptx.pptx"
