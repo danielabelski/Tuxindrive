@@ -94,6 +94,18 @@ class ResponsiveWindowTests(unittest.TestCase):
             initialization,
         )
 
+    def test_live_log_keeps_the_newest_records_visible_at_the_top(self) -> None:
+        source = (REPOSITORY / "src/tuxindrive/app.py").read_text(encoding="utf-8")
+        refresh = source[
+            source.index("    def _refresh_activity_log("):
+            source.index("    @staticmethod\n    def _tail_file")
+        ]
+
+        self.assertIn("newest_first_log(content)", refresh)
+        self.assertIn("sections.sort(key=lambda section: section[0], reverse=True)", refresh)
+        self.assertIn("buffer.get_start_iter()", refresh)
+        self.assertNotIn("buffer.get_end_iter()", refresh)
+
 
 if __name__ == "__main__":
     unittest.main()

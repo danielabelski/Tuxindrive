@@ -100,6 +100,7 @@ from .server_credentials import store_server_token
 from .search_index import FolderSearchIndex, IndexStats, SearchResult
 from .file_preview import PreviewData, PreviewError, preview_path
 from .error_details import details_for_job
+from .live_log import newest_first_log
 from .recovery_advisor import advice_for_error
 from .managed_policy import ManagedPolicy, load_managed_policy
 from .scheduling import persisted_run_time
@@ -5741,7 +5742,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self._activity_files = {
             path: value for path, value in self._activity_files.items() if path in active
         }
-        sections: list[str] = []
+        sections: list[tuple[int, str]] = []
         for source in sources:
             try:
                 stat = source.stat()
@@ -5758,13 +5759,19 @@ class MainWindow(Gtk.ApplicationWindow):
                 content = self._tail_file(source)
                 self._activity_files[source] = (*fingerprint, content)
             if content:
-                sections.append(f"── {source.name} ──\n{content.strip()}")
-        combined = "\n\n".join(sections) or "No activity recorded yet."
+                sections.append(
+                    (
+                        stat.st_mtime_ns,
+                        f"── {source.name} ──\n{newest_first_log(content)}",
+                    )
+                )
+        sections.sort(key=lambda section: section[0], reverse=True)
+        combined = "\n\n".join(section for _mtime, section in sections) or "No activity recorded yet."
         if combined != self._activity_content:
             self._activity_content = combined
             buffer = self.activity_view.get_buffer()
             buffer.set_text(combined)
-            self.activity_view.scroll_to_iter(buffer.get_end_iter(), 0.0, False, 0.0, 1.0)
+            self.activity_view.scroll_to_iter(buffer.get_start_iter(), 0.0, True, 0.0, 0.0)
         return True
 
     @staticmethod

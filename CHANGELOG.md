@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.52 — newest-first live activity log
+
+- Show the most recently updated log and newest activity records at the top so
+  current synchronization activity remains visible without manual scrolling.
+- Preserve multi-line errors and tracebacks as complete records while reversing
+  the display order.
+- Keep chronological file-tail caches unchanged and apply newest-first ordering
+  only to the live presentation.
+
 ## 0.26.51 — self-healing Bisync and bounded retries
 
 - Remove only abandoned Bisync staging listings when no complete baseline
