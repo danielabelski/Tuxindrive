@@ -10,6 +10,17 @@ from typing import Any
 from uuid import uuid4
 
 
+CODEX_TRANSIENT_EXCLUDES = (
+    ".tmp/**",
+    "ipc/**",
+    "mcp-oauth-locks/**",
+    "node_repl/active_execs/**",
+    "project-metadata-locks/**",
+    "shell_snapshots/**",
+    "thread-writer-locks/**",
+)
+
+
 def paths_overlap(first: str | Path, second: str | Path) -> bool:
     left = Path(first).expanduser().resolve(strict=False)
     right = Path(second).expanduser().resolve(strict=False)
@@ -527,6 +538,14 @@ class SyncJob:
         data = dict(value)
         if data.get("ai_connector") and data.get("version_retention_days") == 90:
             data["version_retention_days"] = 7
+        if data.get("ai_connector") == "codex":
+            existing_excludes = data.get("exclude_patterns")
+            if not isinstance(existing_excludes, list):
+                existing_excludes = [".Trash-*/**", "*.part", "~$*"]
+            data["exclude_patterns"] = list(dict.fromkeys((
+                *existing_excludes,
+                *CODEX_TRANSIENT_EXCLUDES,
+            )))
         # Migrate the former highly sensitive defaults. Explicit non-default
         # operator thresholds remain untouched.
         if data.get("mass_change_limit", 200) == 200:

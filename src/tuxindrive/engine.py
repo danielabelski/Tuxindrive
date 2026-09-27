@@ -71,7 +71,15 @@ class MountLifecycle:
 def parse_rclone_progress(line: str) -> int | None:
     """Extract a bounded transfer percentage from an rclone stats line."""
     if "Transferred:" not in line:
-        return None
+        # Current rclone --stats-one-line output is logged as a compact byte
+        # counter without the older ``Transferred:`` label, for example:
+        # ``3.270 GiB / 21.449 GiB, 15%, 680 KiB/s, ETA 7h``.
+        if not re.search(
+            r"\d+(?:\.\d+)?\s+[KMGTPE]?i?B\s*/\s*"
+            r"\d+(?:\.\d+)?\s+[KMGTPE]?i?B\s*,",
+            line,
+        ):
+            return None
     match = re.search(r"(?:^|[, ])\s*(\d{1,3})%\s*(?:,|$)", line)
     if not match:
         return None

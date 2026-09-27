@@ -15,7 +15,7 @@ import socket
 from pathlib import Path
 from typing import Mapping
 
-from .models import ConflictPolicy, SyncJob, SyncMode
+from .models import CODEX_TRANSIENT_EXCLUDES, ConflictPolicy, SyncJob, SyncMode
 
 
 SECRET_EXCLUDES = (
@@ -107,7 +107,10 @@ def connectors(
     return (
         AIBackupConnector(
             "codex", "Codex", "Chats, memories, skills and workspace metadata",
-            (codex,), ("config.toml",),
+            (codex,), (
+                "config.toml",
+                *CODEX_TRANSIENT_EXCLUDES,
+            ),
         ),
         AIBackupConnector(
             "claude", "Claude Code", "Projects, conversations, commands and settings",

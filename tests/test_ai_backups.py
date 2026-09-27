@@ -54,6 +54,8 @@ class AIBackupTests(unittest.TestCase):
             self.assertEqual(job.remote_path, "AI-Backups/Personal/work-laptop/codex")
             self.assertIn("auth.json", job.exclude_patterns)
             self.assertIn("config.toml", job.exclude_patterns)
+            self.assertIn("node_repl/active_execs/**", job.exclude_patterns)
+            self.assertIn(".tmp/**", job.exclude_patterns)
             self.assertTrue(set(SECRET_EXCLUDES).issubset(job.exclude_patterns))
 
     def test_missing_tools_and_invalid_account_create_no_unsafe_job(self):
@@ -78,6 +80,22 @@ class AIBackupTests(unittest.TestCase):
         )
         restored = AppConfig.from_dict(AppConfig(jobs=[job]).to_dict()).jobs[0]
         self.assertEqual(restored.version_retention_days, 7)
+
+    def test_existing_codex_backup_gains_transient_runtime_excludes(self):
+        job = SyncJob(
+            "drive", "/tmp/codex", ai_connector="codex",
+            exclude_patterns=["auth.json"],
+        )
+        restored = AppConfig.from_dict(AppConfig(jobs=[job]).to_dict()).jobs[0]
+        self.assertIn("auth.json", restored.exclude_patterns)
+        self.assertIn("node_repl/active_execs/**", restored.exclude_patterns)
+        self.assertIn(".tmp/**", restored.exclude_patterns)
+
+        legacy = AppConfig(jobs=[job]).to_dict()["jobs"][0]
+        legacy.pop("exclude_patterns")
+        restored_legacy = SyncJob.from_dict(legacy)
+        self.assertIn("*.part", restored_legacy.exclude_patterns)
+        self.assertIn("node_repl/active_execs/**", restored_legacy.exclude_patterns)
 
     def test_remote_component_is_bounded_and_cannot_traverse(self):
         self.assertEqual(safe_remote_component("../../work laptop", "computer"), "work-laptop")

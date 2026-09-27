@@ -7392,6 +7392,21 @@ class TuxInDriveApplication(Gtk.Application):
 
     def do_shutdown(self) -> None:
         LOGGER.info("TuxInDrive shutting down")
+        running_jobs = set(self.engine.running_jobs)
+        interrupted_ai_backup = False
+        interrupted_at = datetime.now(timezone.utc).isoformat()
+        for job in self.config.jobs:
+            if job.id not in running_jobs or not job.is_ai_backup:
+                continue
+            job.last_status = (
+                "Backup interrupted when TuxInDrive closed; press Sync now to "
+                "resume incrementally"
+            )
+            job.last_error = job.last_status
+            job.last_error_at = interrupted_at
+            interrupted_ai_backup = True
+        if interrupted_ai_backup:
+            self.save()
         if (
             self._desktop_interface_settings is not None
             and self._desktop_theme_handler

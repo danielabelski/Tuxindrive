@@ -28,7 +28,15 @@ class SyncEngineCommandTests(unittest.TestCase):
         self.assertEqual(
             parse_rclone_progress("Transferred: 3 / 3, 100%"), 100
         )
+        self.assertEqual(
+            parse_rclone_progress(
+                "2026/09/27 18:15:41 INFO  :     3.270 GiB / 21.449 GiB, "
+                "15%, 680.875 KiB/s, ETA 7h46m36s"
+            ),
+            15,
+        )
         self.assertIsNone(parse_rclone_progress("Checks: 10 / 10, 100%"))
+        self.assertIsNone(parse_rclone_progress("Copied 15% of a text document"))
         self.assertIsNone(parse_rclone_progress("Transferred: unknown"))
 
     def test_ai_backup_prunes_only_versions_older_than_retention(self):
