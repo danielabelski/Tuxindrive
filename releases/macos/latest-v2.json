@@ -1,8 +1,8 @@
 {
-  "version": "0.26.56",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.56/TuxInDrive-0.26.56-macos-arm64.dmg",
-  "sha256": "1884018dc1c29da5fcfc3a8ce61a89486839816e500a6c657194c8064c9a7f0f",
-  "notes": "Space-efficient incremental AI backups with live progress",
-  "expires_at": "2026-12-26T16:32:30.637752+00:00",
-  "signature": "7Kg4kCw0s1w066ToG+8dNGtAomsIGfNY31lImHbIRoEENJDToXWXdYO3K9WOMY7mKRvtD0rJ+1HIdRYbszouDQ=="
+  "version": "0.26.57",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.57/TuxInDrive-0.26.57-macos-arm64.dmg",
+  "sha256": "164ab660e0acc79e8c7848710d607865b146a721b4ba17398bbc188a8f2f8ea1",
+  "notes": "Accurate AI-backup progress, transient runtime exclusions, and safe incremental resume",
+  "expires_at": "2026-12-26T17:18:23.581500+00:00",
+  "signature": "ac31E0HKkNsQ7ZwQ367tKLX4KoXXs8Z3G/zQqd6j6YLuvDfNKtSpnEKjNA+pdxXQPK5PTgPxqu7hV1FG3l0fAg=="
 }

@@ -1,8 +1,8 @@
 {
-  "version": "0.26.56",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.56/tuxindrive_0.26.56_all.deb",
-  "sha256": "04784a796e96bfc96cdf3ce985bbd08cd2e509b86ea1a8c61832f242f22242b5",
-  "notes": "Space-efficient incremental AI backups with live progress",
-  "expires_at": "2026-12-26T16:32:30.252496+00:00",
-  "signature": "Qu0QVhil8OBDnN9lMXeheXgaUO0DL+IXzDSZt4KuPEWNSwKsxb3lhYI4OhC+qU54tLYWZFXJ6ZLuXoFSgPejCQ=="
+  "version": "0.26.57",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.57/tuxindrive_0.26.57_all.deb",
+  "sha256": "a54f6a8b14f376fd063f32999562f37ecf8c9c6ac919c3b6a44a351e845e7e3e",
+  "notes": "Accurate AI-backup progress, transient runtime exclusions, and safe incremental resume",
+  "expires_at": "2026-12-26T17:18:23.427154+00:00",
+  "signature": "uERUVtezqYsSGYf53lg/2oxR6mnqheqxoC9Ae7f1VPa1em+As5Gnm/IbJn0wwqBqnFdvLI16pxOxY4GHuEm0Dg=="
 }

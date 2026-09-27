@@ -1,8 +1,8 @@
 {
-  "version": "0.26.56",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.56/TuxInDrive-0.26.56-windows-x64-setup.exe",
-  "sha256": "7caf68a34dec4a615863c14b649ae8050d8a01d127ec1ee08822b920f54d48ab",
-  "notes": "Space-efficient incremental AI backups with live progress",
-  "expires_at": "2026-12-26T16:32:30.441808+00:00",
-  "signature": "WBJV9D5OjtLQafcJcuKUhQ4MQN9WBUSK1xiuupgEPg94hStRqQYp97M43GGlQxDoUrt+snmOzYlC2GoA6/TVBw=="
+  "version": "0.26.57",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.57/TuxInDrive-0.26.57-windows-x64-setup.exe",
+  "sha256": "865a47b25e04f27e11b91b63782ebf3983d063e89abf8c0af2822e32b69fab7f",
+  "notes": "Accurate AI-backup progress, transient runtime exclusions, and safe incremental resume",
+  "expires_at": "2026-12-26T17:18:23.497377+00:00",
+  "signature": "wgePKDdWxtw+cB0S2Il6q+hSRrCW998Mwj04Kq79cyXo36oIfMC7g/T/lDPMQDxHKOaVmu7vScBHCqFoVyzpDg=="
 }
