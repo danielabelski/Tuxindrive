@@ -68,6 +68,16 @@ class MountLifecycle:
     updated_at: str
 
 
+def parse_rclone_progress(line: str) -> int | None:
+    """Extract a bounded transfer percentage from an rclone stats line."""
+    if "Transferred:" not in line:
+        return None
+    match = re.search(r"(?:^|[, ])\s*(\d{1,3})%\s*(?:,|$)", line)
+    if not match:
+        return None
+    return min(100, max(0, int(match.group(1))))
+
+
 class SyncEngine:
     _MAX_ACTIVE_TRANSFERS = 2
     _MAX_DUPLICATE_RECOVERY_ATTEMPTS = 5
@@ -110,6 +120,7 @@ class SyncEngine:
         self._job_backends: dict[str, str] = {}
         self._callback_baselines: dict[str, dict[str, FileState]] = {}
         self._traffic_totals: dict[str, tuple[int, int]] = {}
+        self._job_progress: dict[str, int] = {}
         self._streaming_refresh_mode = "balanced"
         self._cache_watchers: dict[str, InotifyTreeMonitor] = {}
         self._cache_cleanup_state: dict[str, tuple[int, int, bool, int]] = {}
@@ -134,6 +145,10 @@ class SyncEngine:
     def traffic_totals(self, job_id: str) -> tuple[int, int]:
         with self._lock:
             return self._traffic_totals.get(job_id, (0, 0))
+
+    def job_progress(self, job_id: str) -> int | None:
+        with self._lock:
+            return self._job_progress.get(job_id)
 
     def finalize_traffic(self, job_id: str, log_path: Path) -> tuple[int, int]:
         """Accumulate rclone's final payload counter without logging secrets."""
@@ -397,6 +412,32 @@ class SyncEngine:
         if job.mode is SyncMode.VIRTUAL_DRIVE:
             return self.mount_command(job)
         raise ValueError(f"Unsupported sync mode: {job.mode}")
+
+    def _prune_remote_history(self, job: SyncJob, log) -> None:
+        """Bound remote version growth after a successful AI backup."""
+        if not job.is_ai_backup or not job.version_history:
+            return
+        days = max(1, job.version_retention_days)
+        remote_root = job.remote_spec.split(":", 1)[0] + ":"
+        history_root = f"{remote_root}.tuxdrive-versions/{job.id}"
+        command = [
+            self.rclone_path, "delete", history_root,
+            "--min-age", f"{days}d", "--rmdirs",
+            *self.bandwidth.rclone_args(job.bandwidth_limit),
+        ]
+        log.write(f"Pruning AI backup versions older than {days} day(s).\n")
+        try:
+            result = subprocess.run(
+                command, stdout=log, stderr=subprocess.STDOUT, text=True,
+                timeout=1800, check=False, **new_process_group(),
+            )
+            if result.returncode:
+                log.write(
+                    "Remote history pruning was skipped or incomplete; "
+                    f"rclone exited with {result.returncode}.\n"
+                )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            log.write(f"Remote history pruning could not complete: {exc}\n")
 
     @staticmethod
     def _bisync_workdir(job: SyncJob) -> Path:
@@ -2392,18 +2433,31 @@ class SyncEngine:
                     )
                 process = subprocess.Popen(
                     command,
-                    stdout=log,
+                    stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
+                    bufsize=1,
                     **new_process_group(),
                 )
                 with self._lock:
                     self._processes[job.id] = process
+                    self._job_progress[job.id] = 0
                 self._record_network(job.id)
+                assert process.stdout is not None
+                for line in process.stdout:
+                    log.write(line)
+                    progress = parse_rclone_progress(line)
+                    if progress is not None:
+                        with self._lock:
+                            self._job_progress[job.id] = progress
                 return_code = process.wait()
                 cancelled = return_code in (-signal.SIGTERM, 143)
                 log.write(f"[{datetime.now(timezone.utc).isoformat()}] Exit {return_code}\n")
             if return_code == 0:
+                with log_path.open("a", encoding="utf-8") as history_log:
+                    self._prune_remote_history(job, history_log)
+                with self._lock:
+                    self._job_progress[job.id] = 100
                 if job.mode is SyncMode.TWO_WAY and not dry_run:
                     log_issue = self._successful_run_log_issue(
                         log_path, run_log_offset

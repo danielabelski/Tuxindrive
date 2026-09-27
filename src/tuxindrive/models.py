@@ -525,6 +525,8 @@ class SyncJob:
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "SyncJob":
         data = dict(value)
+        if data.get("ai_connector") and data.get("version_retention_days") == 90:
+            data["version_retention_days"] = 7
         # Migrate the former highly sensitive defaults. Explicit non-default
         # operator thresholds remain untouched.
         if data.get("mass_change_limit", 200) == 200:

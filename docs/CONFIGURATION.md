@@ -1,7 +1,7 @@
 # TuxInDrive configuration reference
 
 This reference describes the persisted desktop configuration in TuxInDrive
-0.26.55. Normal changes should be made in **Settings**, **Connect account**, or
+0.26.56. Normal changes should be made in **Settings**, **Connect account**, or
 **Add/Edit folder**. Stop TuxInDrive and make a backup before manually editing
 JSON; a syntactically valid but inconsistent mapping can still synchronize the
 wrong location.
@@ -184,7 +184,9 @@ temporary Office lock files (`~$*`).
 The **AI backups** wizard detects local data folders for Codex, Claude Code,
 Gemini CLI, Cursor, and Continue. It creates ordinary upload-only jobs using
 the selected existing cloud account. The jobs run on the normal scheduler,
-retain replaced remote files for 90 days, and are marked by `ai_connector`.
+transfer only changed content, retain replaced remote files for seven days,
+automatically remove older remote versions after a successful run, and are
+marked by `ai_connector`.
 They never authenticate to or scrape an AI service.
 
 Credential files, private-key extensions, environment files, sockets, locks,

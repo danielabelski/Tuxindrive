@@ -173,7 +173,7 @@ def build_backup_jobs(
                 exclude_patterns=list(dict.fromkeys((*SECRET_EXCLUDES, *connector.excludes))),
                 realtime_sync=False,
                 version_history=True,
-                version_retention_days=90,
+                version_retention_days=7,
                 ransomware_protection=True,
                 max_delete=25,
                 ai_connector=connector.key,

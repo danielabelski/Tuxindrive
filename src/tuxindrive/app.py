@@ -6714,7 +6714,9 @@ class TuxInDriveApplication(Gtk.Application):
         job.last_status = (
             "Connecting files-on-demand drive…"
             if job.mode is SyncMode.VIRTUAL_DRIVE
-            else "Synchronizing…"
+            else "Backing up incrementally… 0%"
+            if job.is_ai_backup
+            else "Synchronizing… 0%"
         )
         LOGGER.info(
             "Starting job %s (%s): %s -> %s",
@@ -6731,12 +6733,29 @@ class TuxInDriveApplication(Gtk.Application):
         if self.window:
             self.window.refresh()
         started = self.engine.run_async(job, self._job_finished)
+        if started and job.mode is not SyncMode.VIRTUAL_DRIVE:
+            GLib.timeout_add_seconds(1, self._refresh_job_progress, job.id)
         if not started:
             self._nautilus_active_jobs.discard(job.id)
             self._refresh_tray_from_jobs("The synchronization job could not be started")
             self._publish_nautilus_state()
         if not started and self.window and not quiet:
             self.window.message("The job could not be started.", Gtk.MessageType.WARNING)
+
+    def _refresh_job_progress(self, job_id: str) -> bool:
+        job = next((item for item in self.config.jobs if item.id == job_id), None)
+        if job is None or job_id not in self.engine.running_jobs:
+            return False
+        progress = self.engine.job_progress(job_id)
+        if progress is not None:
+            job.last_status = (
+                f"Backing up incrementally… {progress}%"
+                if job.is_ai_backup
+                else f"Synchronizing… {progress}%"
+            )
+            if self.window:
+                self.window.refresh()
+        return True
 
     def stop_job(self, job: SyncJob) -> None:
         self.engine.stop_callbacks(job.id)

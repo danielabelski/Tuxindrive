@@ -49,7 +49,7 @@ class AIBackupTests(unittest.TestCase):
             self.assertEqual(job.interval_minutes, 30)
             self.assertFalse(job.realtime_sync)
             self.assertTrue(job.version_history)
-            self.assertEqual(job.version_retention_days, 90)
+            self.assertEqual(job.version_retention_days, 7)
             self.assertEqual(job.ai_connector, "codex")
             self.assertEqual(job.remote_path, "AI-Backups/Personal/work-laptop/codex")
             self.assertIn("auth.json", job.exclude_patterns)
@@ -70,6 +70,14 @@ class AIBackupTests(unittest.TestCase):
         restored = AppConfig.from_dict(AppConfig(jobs=[job]).to_dict()).jobs[0]
         self.assertTrue(restored.is_ai_backup)
         self.assertEqual(restored.ai_connector, "codex")
+
+    def test_existing_ninety_day_ai_backup_migrates_to_seven_days(self):
+        job = SyncJob(
+            "drive", "/tmp/codex", ai_connector="codex",
+            version_retention_days=90,
+        )
+        restored = AppConfig.from_dict(AppConfig(jobs=[job]).to_dict()).jobs[0]
+        self.assertEqual(restored.version_retention_days, 7)
 
     def test_remote_component_is_bounded_and_cannot_traverse(self):
         self.assertEqual(safe_remote_component("../../work laptop", "computer"), "work-laptop")

@@ -1,4 +1,5 @@
 import json
+import io
 import os
 import tempfile
 import threading
@@ -9,7 +10,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 from tuxindrive.bandwidth import GlobalBandwidthController
-from tuxindrive.engine import JobResult, SyncEngine
+from tuxindrive.engine import JobResult, SyncEngine, parse_rclone_progress
 from tuxindrive.callbacks import FileChange, FileState, changes_between, is_transient_path, normalize_remote_modtime
 from tuxindrive.models import (
     ConflictPolicy, PeerRole, SyncJob, SyncMode, paths_overlap, safe_streaming_overlap,
@@ -19,6 +20,37 @@ from tuxindrive.models import (
 class SyncEngineCommandTests(unittest.TestCase):
     def setUp(self):
         self.engine = SyncEngine("/usr/bin/rclone")
+
+    def test_rclone_progress_parser_accepts_stats_and_rejects_other_lines(self):
+        self.assertEqual(
+            parse_rclone_progress("Transferred: 12 MiB / 48 MiB, 25%, 2 MiB/s"), 25
+        )
+        self.assertEqual(
+            parse_rclone_progress("Transferred: 3 / 3, 100%"), 100
+        )
+        self.assertIsNone(parse_rclone_progress("Checks: 10 / 10, 100%"))
+        self.assertIsNone(parse_rclone_progress("Transferred: unknown"))
+
+    def test_ai_backup_prunes_only_versions_older_than_retention(self):
+        job = SyncJob(
+            "drive", "/data/Codex", ai_connector="codex",
+            version_history=True, version_retention_days=7,
+        )
+        completed = MagicMock(returncode=0)
+        with patch("tuxindrive.engine.subprocess.run", return_value=completed) as run:
+            self.engine._prune_remote_history(job, io.StringIO())
+        command = run.call_args.args[0]
+        self.assertEqual(
+            command[:3], ["/usr/bin/rclone", "delete", f"drive:.tuxdrive-versions/{job.id}"]
+        )
+        self.assertEqual(command[command.index("--min-age") + 1], "7d")
+        self.assertIn("--rmdirs", command)
+
+    def test_normal_sync_does_not_prune_remote_history(self):
+        job = SyncJob("drive", "/data/Documents", version_history=True)
+        with patch("tuxindrive.engine.subprocess.run") as run:
+            self.engine._prune_remote_history(job, io.StringIO())
+        run.assert_not_called()
 
     def test_first_two_way_run_is_safe_resync(self):
         job = SyncJob(
@@ -266,11 +298,12 @@ class SyncEngineCommandTests(unittest.TestCase):
             completed = []
 
             def failed_process(_command, **kwargs):
-                kwargs["stdout"].write(
+                output = (
                     "ERROR : Photos/image.jpg.1234abcd.partial: corrupted on transfer: "
                     "md5 hashes differ src x vs dst y\n"
                 )
                 process = MagicMock()
+                process.stdout = io.StringIO(output)
                 process.wait.return_value = 1
                 return process
 
@@ -334,13 +367,14 @@ class SyncEngineCommandTests(unittest.TestCase):
             def process_with_duplicate(command, **kwargs):
                 commands.append(command)
                 if len(commands) == 1:
-                    kwargs["stdout"].write(
+                    output = (
                         "NOTICE: DPH/August2026/report.xlsx: "
                         "Duplicate object found in destination - ignoring\n"
                     )
                 else:
-                    kwargs["stdout"].write("Synchronization successful\n")
+                    output = "Synchronization successful\n"
                 process = MagicMock()
+                process.stdout = io.StringIO(output)
                 process.wait.return_value = 0
                 return process
 
@@ -375,10 +409,11 @@ class SyncEngineCommandTests(unittest.TestCase):
             completed = []
 
             def process_with_duplicate(_command, **kwargs):
-                kwargs["stdout"].write(
+                output = (
                     "NOTICE: DPH/report.xlsx: Duplicate object found in destination - ignoring\n"
                 )
                 process = MagicMock()
+                process.stdout = io.StringIO(output)
                 process.wait.return_value = 0
                 return process
 

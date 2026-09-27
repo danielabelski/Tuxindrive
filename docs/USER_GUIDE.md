@@ -2,11 +2,11 @@
 
 <p align="center"><img src="../branding/tuxindrive-logo.png" width="150" alt="TuxInDrive circular black-and-white penguin logo with a red bow tie"></p>
 
-This guide covers TuxInDrive 0.26.55 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
+This guide covers TuxInDrive 0.26.56 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
 
 Credentials for rclone-backed providers are kept in rclone's authenticated encrypted configuration. TuxInDrive generates its configuration key locally and stores it in GNOME Secret Service; existing rclone configurations already encrypted by an advanced user are left under that user's password-command setup. Proton's official CLI separately stores its browser session in Secret Service under `ch.proton.drive/drive-sdk-cli`; TuxInDrive never reads or exports it. Do not delete either secret until the related accounts have been disconnected.
 
-Version 0.26.55 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
+Version 0.26.56 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
 
 ### Upgrading from TuxDrive
 
@@ -75,6 +75,10 @@ Codex, Claude Code, Gemini CLI, Cursor, or Continue installation. Select the
 cloud destination and interval, then choose **Enable backups**. TuxInDrive
 creates one upload-only job per tool and starts the first backup immediately;
 later runs use the normal scheduler and can be paused with the job switch.
+Unchanged files are not uploaded again. While a backup is running, its job
+status shows the current transfer percentage. Replaced or deleted files are
+kept for seven days, and older remote versions are removed automatically after
+a successful backup so version history cannot grow indefinitely.
 
 The connector backs up locally available conversations, memories, prompts,
 skills, and ordinary settings. Known authentication files, private keys,

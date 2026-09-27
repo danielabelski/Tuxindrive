@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.56 — space-efficient incremental AI backups
+
+- Upload only changed AI-tool data and expose rclone's live transfer percentage
+  in the running job status.
+- Reduce generated AI-backup history from 90 to seven days and migrate existing
+  90-day connector jobs to the smaller retention window.
+- Remove expired remote versions after a successful backup while leaving
+  ordinary synchronization jobs and their retention policies unchanged.
+
 ## 0.26.55 — automatic AI-tool backups
 
 - Detect local Codex, Claude Code, Gemini CLI, Cursor, and Continue data and

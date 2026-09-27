@@ -1,3 +1,11 @@
+tuxindrive (0.26.56-1) unstable; urgency=medium
+
+  * Transfer only changed AI backup content and show live completion percentage.
+  * Reduce AI backup version retention to seven days.
+  * Automatically prune expired remote AI backup versions after successful runs.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Sun, 27 Sep 2026 18:11:56 +0200
+
 tuxindrive (0.26.55-1) unstable; urgency=medium
 
   * Add automatic local backups for Codex and common AI tools.
