@@ -1,8 +1,8 @@
 {
-  "version": "0.26.55",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/TuxInDrive-0.26.55-android.apk",
-  "sha256": "2f9f7ffc4569c33e03f81a58ec5dd6830919f576c9f90f509b9c107fe3e247cd",
-  "notes": "Automatic local backups for Codex and common AI tools",
-  "expires_at": "2026-12-26T11:50:49.004846+00:00",
-  "signature": "kLv34cL7nb6WQUTmjzgD0qe4H9B3ZlKAmmyUT2sOwMpU7su5oWcn/5WzIXe1Um+hlY9yoBekNfafAP0461f1Aw=="
+  "version": "0.26.56",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.56/TuxInDrive-0.26.56-android.apk",
+  "sha256": "b45724e4d34eb813d2a9751eaf1dc541fef63b33b6693be5473f46fb0353001c",
+  "notes": "Space-efficient incremental AI backups with live progress",
+  "expires_at": "2026-12-26T16:32:31.016753+00:00",
+  "signature": "UFf3SFigLfal0Pu/PFUJHVXzzdmlBBikhj08So/r54ZfuMlCpn6MpTuIgVZx0RGljMt/+1S00qCmORNykup2AQ=="
 }

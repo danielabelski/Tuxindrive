@@ -1,8 +1,8 @@
 {
-  "version": "0.26.55",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/tuxindrive_0.26.55_all.deb",
-  "sha256": "c83e7342605deb4be0806cff200894d0de8cfe82b8ad671c54301213ccd2837d",
-  "notes": "Automatic local backups for Codex and common AI tools",
-  "expires_at": "2026-12-26T11:50:48.288810+00:00",
-  "signature": "hsRgKQZHrPWHRwObBqzsLbTdJRS41wQonB+bVfzcyVgvkjsDVxSrhC1YIyd6EUdJai/9g6og+jXS8SYaOPYOCQ=="
+  "version": "0.26.56",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.56/tuxindrive_0.26.56_all.deb",
+  "sha256": "04784a796e96bfc96cdf3ce985bbd08cd2e509b86ea1a8c61832f242f22242b5",
+  "notes": "Space-efficient incremental AI backups with live progress",
+  "expires_at": "2026-12-26T16:32:30.252496+00:00",
+  "signature": "Qu0QVhil8OBDnN9lMXeheXgaUO0DL+IXzDSZt4KuPEWNSwKsxb3lhYI4OhC+qU54tLYWZFXJ6ZLuXoFSgPejCQ=="
 }

@@ -1,8 +1,8 @@
 {
-  "version": "0.26.55",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/TuxInDrive-0.26.55-macos-arm64.dmg",
-  "sha256": "ecb8eed068243cbcdd7539521f23a70aaa832d959fdbf584c75d9349c9f23f21",
-  "notes": "Automatic local backups for Codex and common AI tools",
-  "expires_at": "2026-12-26T11:50:48.667605+00:00",
-  "signature": "g1hGFzQK7M6FpOVs8MzAECsZB1mIMetEWX4PAkpKTPqj4HSMnWGhI/1edIcPkJQv21kR7bm0xSc+QGBMNktSCQ=="
+  "version": "0.26.56",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.56/TuxInDrive-0.26.56-macos-arm64.dmg",
+  "sha256": "1884018dc1c29da5fcfc3a8ce61a89486839816e500a6c657194c8064c9a7f0f",
+  "notes": "Space-efficient incremental AI backups with live progress",
+  "expires_at": "2026-12-26T16:32:30.637752+00:00",
+  "signature": "7Kg4kCw0s1w066ToG+8dNGtAomsIGfNY31lImHbIRoEENJDToXWXdYO3K9WOMY7mKRvtD0rJ+1HIdRYbszouDQ=="
 }
