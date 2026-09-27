@@ -1,6 +1,6 @@
 # TuxInDrive architecture
 
-This document describes how TuxInDrive 0.26.54 is implemented. Job failures
+This document describes how TuxInDrive 0.26.55 is implemented. Job failures
 persist a bounded structured reference (reason, time, reported source path and
 exact private log path); the desktop error dialog reads at most the final 64
 KiB of that one confined log, redacts common credential forms, and never starts
@@ -143,6 +143,12 @@ creation, and every generated link must still be HTTPS.
 
 `SyncEngine` in `engine.py` owns command construction, process tracking,
 callbacks, streaming mounts, queue admission and result normalization.
+
+`ai_backups.py` is a local discovery layer for Codex, Claude Code, Gemini CLI,
+Cursor, and Continue. It produces ordinary scheduled upload jobs and adds a
+conservative credential/cache exclusion set. It performs no online AI-service
+authentication or scraping, so execution and safety remain inside the same
+engine and policy boundaries as any other synchronized folder.
 
 ### Full jobs
 

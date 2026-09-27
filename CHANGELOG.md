@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.55 — automatic AI-tool backups
+
+- Detect local Codex, Claude Code, Gemini CLI, Cursor, and Continue data and
+  create scheduled upload-only backups through an existing cloud account.
+- Exclude known authentication files, private keys, environment files, caches,
+  logs, sockets, locks, and temporary data from generated jobs.
+- Keep the connector local-only, retain remote version history for 90 days,
+  reject overlapping jobs, and avoid scraping browser or online AI sessions.
+
 ## 0.26.54 — accurate checksum diagnostics
 
 - Correlate cloud duplicate notices with checksum failures by exact provider

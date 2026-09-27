@@ -430,6 +430,7 @@ class SyncJob:
     repository_branch: str = "main"
     git_author_name: str = ""
     git_author_email: str = ""
+    ai_connector: str = ""
     id: str = field(default_factory=lambda: uuid4().hex)
     initialized: bool = False
     last_run: str | None = None
@@ -462,6 +463,10 @@ class SyncJob:
     @property
     def is_git(self) -> bool:
         return bool(self.repository_url)
+
+    @property
+    def is_ai_backup(self) -> bool:
+        return bool(self.ai_connector)
 
     def selective_args(self) -> list[str]:
         """Return deterministic rclone selection flags without shell parsing."""

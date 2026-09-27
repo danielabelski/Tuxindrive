@@ -2,11 +2,11 @@
 
 <p align="center"><img src="../branding/tuxindrive-logo.png" width="150" alt="TuxInDrive circular black-and-white penguin logo with a red bow tie"></p>
 
-This guide covers TuxInDrive 0.26.54 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
+This guide covers TuxInDrive 0.26.55 on Linux, Windows, macOS and Android. Windows and macOS retain the Linux GTK desktop layout, while Android reorganizes accounts, synchronized folders, cloud files, activity and settings for touch displays. Platform-specific installation and signing details are in [Platform support](PLATFORM_SUPPORT.md). Administrators and developers can continue with the [documentation index](README.md), [operations guide](OPERATIONS.md), and [architecture reference](ARCHITECTURE.md).
 
 Credentials for rclone-backed providers are kept in rclone's authenticated encrypted configuration. TuxInDrive generates its configuration key locally and stores it in GNOME Secret Service; existing rclone configurations already encrypted by an advanced user are left under that user's password-command setup. Proton's official CLI separately stores its browser session in Secret Service under `ch.proton.drive/drive-sdk-cli`; TuxInDrive never reads or exports it. Do not delete either secret until the related accounts have been disconnected.
 
-Version 0.26.54 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
+Version 0.26.55 is the supported security and stability baseline. Upgrade older installations before reconnecting cloud or peer accounts. See [Security hardening and secure operation](SECURITY_HARDENING.md) for the complete control inventory and post-upgrade checklist.
 
 ### Upgrading from TuxDrive
 
@@ -58,14 +58,30 @@ The main window contains:
 2. **Cloud accounts** — connection and aggregate activity state.
 3. **Account menu** — open online, reconnect OAuth, or remove an unused account.
 4. **Add folder** — create a synchronized or streaming job.
-5. **Provider icon and status** — each account/job keeps its Google Drive, OneDrive, Dropbox, Box, pCloud, MEGA, Proton Drive, Nextcloud, GitHub, peer, or vault icon; the adjacent text and Nautilus emblem communicate synchronization state.
-6. **Job controls** — sync/mount, stop, open, share, edit, log, and remove.
-7. **Compact enable switch** — pause or resume an individual job without enlarging the row under high-DPI GTK themes.
-8. **Live activity log** — current application and transfer activity.
-9. **Settings** — visual design, startup, notification, and minimized-start preferences.
-10. **Language flag** — switch English, German, French, Spanish, Arabic or Hebrew immediately; the choice is retained for future starts.
-11. **Help (`?`)** — open searchable offline documentation with function descriptions and practical how-to guides.
-12. **Search (magnifying glass)** — find a local file or folder by name across every configured synchronized folder.
+5. **AI backups** — detect supported local AI clients and create credential-excluding automatic cloud backups.
+6. **Provider icon and status** — each account/job keeps its Google Drive, OneDrive, Dropbox, Box, pCloud, MEGA, Proton Drive, Nextcloud, GitHub, peer, or vault icon; the adjacent text and Nautilus emblem communicate synchronization state.
+7. **Job controls** — sync/mount, stop, open, share, edit, log, and remove.
+8. **Compact enable switch** — pause or resume an individual job without enlarging the row under high-DPI GTK themes.
+9. **Live activity log** — current application and transfer activity.
+10. **Settings** — visual design, startup, notification, and minimized-start preferences.
+11. **Language flag** — switch English, German, French, Spanish, Arabic or Hebrew immediately; the choice is retained for future starts.
+12. **Help (`?`)** — open searchable offline documentation with function descriptions and practical how-to guides.
+13. **Search (magnifying glass)** — find a local file or folder by name across every configured synchronized folder.
+
+### Back up local AI tools automatically
+
+Connect a cloud storage account, select **AI backups**, and choose any detected
+Codex, Claude Code, Gemini CLI, Cursor, or Continue installation. Select the
+cloud destination and interval, then choose **Enable backups**. TuxInDrive
+creates one upload-only job per tool and starts the first backup immediately;
+later runs use the normal scheduler and can be paused with the job switch.
+
+The connector backs up locally available conversations, memories, prompts,
+skills, and ordinary settings. Known authentication files, private keys,
+environment files, caches, logs, and temporary files are excluded. It does not
+sign in to the AI service and cannot export browser-only chat history. Review
+the generated exceptions if a third-party extension stores secrets under a
+custom filename.
 
 ### Search all synchronized folders
 

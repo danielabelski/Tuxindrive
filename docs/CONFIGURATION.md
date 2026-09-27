@@ -1,7 +1,7 @@
 # TuxInDrive configuration reference
 
 This reference describes the persisted desktop configuration in TuxInDrive
-0.26.54. Normal changes should be made in **Settings**, **Connect account**, or
+0.26.55. Normal changes should be made in **Settings**, **Connect account**, or
 **Add/Edit folder**. Stop TuxInDrive and make a backup before manually editing
 JSON; a syntactically valid but inconsistent mapping can still synchronize the
 wrong location.
@@ -158,7 +158,7 @@ directly without updating every `account_remote` reference.
 
 | Group | Fields and behavior |
 |---|---|
-| Identity | `id`, `name`, `account_remote`, `enabled`, optional `group_id` |
+| Identity | `id`, `name`, `account_remote`, `enabled`, optional `group_id`; `ai_connector` identifies an automatic local AI-tool backup |
 | Mapping | `local_path`, `remote_path`, `remote_scope`, `cloud_location_name` |
 | Mode | `two_way`, `download_only`, `upload_only`, or `virtual_drive` |
 | Scheduling | `interval_minutes`, `realtime_sync` |
@@ -178,6 +178,22 @@ of 500 changed paths and 80 percent. Both bulk thresholds must be reached;
 deletion ceilings and ransomware-shaped filename suffixes remain independent
 hard stops. Default excludes are `.Trash-*/**`, `*.part`, and
 temporary Office lock files (`~$*`).
+
+### Automatic AI-tool backups
+
+The **AI backups** wizard detects local data folders for Codex, Claude Code,
+Gemini CLI, Cursor, and Continue. It creates ordinary upload-only jobs using
+the selected existing cloud account. The jobs run on the normal scheduler,
+retain replaced remote files for 90 days, and are marked by `ai_connector`.
+They never authenticate to or scrape an AI service.
+
+Credential files, private-key extensions, environment files, sockets, locks,
+logs, temporary data, and caches are excluded from every generated job.
+Tool-specific credential/configuration files are excluded as well. Because a
+tool may introduce a new secret filename in a future version, users should
+still review the generated synchronization exceptions before relying on the
+backup for untrusted sharing. Browser-only chat history is outside the scope
+of these local connectors.
 
 Selective extensions are stored without a leading dot and matched
 case-insensitively. An empty extension list means all extensions. Zero for the

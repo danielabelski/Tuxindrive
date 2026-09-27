@@ -106,6 +106,7 @@ from .managed_policy import ManagedPolicy, load_managed_policy
 from .scheduling import persisted_run_time
 from .provider_probe import ProviderCapabilityProbe
 from .selective_rules import PRESETS, preset_by_key, preview_local_rules
+from .ai_backups import build_backup_jobs, connectors as ai_connectors
 
 try:  # Ubuntu's AppIndicator extension provides Windows-like tray controls.
     gi.require_version("AyatanaAppIndicator3", "0.1")
@@ -927,6 +928,95 @@ class ExceptionRulesEditor(Gtk.Box):
         self.entry.set_text("")
 
 
+class AIBackupDialog(ResponsiveDialog):
+    """Create scheduled, credential-excluding upload jobs for local AI tools."""
+
+    def __init__(self, parent: Gtk.Window, accounts: list[Account]) -> None:
+        super().__init__(title="Automatic AI backups", transient_for=parent, modal=True)
+        self.set_default_size(650, 560)
+        self.accounts = accounts
+        self.available = ai_connectors()
+        area = self.get_content_area()
+        area.set_border_width(24)
+        area.set_spacing(12)
+
+        intro = Gtk.Label(
+            label=(
+                "Back up local conversations, memories, prompts and settings through an existing "
+                "cloud account. Known credential files, private keys and caches are excluded. These connectors "
+                "do not access the tools' online accounts."
+            ),
+            xalign=0,
+        )
+        intro.set_line_wrap(True)
+        area.pack_start(intro, False, False, 0)
+
+        self.checks: dict[str, Gtk.CheckButton] = {}
+        tools = Gtk.ListBox()
+        tools.set_selection_mode(Gtk.SelectionMode.NONE)
+        for connector in self.available:
+            row = Gtk.ListBoxRow()
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            box.set_border_width(8)
+            detected = connector.detected
+            check = Gtk.CheckButton(label=connector.name)
+            check.set_active(detected)
+            check.set_sensitive(detected)
+            self.checks[connector.key] = check
+            path_text = ", ".join(str(path) for path in connector.available_paths)
+            detail = connector.description
+            detail += f"\nDetected: {path_text}" if detected else "\nNot detected on this computer"
+            note = Gtk.Label(label=detail, xalign=0)
+            note.set_line_wrap(True)
+            note.get_style_context().add_class("dim-label")
+            box.pack_start(check, False, False, 0)
+            box.pack_start(note, False, False, 0)
+            row.add(box)
+            tools.add(row)
+        area.pack_start(tools, True, True, 0)
+
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        self.account = Gtk.ComboBoxText()
+        for account in accounts:
+            self.account.append(account.remote, f"{account.display_name} · {account.provider.label}")
+        self.account.set_active(0)
+        self.remote_base = Gtk.Entry()
+        self.remote_base.set_text("AI Backups")
+        self.interval = Gtk.SpinButton.new_with_range(5, 1440, 5)
+        self.interval.set_value(60)
+        for index, (label, widget) in enumerate((
+            ("Cloud account", self.account),
+            ("Cloud backup folder", self.remote_base),
+            ("Backup interval (minutes)", self.interval),
+        )):
+            grid.attach(Gtk.Label(label=label, xalign=0), 0, index, 1, 1)
+            grid.attach(widget, 1, index, 1, 1)
+        area.pack_start(grid, False, False, 0)
+        self.status = Gtk.Label(xalign=0)
+        self.status.set_line_wrap(True)
+        area.pack_start(self.status, False, False, 0)
+        self.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        self.add_button("Enable backups", Gtk.ResponseType.OK)
+        self.show_all()
+
+    def jobs(self) -> list[SyncJob]:
+        selected = [
+            item for item in self.available
+            if self.checks[item.key].get_active() and self.checks[item.key].get_sensitive()
+        ]
+        return build_backup_jobs(
+            selected,
+            account_remote=self.account.get_active_id() or "",
+            remote_base=self.remote_base.get_text(),
+            interval_minutes=self.interval.get_value_as_int(),
+        )
+
+    def validation_error(self, message: str) -> None:
+        self.status.set_markup(
+            f"<span foreground='#c01c28'>{GLib.markup_escape_text(message)}</span>"
+        )
+
+
 class SyncJobDialog(ResponsiveDialog):
     def __init__(
         self,
@@ -1204,6 +1294,7 @@ class SyncJobDialog(ResponsiveDialog):
             value.online_only_paths = list(self.existing.online_only_paths)
             value.peer_role = self.existing.peer_role
             value.one_time_drop_id = self.existing.one_time_drop_id
+            value.ai_connector = self.existing.ai_connector
             return [value]
         return values
 
@@ -3955,6 +4046,11 @@ class MainWindow(Gtk.ApplicationWindow):
         add_job.get_style_context().add_class("primary-action")
         add_job.connect("clicked", self._add_job)
         heading_row.pack_end(add_job, False, False, 0)
+        ai_backup = Gtk.Button(label="AI backups")
+        ai_backup.get_style_context().add_class("secondary-action")
+        ai_backup.set_tooltip_text("Automatically back up local Codex and other AI-tool data")
+        ai_backup.connect("clicked", self._add_ai_backups)
+        heading_row.pack_end(ai_backup, False, False, 0)
         add_group = Gtk.Button(label=tr("new_group"))
         add_group.get_style_context().add_class("secondary-action")
         add_group.set_tooltip_text("Create an internal group without moving local or cloud folders")
@@ -4955,6 +5051,51 @@ class MainWindow(Gtk.ApplicationWindow):
                 for job in jobs:
                     self.controller.run_job(job)
                 break
+        dialog.destroy()
+
+    def _add_ai_backups(self, _button: Gtk.Widget) -> None:
+        accounts = [
+            item for item in self.controller.config.accounts
+            if item.provider not in {Provider.GITHUB, Provider.PEER}
+        ]
+        if not accounts:
+            self.message("Connect a cloud storage account first.", Gtk.MessageType.WARNING)
+            return
+        dialog = AIBackupDialog(self, accounts)
+        while dialog.run() == Gtk.ResponseType.OK:
+            try:
+                jobs = dialog.jobs()
+            except ValueError as exc:
+                dialog.validation_error(str(exc))
+                continue
+            if not jobs:
+                dialog.validation_error("Select at least one detected AI tool.")
+                continue
+            existing_connectors = {
+                job.ai_connector for job in self.controller.config.jobs if job.ai_connector
+            }
+            duplicates = sorted({job.ai_connector for job in jobs} & existing_connectors)
+            if duplicates:
+                dialog.validation_error(
+                    "A backup already exists for: " + ", ".join(duplicates)
+                )
+                continue
+            if any(
+                paths_overlap(job.local_path, item.local_path)
+                and not safe_streaming_overlap(job, item)
+                for job in jobs for item in self.controller.config.jobs
+            ):
+                dialog.validation_error(
+                    "An AI data folder overlaps an existing synchronization job."
+                )
+                continue
+            self.controller.config.jobs.extend(jobs)
+            self.controller.save()
+            self.controller.reconfigure_callbacks()
+            self.refresh()
+            for job in jobs:
+                self.controller.run_job(job)
+            break
         dialog.destroy()
 
     def _toggle_job(self, switch: Gtk.Switch, _property, job: SyncJob) -> None:

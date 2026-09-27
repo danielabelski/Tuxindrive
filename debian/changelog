@@ -1,3 +1,11 @@
+tuxindrive (0.26.55-1) unstable; urgency=medium
+
+  * Add automatic local backups for Codex and common AI tools.
+  * Exclude known credentials, private keys, caches and temporary data.
+  * Reuse scheduled upload-only jobs with remote version history.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Sun, 27 Sep 2026 13:34:04 +0200
+
 tuxindrive (0.26.54-1) unstable; urgency=medium
 
   * Correlate checksum failures with duplicate paths exactly.
