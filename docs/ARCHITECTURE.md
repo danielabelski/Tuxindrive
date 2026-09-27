@@ -150,6 +150,13 @@ conservative credential/cache exclusion set. It performs no online AI-service
 authentication or scraping, so execution and safety remain inside the same
 engine and policy boundaries as any other synchronized folder.
 
+The engine sends rclone's live statistics to the normal job-progress callback,
+so the UI can display the current transfer percentage without a connector-only
+execution path. After a successful connector run, it prunes only that job's
+hidden `.tuxdrive-versions/<job-id>` objects older than seven days. Failed runs
+do not prune history, and ordinary synchronization jobs retain their configured
+retention policy unchanged.
+
 ### Full jobs
 
 - Two-way jobs use `rclone bisync`. The first run is an explicit resync/merge;

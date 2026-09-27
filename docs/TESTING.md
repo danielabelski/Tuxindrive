@@ -18,12 +18,13 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The TuxInDrive development suite contains **464 automated tests: 452 Python tests and 12 Android JVM tests**. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, animated aggregate tray state and historical upgrades. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The TuxInDrive development suite contains **538 automated tests: 525 Python tests and 13 Android JVM tests**. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, animated aggregate tray state and historical upgrades. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 ## Test groups
 
 | Test module | Tests | What it verifies |
 |---|---:|---|
+| `test_ai_backups.py` | 7 | Local Codex, Claude Code, Gemini CLI, Cursor and Continue discovery; override handling; secret exclusions; upload-only scheduling; connector persistence; seven-day retention migration; safe remote components and symlink rejection. |
 | `test_audit.py` | 4 | Private audit persistence, filtering, bounded newest-first reads across chunk boundaries, malformed historical-line handling and private CSV/JSONL export. |
 | `test_bandwidth.py` | 13 | Directional syntax and invalid values, stricter global/job limits, automatic headroom/fair division, independent upload/download clocks, network-slot admission and release, update byte clock and bounded scan jitter. |
 | `test_bootstrap.py` | 7 | Linux/macOS transfer-engine selection, rejection and identity-cached revalidation of incompatible/replaced rclone versions, supported CPU architectures, and pinned release checksums. |
@@ -66,7 +67,7 @@ The TuxInDrive development suite contains **464 automated tests: 452 Python test
 | `test_upgrade_matrix.py` | 2 | Historical configuration migration, privacy defaults and stable round trips. |
 | `test_updater.py` | 18 | Version validation/comparison, platform-channel selection, trusted URLs, expiry/checksum/tamper rejection, globally rate-limited downloads, size/partial cleanup, privileged immutable staging and signed release coherence. |
 
-Android JVM coverage is kept beside the mobile source: `MobileValidationTest` contains 6 tests for bandwidth, automatic headroom, and version inputs, `MobileNetworkControllerTest` contains 2 tests for serialized access and exception-safe permit release, `ProfileQrTest` contains 2 cross-platform protocol/tamper tests, and `ProfileImporterTest` contains 2 tests for the encrypted rclone configuration plus its independent unlock key. Release CI runs `testSideloadReleaseUnitTest`; main-branch package CI runs `testSideloadDebugUnitTest` before lint and assembly. The Android build also needs the pinned `rclone.aar`; CI creates it before Gradle runs.
+Android JVM coverage is kept beside the mobile source: `MobileValidationTest` contains 7 tests for bandwidth, automatic headroom, and version inputs, `MobileNetworkControllerTest` contains 2 tests for serialized access and exception-safe permit release, `ProfileQrTest` contains 2 cross-platform protocol/tamper tests, and `ProfileImporterTest` contains 2 tests for the encrypted rclone configuration plus its independent unlock key. Release CI runs `testSideloadReleaseUnitTest`; main-branch package CI runs `testSideloadDebugUnitTest` before lint and assembly. The Android build also needs the pinned `rclone.aar`; CI creates it before Gradle runs.
 
 ## Important safety invariants covered
 
@@ -111,9 +112,9 @@ Android JVM coverage is kept beside the mobile source: `MobileValidationTest` co
 
 ```bash
 sh scripts/build-deb.sh
-dpkg-deb --info dist/tuxindrive_0.26.39_all.deb
-dpkg-deb --contents dist/tuxindrive_0.26.39_all.deb
-sha256sum dist/tuxindrive_0.26.39_all.deb
+dpkg-deb --info dist/tuxindrive_0.26.56_all.deb
+dpkg-deb --contents dist/tuxindrive_0.26.56_all.deb
+sha256sum dist/tuxindrive_0.26.56_all.deb
 ```
 
 The CI **Static security analysis** step must run before tests and packaging:
@@ -128,8 +129,8 @@ The release is blocked on any high-severity Bandit result or unresolved dependen
 Release manifests must be signed outside Git with the Ed25519 release key:
 
 ```bash
-python3 scripts/sign-update.py --version 0.26.39 \
-  --package dist/tuxindrive_0.26.39_all.deb \
+python3 scripts/sign-update.py --version 0.26.56 \
+  --package dist/tuxindrive_0.26.56_all.deb \
   --output update/latest-v2.json \
   --private-key /secure/offline/TuxInDrive-update-signing-private.pem
 ```
@@ -145,8 +146,8 @@ private bootstrap and installed module layout:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.39_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.39_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.56_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.56_all.deb
 PYTHONPATH=src python3 -m unittest -v tests.test_server
 ```
 

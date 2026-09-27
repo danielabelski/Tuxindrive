@@ -10,7 +10,7 @@ class LocalizationAndHelpTests(unittest.TestCase):
 
     def test_six_languages_have_matching_complete_help_topics(self):
         expected = [item.key for item in topics("en")]
-        self.assertEqual(len(expected), 18)
+        self.assertEqual(len(expected), 19)
         for language in LANGUAGES:
             localized = topics(language.code)
             self.assertEqual([item.key for item in localized], expected)

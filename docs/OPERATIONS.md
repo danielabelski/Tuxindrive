@@ -171,6 +171,20 @@ repair does not silently choose an unsafe winner.
 
 ## Backup and restore
 
+### Automatic AI-tool backups
+
+The **AI backups** wizard creates upload-only scheduled jobs for detected local
+Codex, Claude Code, Gemini CLI, Cursor and Continue data. Subsequent runs send
+only changed content and show live completion percentage on the job row. A
+successful run removes connector-specific remote versions older than seven
+days; a failed run keeps existing history, and ordinary jobs are not affected.
+
+Treat the generated exclusions as a conservative baseline, not a guarantee for
+future third-party extensions. Review them when a tool adds custom credential
+or environment files. The connector never signs in to an AI service and does
+not capture browser-only history. If discovery rejects a symbolic-link root,
+back up the real directory explicitly rather than weakening path confinement.
+
 Create an encrypted profile backup from Settings and select whether credentials
 are included. The visible cloud object is
 `TuxInDrive/TuxInDrive-Profile.tdx`. Keep the passphrase separately; it cannot

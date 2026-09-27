@@ -44,7 +44,7 @@ PYTHONPATH=src python3 -m compileall -q src
 6. Update documentation when controls, configuration, packaging, or user-visible behaviour changes.
 7. Open a pull request and complete the checklist.
 
-The [testing guide](docs/TESTING.md) describes the current 399-test Python suite plus 12 Android JVM tests, the release matrix, safety invariants and known coverage gaps. Recovery, integrity, mass-change, conflict-resolution, peer authorization, lease, discovery, Nautilus, streaming-mount, provider-URL, bandwidth/admission, server, encryption, local-index, or preview changes must include focused safety tests and document trust, expiry, authoritative-side, privacy, tenant, resource-bound, and rollback behavior.
+The [testing guide](docs/TESTING.md) describes the current 525-test Python suite plus 13 Android JVM tests, the release matrix, safety invariants and known coverage gaps. Recovery, integrity, mass-change, conflict-resolution, peer authorization, lease, discovery, Nautilus, streaming-mount, provider-URL, bandwidth/admission, server, encryption, local-index, AI-backup, or preview changes must include focused safety tests and document trust, expiry, authoritative-side, privacy, tenant, resource-bound, and rollback behavior.
 
 ## Pull-request expectations
 

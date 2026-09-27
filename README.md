@@ -269,12 +269,12 @@ TuxInDrive Profile links the application to an existing Google Drive, OneDrive, 
 
 | Platform | Package | Notes |
 | --- | --- | --- |
-| Ubuntu/Debian | `tuxindrive_0.26.38_all.deb` | Signed in-app Debian updates remain supported. |
-| Ubuntu/Debian Server | `tuxindrive-server_0.26.38_all.deb` | Separate preview service; explicit enablement, bearer token, and TLS for remote access. |
+| Ubuntu/Debian | `tuxindrive_0.26.56_all.deb` | Signed in-app Debian updates remain supported. |
+| Ubuntu/Debian Server | `tuxindrive-server_0.26.56_all.deb` | Separate preview service; explicit enablement, bearer token, and TLS for remote access. |
 | Ubuntu/Debian Network Lab | `tuxindrive-network-lab_0.26.31+lab5_all.deb` | Separate local release with 19 functional scenarios, visual topology and real multi-address loopback traffic. |
-| Windows 10/11 x64 | `TuxInDrive-0.26.38-windows-x64-setup.exe` | Same GTK desktop UI; install WinFsp for streaming drives. |
-| macOS 12+ | `TuxInDrive-0.26.38-macos-*.dmg` | Same GTK desktop UI; install macFUSE for streaming drives. |
-| Android 8+ | `TuxInDrive-0.26.38-android.apk` | Native phone/tablet UI, SAF folder access and OS-managed background sync. |
+| Windows 10/11 x64 | `TuxInDrive-0.26.56-windows-x64-setup.exe` | Same GTK desktop UI; install WinFsp for streaming drives. |
+| macOS 12+ | `TuxInDrive-0.26.56-macos-*.dmg` | Same GTK desktop UI; install macFUSE for streaming drives. |
+| Android 8+ | `TuxInDrive-0.26.56-android.apk` | Native phone/tablet UI, SAF folder access and OS-managed background sync. |
 
 ### Ubuntu and Debian
 
@@ -293,7 +293,7 @@ commands are named TuxInDrive. Alternatively, download the release `.deb` and
 run:
 
 ```bash
-sudo apt install ./tuxindrive_0.26.38_all.deb
+sudo apt install ./tuxindrive_0.26.56_all.deb
 ```
 
 Open **TuxInDrive** from the application menu. Choose **Connect account**, select a provider, and complete its guided authorization. Then add a local synchronized folder or virtual drive. The same visual cloud tree and multi-folder selection are used for supported storage providers; GitHub uses a dedicated repository/branch/local-folder dialog.
@@ -303,7 +303,7 @@ and keep the required `./` local-file prefix:
 
 ```bash
 cd ~/Downloads
-sudo apt install ./tuxindrive-server_0.26.38_all.deb
+sudo apt install ./tuxindrive-server_0.26.56_all.deb
 ```
 
 Continue with the bootstrap token, service start, local health check, TLS rules,
@@ -328,7 +328,7 @@ Maintainers can produce a signed Launchpad source upload with
 Launchpad receives source packages and builds the final binaries inside the
 matching Ubuntu series.
 
-The Debian installers are written to `dist/tuxindrive_0.26.38_all.deb` and `dist/tuxindrive-server_0.26.38_all.deb`. The independently versioned Network Lab build writes `dist/tuxindrive-network-lab_0.26.31+lab5_all.deb`. Windows, macOS and Android artifacts are built by `.github/workflows/platform-packages.yml` on their native build hosts. Durable product packages are attached to the matching GitHub Release; the lab uses its own `network-lab-v*` release. Dedicated signed client channel manifests and package-location pointers live under [`releases/`](releases/README.md).
+The Debian installers are written to `dist/tuxindrive_0.26.56_all.deb` and `dist/tuxindrive-server_0.26.56_all.deb`. The independently versioned Network Lab build writes `dist/tuxindrive-network-lab_0.26.31+lab5_all.deb`. Windows, macOS and Android artifacts are built by `.github/workflows/platform-packages.yml` on their native build hosts. Durable product packages are attached to the matching GitHub Release; the lab uses its own `network-lab-v*` release. Dedicated signed client channel manifests and package-location pointers live under [`releases/`](releases/README.md).
 
 ### Local-first collaborative documents
 
@@ -338,11 +338,11 @@ ODT paragraphs/styles/comments/tracked-change markers and ODS cells/formulas are
 
 ### Documentation and language
 
-Select the **?** button in the top bar to open the searchable offline documentation center. Its 18 chapters describe accounts and OAuth, visual folder selection, synchronization modes, streaming/offline files, every job action, exceptions, recovery, integrity/conflicts, peer/Tor sharing, collaborative editing, encrypted migration, Nautilus, updates, transfer policies, diagnostics and safe removal. Each chapter includes practical user steps.
+Select the **?** button in the top bar to open the searchable offline documentation center. Its 19 chapters describe accounts and OAuth, visual folder selection, synchronization modes, incremental AI-tool backups, streaming/offline files, every job action, exceptions, recovery, integrity/conflicts, peer/Tor sharing, collaborative editing, encrypted migration, Nautilus, updates, transfer policies, diagnostics and safe removal. Each chapter includes practical user steps.
 
 The flag selector switches **English**, **German**, **French**, **Spanish**, **Arabic**, or **Hebrew** immediately and stores the choice privately. Arabic and Hebrew labels and documentation use right-to-left text flow without moving the interface controls. Provider and rclone diagnostics may remain in their source language so technical evidence is not mistranslated.
 
-The current suite contains 527 automated tests (515 Python and 12 Android JVM tests), including approval-based LAN discovery; encrypted `.tdx`/QR interoperability and malformed-frame rejection; aggregate automatic bandwidth protection and independent directional limits; protocol-provider capability guards; selective transfer rules; per-file recovery resolution; checksum-failure pausing with exact provider paths and correlation-safe provider diagnostics; cross-platform network-counter failure handling; path, symlink and signing-key security; bounded opt-in search previews; recovery retention and confinement; visual themes; animated aggregate tray state; newest-first live logs; exact Nautilus 4.1 integration; bounded FUSE hydration; asynchronous cloud-folder editing; drag/drop groups; GitHub and Proton guards; signed update channels; bounded server requests and relays; Network Lab isolation/scenarios/progress; server installation, isolation and GUI privilege boundaries; hostile ODF/CRDT input; Android serialization and input validation; responsive desktop-window constraints; release packaging; and six-language help parity. See [Testing and release verification](docs/TESTING.md) for details.
+The current suite contains 538 automated tests (525 Python and 13 Android JVM tests), including automatic AI-backup discovery, secret exclusions, root-symlink rejection, incremental retention cleanup and progress reporting; approval-based LAN discovery; encrypted `.tdx`/QR interoperability and malformed-frame rejection; aggregate automatic bandwidth protection and independent directional limits; protocol-provider capability guards; selective transfer rules; per-file recovery resolution; checksum-failure pausing with exact provider paths and correlation-safe provider diagnostics; cross-platform network-counter failure handling; path, symlink and signing-key security; bounded opt-in search previews; recovery retention and confinement; visual themes; animated aggregate tray state; newest-first live logs; exact Nautilus 4.1 integration; bounded FUSE hydration; asynchronous cloud-folder editing; drag/drop groups; GitHub and Proton guards; signed update channels; bounded server requests and relays; Network Lab isolation/scenarios/progress; server installation, isolation and GUI privilege boundaries; hostile ODF/CRDT input; Android serialization and input validation; responsive desktop-window constraints; release packaging; and six-language help parity. See [Testing and release verification](docs/TESTING.md) for details.
 
 ## Suggestions and roadmap
 

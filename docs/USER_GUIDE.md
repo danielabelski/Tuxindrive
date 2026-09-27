@@ -28,14 +28,14 @@ sudo apt install tuxdrive
 On another Debian-family system, download the package and install it directly:
 
 ```bash
-sudo apt install ./tuxindrive_0.26.39_all.deb
+sudo apt install ./tuxindrive_0.26.56_all.deb
 ```
 
 Launch **TuxInDrive** from Ubuntu's application menu. TuxInDrive remains active in the system tray when its window is closed. On first start it verifies or installs its private cloud transfer engine.
 
 ### Windows and macOS
 
-Run the Windows setup executable or drag TuxInDrive from the macOS DMG to Applications. Both packages open the same account sidebar, synchronized-folder cards, settings and dialogs as Linux. Windows stores secrets in Credential Manager and needs WinFsp for streaming drives; macOS uses Keychain and needs macFUSE. File-manager badges remain Linux/Nautilus-only in 0.26.39.
+Run the Windows setup executable or drag TuxInDrive from the macOS DMG to Applications. Both packages open the same account sidebar, synchronized-folder cards, settings and dialogs as Linux. Windows stores secrets in Credential Manager and needs WinFsp for streaming drives; macOS uses Keychain and needs macFUSE. File-manager badges remain Linux/Nautilus-only in 0.26.56.
 
 ### Android
 
@@ -171,7 +171,7 @@ installation confirmation are controlled by Android and are never bypassed.
 Disable the setting to cancel automatic checks; **Check for updates** remains
 available for a manual check. Store-distributed builds do not self-update.
 
-When moving from 0.18.1, the legacy channel signed by its already trusted key first installs the fixed 0.19.1 bridge. Restart TuxInDrive, then use **Settings → Check for updates** again: 0.19.1 reads the separately signed v2 channel and installs the current 0.26.39 release. Never bypass a signature warning. If the error persists, close and reopen the update dialog to refetch the manifest; manual package installation remains the recovery path when a proxy or cache serves stale metadata.
+When moving from 0.18.1, the legacy channel signed by its already trusted key first installs the fixed 0.19.1 bridge. Restart TuxInDrive, then use **Settings → Check for updates** again: 0.19.1 reads the separately signed v2 channel and installs the current 0.26.56 release. Never bypass a signature warning. If the error persists, close and reopen the update dialog to refetch the manifest; manual package installation remains the recovery path when a proxy or cache serves stale metadata.
 
 ### Rename an item in TuxInDrive
 
@@ -788,7 +788,7 @@ cat ~/.local/state/tuxindrive/startup.log
 cat ~/.local/state/tuxindrive/crash.log
 ```
 
-Reinstall the current package with `sudo apt install ./tuxindrive_0.26.39_all.deb`.
+Reinstall the current package with `sudo apt install ./tuxindrive_0.26.56_all.deb`.
 
 ## 13. Data safety
 
@@ -798,10 +798,10 @@ Reinstall the current package with `sudo apt install ./tuxindrive_0.26.39_all.de
 - Do not point multiple normal jobs at overlapping local folders.
 - Removing a TuxInDrive job does not delete its local or cloud files.
 
-### Security upgrade checklist for 0.26.39
+### Security upgrade checklist for 0.26.56
 
-1. Install `tuxindrive_0.26.39_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
-2. Confirm **Settings → Check for updates** reports 0.26.39 and no signature or expiry error.
+1. Install `tuxindrive_0.26.56_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
+2. Confirm **Settings → Check for updates** reports 0.26.56 and no signature or expiry error.
 3. Reconnect each provider once and verify that `~/.config/rclone/rclone.conf` is encrypted and mode `0600`; do not print or upload it.
 4. Confirm the `TuxInDrive rclone configuration` entry exists in GNOME Passwords and Keys/Secret Service. Do not delete it without an export/recovery plan.
 5. Review peer invitations, revoke unused device and Onion credentials, and exchange replacements through an authenticated channel when compromise is suspected.
