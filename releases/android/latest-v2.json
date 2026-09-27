@@ -1,8 +1,8 @@
 {
-  "version": "0.26.54",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.54/TuxInDrive-0.26.54-android.apk",
-  "sha256": "8cae6ffcb07d23c09f86583b8cc02e7edec23ba2c75e4529bfedd9cc6c8d6f27",
-  "notes": "Accurate provider checksum diagnostics and duplicate-path correlation",
-  "expires_at": "2026-12-25T17:46:41.139334+00:00",
-  "signature": "mwFSyU3aFzKrWc95MdW+E16RDXMb3qH6nF2aYQhoki00zL5R46a1kQOac76sfkCT8DRm/5bkYJeEhxYXuhHyCA=="
+  "version": "0.26.55",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/TuxInDrive-0.26.55-android.apk",
+  "sha256": "2f9f7ffc4569c33e03f81a58ec5dd6830919f576c9f90f509b9c107fe3e247cd",
+  "notes": "Automatic local backups for Codex and common AI tools",
+  "expires_at": "2026-12-26T11:50:49.004846+00:00",
+  "signature": "kLv34cL7nb6WQUTmjzgD0qe4H9B3ZlKAmmyUT2sOwMpU7su5oWcn/5WzIXe1Um+hlY9yoBekNfafAP0461f1Aw=="
 }

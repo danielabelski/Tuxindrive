@@ -1,8 +1,8 @@
 {
-  "version": "0.26.54",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.54/TuxInDrive-0.26.54-macos-arm64.dmg",
-  "sha256": "06eefbe37f97c30731542d1dd2866c103c8f6a34b217331329fe593738e132ff",
-  "notes": "Accurate provider checksum diagnostics and duplicate-path correlation",
-  "expires_at": "2026-12-25T17:46:40.565255+00:00",
-  "signature": "xcCxs1h5FZPFhIb4mz57AZK8ftq1OIBHbas2B7hYCM0zJVeHyo8mIoS2UdyLNBpOUe/RyTW87WYL0D6s/UD5Cg=="
+  "version": "0.26.55",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/TuxInDrive-0.26.55-macos-arm64.dmg",
+  "sha256": "ecb8eed068243cbcdd7539521f23a70aaa832d959fdbf584c75d9349c9f23f21",
+  "notes": "Automatic local backups for Codex and common AI tools",
+  "expires_at": "2026-12-26T11:50:48.667605+00:00",
+  "signature": "g1hGFzQK7M6FpOVs8MzAECsZB1mIMetEWX4PAkpKTPqj4HSMnWGhI/1edIcPkJQv21kR7bm0xSc+QGBMNktSCQ=="
 }

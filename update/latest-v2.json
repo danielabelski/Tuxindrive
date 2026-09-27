@@ -1,8 +1,8 @@
 {
-  "version": "0.26.54",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.54/tuxindrive_0.26.54_all.deb",
-  "sha256": "97e58dd0e98cedfa681bfdb45cccef314480d6e8c285fdccb6f35b0b5fac9354",
-  "notes": "Accurate provider checksum diagnostics and duplicate-path correlation",
-  "expires_at": "2026-12-25T17:46:40.157426+00:00",
-  "signature": "QWgGRdanySw75wfDBcpk711SRZH1jmnQNgxh6w4s+vPEcMaIfB3Td8G5dW6nLXL8s0KUabQSZAzzVSWRjqlfCg=="
+  "version": "0.26.55",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/tuxindrive_0.26.55_all.deb",
+  "sha256": "c83e7342605deb4be0806cff200894d0de8cfe82b8ad671c54301213ccd2837d",
+  "notes": "Automatic local backups for Codex and common AI tools",
+  "expires_at": "2026-12-26T11:50:48.288810+00:00",
+  "signature": "hsRgKQZHrPWHRwObBqzsLbTdJRS41wQonB+bVfzcyVgvkjsDVxSrhC1YIyd6EUdJai/9g6og+jXS8SYaOPYOCQ=="
 }

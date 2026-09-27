@@ -1,8 +1,8 @@
 {
-  "version": "0.26.54",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.54/TuxInDrive-0.26.54-windows-x64-setup.exe",
-  "sha256": "a6f54ed6878842cc5122b4e9d3cccf504224baeb033bbb81ff23df6c0df3f4e5",
-  "notes": "Accurate provider checksum diagnostics and duplicate-path correlation",
-  "expires_at": "2026-12-25T17:46:40.357447+00:00",
-  "signature": "3v5EdLc/36ySoSbM/IHek9HTA29ZoZIsH2aW8RjCvDDtMp8UySNwbp00vxX6yksOCPrHd8h4Ykh4MWYo8jCkBw=="
+  "version": "0.26.55",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.55/TuxInDrive-0.26.55-windows-x64-setup.exe",
+  "sha256": "cb2b97bd55dc949147c7aeccd624af6d112975bef387b15bd8a4d7f9a01cbc07",
+  "notes": "Automatic local backups for Codex and common AI tools",
+  "expires_at": "2026-12-26T11:50:48.469545+00:00",
+  "signature": "CLb0w8G/qStaGII1DuFz+ZOs/zMKjT82xGursSe+wMdIG41LA6I+yAVa7P+krQx5GIFPjSKaG+NijRkeSaPTBQ=="
 }
