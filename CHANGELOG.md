@@ -2,6 +2,15 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.57 — trustworthy AI-backup progress and resume
+
+- Parse current compact rclone statistics so a running AI backup shows its
+  real transfer percentage instead of remaining at zero.
+- Exclude volatile Codex runtime and lock directories from new and existing
+  connector jobs, avoiding failures when short-lived files disappear.
+- Persist a clear interrupted state when TuxInDrive closes during a backup;
+  **Sync now** resumes incrementally without re-uploading completed files.
+
 ## 0.26.56 — space-efficient incremental AI backups
 
 - Upload only changed AI-tool data and expose rclone's live transfer percentage

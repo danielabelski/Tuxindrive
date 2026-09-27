@@ -1,3 +1,11 @@
+tuxindrive (0.26.57-1) unstable; urgency=medium
+
+  * Show accurate progress for current compact rclone statistics.
+  * Exclude volatile Codex runtime paths from existing and new backup jobs.
+  * Preserve a clear resumable state when an AI backup is interrupted.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Sun, 27 Sep 2026 19:00:27 +0200
+
 tuxindrive (0.26.56-1) unstable; urgency=medium
 
   * Transfer only changed AI backup content and show live completion percentage.
