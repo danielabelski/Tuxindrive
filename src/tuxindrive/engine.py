@@ -88,6 +88,7 @@ def parse_rclone_progress(line: str) -> int | None:
 
 class SyncEngine:
     _MAX_ACTIVE_TRANSFERS = 2
+    _QUEUE_TIMEOUT_SECONDS = 600.0
     _MAX_DUPLICATE_RECOVERY_ATTEMPTS = 5
     _ORPHANED_BISYNC_LOCK_GRACE_SECONDS = 120.0
     _OFFLINE_READ_INACTIVITY_TIMEOUT = 60.0
@@ -107,6 +108,9 @@ class SyncEngine:
         self._processes: dict[str, subprocess.Popen[str]] = {}
         self._active_jobs: set[str] = set()
         self._waiting_jobs: set[str] = set()
+        self._waiting_order: list[str] = []
+        self._waiting_since: dict[str, float] = {}
+        self._waiting_priority: dict[str, int] = {}
         self._incremental_jobs: set[str] = set()
         self._cancelled_queued_jobs: set[str] = set()
         self.bandwidth = bandwidth or GlobalBandwidthController(
@@ -157,6 +161,22 @@ class SyncEngine:
     def job_progress(self, job_id: str) -> int | None:
         with self._lock:
             return self._job_progress.get(job_id)
+
+    def job_queue_status(self, job_id: str) -> tuple[int, int] | None:
+        """Return the one-based queue position and seconds waited."""
+        with self._lock:
+            if job_id not in self._waiting_jobs:
+                return None
+            try:
+                ordered = sorted(
+                    self._waiting_order,
+                    key=lambda item: self._waiting_priority.get(item, 1),
+                )
+                position = ordered.index(job_id) + 1
+            except ValueError:
+                position = 1
+            waited = int(max(0.0, time.monotonic() - self._waiting_since.get(job_id, time.monotonic())))
+            return position, waited
 
     def finalize_traffic(self, job_id: str, log_path: Path) -> tuple[int, int]:
         """Accumulate rclone's final payload counter without logging secrets."""
@@ -1550,6 +1570,9 @@ class SyncEngine:
                 return False
             self._active_jobs.add(job.id)
             self._waiting_jobs.add(job.id)
+            self._waiting_order.append(job.id)
+            self._waiting_since[job.id] = time.monotonic()
+            self._waiting_priority[job.id] = 0 if job.is_ai_backup else 1
             self._cancelled_queued_jobs.discard(job.id)
         log_path = self._log_path(job)
         thread = threading.Thread(
@@ -1595,19 +1618,37 @@ class SyncEngine:
             exclusive = self.bandwidth.enabled and (
                 job.is_git or self._job_backends.get(job.id) == "proton_cli"
             )
-            with self.bandwidth.guard(exclusive=exclusive):
+            with self.bandwidth.guard(
+                exclusive=exclusive,
+                priority=0 if job.is_ai_backup else 1,
+                timeout=self._QUEUE_TIMEOUT_SECONDS,
+            ):
                 with self._lock:
                     self._waiting_jobs.discard(job.id)
+                    if job.id in self._waiting_order:
+                        self._waiting_order.remove(job.id)
+                    self._waiting_since.pop(job.id, None)
+                    self._waiting_priority.pop(job.id, None)
                     cancelled = job.id in self._cancelled_queued_jobs
                     self._cancelled_queued_jobs.discard(job.id)
                 if cancelled:
                     callback(JobResult(job.id, False, "Synchronization cancelled", log_path, True))
                     return
                 self._run_worker(job, log_path, callback, dry_run)
+        except TimeoutError:
+            callback(JobResult(
+                job.id, False,
+                "Synchronization could not start because the transfer queue was busy for 10 minutes; the slot was released and the job can be retried.",
+                log_path,
+            ))
         finally:
             with self._lock:
                 self._active_jobs.discard(job.id)
                 self._waiting_jobs.discard(job.id)
+                if job.id in self._waiting_order:
+                    self._waiting_order.remove(job.id)
+                self._waiting_since.pop(job.id, None)
+                self._waiting_priority.pop(job.id, None)
                 self._cancelled_queued_jobs.discard(job.id)
 
     def cancel(self, job_id: str) -> bool:

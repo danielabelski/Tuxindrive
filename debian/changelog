@@ -1,3 +1,12 @@
+tuxindrive (0.26.60-1) unstable; urgency=medium
+
+  * Make transfer admission priority-aware and FIFO within each priority.
+  * Show queued AI backups honestly with position and elapsed wait time.
+  * Release jobs that cannot obtain a transfer slot within ten minutes.
+  * Exclude regenerable Codex dependency, build and cache trees from backups.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Mon, 28 Sep 2026 18:35:00 +0200
+
 tuxindrive (0.26.59-1) unstable; urgency=medium
 
   * Add manual-only scheduling for new and existing AI-tool backups.

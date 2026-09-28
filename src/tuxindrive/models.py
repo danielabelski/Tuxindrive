@@ -18,6 +18,12 @@ CODEX_TRANSIENT_EXCLUDES = (
     "project-metadata-locks/**",
     "shell_snapshots/**",
     "thread-writer-locks/**",
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/__pycache__/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/.pytest_cache/**",
 )
 
 

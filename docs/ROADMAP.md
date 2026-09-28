@@ -7,7 +7,18 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.59
+## Current baseline: 0.26.60
+
+### Completed in 0.26.60: reliable AI backup admission and scanning
+
+- Prioritize AI backups in the bounded transfer queue while preserving FIFO
+  order within each priority class.
+- Display queue position and wait time instead of presenting queued work as an
+  active zero-percent upload.
+- Fail and release a transfer request after ten minutes so a stuck admission
+  cannot remain permanently active.
+- Exclude regenerable Codex dependency, virtual-environment, build and cache
+  trees from both newly created and existing backup jobs.
 
 ### Completed in 0.26.39: first competitive P0/P1 reliability slice
 

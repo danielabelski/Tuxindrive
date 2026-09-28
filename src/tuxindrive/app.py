@@ -6775,7 +6775,13 @@ class TuxInDriveApplication(Gtk.Application):
         if job is None or job_id not in self.engine.running_jobs:
             return False
         progress = self.engine.job_progress(job_id)
-        if progress is not None:
+        queued = self.engine.job_queue_status(job_id)
+        if queued is not None:
+            position, waited = queued
+            job.last_status = f"Waiting in transfer queue · position {position} · {waited // 60}:{waited % 60:02d}"
+            if self.window:
+                self.window.refresh()
+        elif progress is not None:
             job.last_status = (
                 f"Backing up incrementally… {progress}%"
                 if job.is_ai_backup

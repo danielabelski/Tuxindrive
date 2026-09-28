@@ -56,6 +56,8 @@ class AIBackupTests(unittest.TestCase):
             self.assertIn("config.toml", job.exclude_patterns)
             self.assertIn("node_repl/active_execs/**", job.exclude_patterns)
             self.assertIn(".tmp/**", job.exclude_patterns)
+            self.assertIn("**/node_modules/**", job.exclude_patterns)
+            self.assertIn("**/build/**", job.exclude_patterns)
             self.assertTrue(set(SECRET_EXCLUDES).issubset(job.exclude_patterns))
 
     def test_missing_tools_and_invalid_account_create_no_unsafe_job(self):

@@ -111,6 +111,39 @@ class GlobalBandwidthControllerTests(unittest.TestCase):
             completed.append(True)
         self.assertEqual(completed, [True])
 
+    def test_priority_queue_is_fifo_and_ai_work_can_pass_normal_waiters(self):
+        controller = GlobalBandwidthController(max_active=1)
+        release = threading.Event()
+        order: list[str] = []
+
+        def occupy() -> None:
+            with controller.guard():
+                release.wait(1)
+
+        def wait(name: str, priority: int) -> None:
+            with controller.guard(priority=priority):
+                order.append(name)
+
+        owner = threading.Thread(target=occupy)
+        owner.start()
+        time.sleep(0.02)
+        normal = threading.Thread(target=wait, args=("normal", 1))
+        ai = threading.Thread(target=wait, args=("ai", 0))
+        normal.start(); time.sleep(0.02); ai.start(); time.sleep(0.02)
+        release.set()
+        for thread in (owner, normal, ai):
+            thread.join(1)
+        self.assertEqual(order, ["ai", "normal"])
+
+    def test_queue_timeout_removes_waiter_without_leaking_capacity(self):
+        controller = GlobalBandwidthController(max_active=1)
+        with controller.guard():
+            with self.assertRaises(TimeoutError):
+                with controller.guard(timeout=0.01):
+                    pass
+        with controller.guard(timeout=0.1):
+            pass
+
     def test_control_plane_request_is_not_starved_by_active_transfer(self):
         controller = GlobalBandwidthController("1M", max_active=1)
         transfer_entered = threading.Event()

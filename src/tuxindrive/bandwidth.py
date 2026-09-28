@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import collections
 import random
 import re
 import threading
@@ -116,8 +117,9 @@ class GlobalBandwidthController:
         headroom_percent: int = 50,
     ) -> None:
         self.max_active = max(1, int(max_active))
-        self._slots = threading.BoundedSemaphore(self.max_active)
-        self._admission = threading.Lock()
+        self._available_slots = self.max_active
+        self._admission = threading.Condition()
+        self._waiters: collections.deque[tuple[object, int, int]] = collections.deque()
         self._control_plane = threading.Lock()
         self._interactive_transfer = threading.Lock()
         self._lock = threading.RLock()
@@ -179,18 +181,35 @@ class GlobalBandwidthController:
         return ["--bwlimit", limit] if limit else []
 
     @contextlib.contextmanager
-    def guard(self, *, exclusive: bool = False) -> Iterator[None]:
+    def guard(
+        self, *, exclusive: bool = False, priority: int = 1,
+        timeout: float | None = None,
+    ) -> Iterator[None]:
         count = self.max_active if exclusive else 1
-        # Serialize multi-slot acquisition so two exclusive callers cannot
-        # each hold one slot while waiting forever for the other.
+        token = object()
+        deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
         with self._admission:
-            for _index in range(count):
-                self._slots.acquire()
+            self._waiters.append((token, max(0, int(priority)), count))
+            while True:
+                eligible = sorted(self._waiters, key=lambda item: item[1])[0]
+                if eligible[0] is token and self._available_slots >= count:
+                    self._waiters.remove(eligible)
+                    self._available_slots -= count
+                    break
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    self._waiters = collections.deque(
+                        item for item in self._waiters if item[0] is not token
+                    )
+                    self._admission.notify_all()
+                    raise TimeoutError("timed out waiting for a transfer slot")
+                self._admission.wait(remaining)
         try:
             yield
         finally:
-            for _index in range(count):
-                self._slots.release()
+            with self._admission:
+                self._available_slots += count
+                self._admission.notify_all()
 
     @contextlib.contextmanager
     def control_plane_guard(self) -> Iterator[None]:
