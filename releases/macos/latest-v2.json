@@ -1,8 +1,8 @@
 {
-  "version": "0.26.59",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/TuxInDrive-0.26.59-macos-arm64.dmg",
-  "sha256": "16b663841fc38f4a832fc8cead35a97acc1f0e7090f5767cbc8238058e8898c2",
-  "notes": "Optional manual-only AI backups with Sync now always available",
-  "expires_at": "2026-12-27T12:08:05.201793+00:00",
-  "signature": "PkMB82cr0gXl4l2tjrKP/mGpl5BTpA11UUyD2ZHyiSA3YHtwRt1n4OgOuEbOwGhXP9ZTx0doGoxtOZWTnbEfDQ=="
+  "version": "0.26.60",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.60/TuxInDrive-0.26.60-macos-arm64.dmg",
+  "sha256": "34c374947b35fdd788729dea77e00c813a20e70891f5d086a655275f29b7a336",
+  "notes": "Reliable priority scheduling, queue watchdogs and faster incremental AI backups",
+  "expires_at": "2026-12-27T16:16:16.541452+00:00",
+  "signature": "q8o7JI65atZDlTEnA5ZCKCSTwQ/QvR6rxqdcilQFF2BVdflkO8xElgF4qsCrJ4KZvqDHEzsdk54A+F3OMDOsBg=="
 }

@@ -1,8 +1,8 @@
 {
-  "version": "0.26.59",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/TuxInDrive-0.26.59-windows-x64-setup.exe",
-  "sha256": "ded100757624196cc2ae6223896084e5c623285caaa56d1b25abd67023305987",
-  "notes": "Optional manual-only AI backups with Sync now always available",
-  "expires_at": "2026-12-27T12:08:05.119717+00:00",
-  "signature": "5Ab78f2CvWPmBF4zw20/XcLDhSSlXDvo7jL3IyBnug+dCWkdaaZb2THwCouZf460+Jm2VkkQpMP/zq1p5ghqDw=="
+  "version": "0.26.60",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.60/TuxInDrive-0.26.60-windows-x64-setup.exe",
+  "sha256": "dca1b4a198be3ce28780d27f029d885a91f4603b8b1e6ba8ce3845ee7b115060",
+  "notes": "Reliable priority scheduling, queue watchdogs and faster incremental AI backups",
+  "expires_at": "2026-12-27T16:16:16.462389+00:00",
+  "signature": "xKUtT0H0uB8EK0XjwCa7u/Yntmo97OBqgzpzo/3gwTNHr4H1GU0NxidCixDT+WMScezYItFjLEKo6n0uAiggDQ=="
 }

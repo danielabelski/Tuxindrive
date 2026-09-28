@@ -1,8 +1,8 @@
 {
-  "version": "0.26.59",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/TuxInDrive-0.26.59-android.apk",
-  "sha256": "01fd06b2237c5ddcec729aa5a8f9fdb8e88ebc3d41e9b2982b71ec036fac2b27",
-  "notes": "Optional manual-only AI backups with Sync now always available",
-  "expires_at": "2026-12-27T12:08:05.452610+00:00",
-  "signature": "ddsgu8Qg4vT+g8N8E+rMiBW7rmc7QWAUpvNqOVqMNksaLXWJtZYW0ce3UHaJ5r4ur4wz26Y/21STNGFnx72xCw=="
+  "version": "0.26.60",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.60/TuxInDrive-0.26.60-android.apk",
+  "sha256": "6d7e181b97f40986fe1e561b7476c47f05da757c20448a787c9ebdb0f13ba24e",
+  "notes": "Reliable priority scheduling, queue watchdogs and faster incremental AI backups",
+  "expires_at": "2026-12-27T16:16:16.790055+00:00",
+  "signature": "pIVDBE15MyfUaAG2SK0rg1dwjX5syx0FP2vzzmwrLaIP1ggPTCcKw8IPcIPdR5gbsDB8PqjdctA5hBFKs3i7Dg=="
 }

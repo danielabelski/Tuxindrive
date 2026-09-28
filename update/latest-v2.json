@@ -1,8 +1,8 @@
 {
-  "version": "0.26.59",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/tuxindrive_0.26.59_all.deb",
-  "sha256": "f0e5581c90db79b4bf7865361dede3ca2ec8fba82530340824c896a72af68a54",
-  "notes": "Optional manual-only AI backups with Sync now always available",
-  "expires_at": "2026-12-27T12:08:05.046332+00:00",
-  "signature": "Ip6mbPN6du0xXgIuBnKStFhmTcQgLG+nd+DhtVaKW9sLJISJl6gsJm/nmcMFMZnA+6chk0uxqTKozkrvv2VkBw=="
+  "version": "0.26.60",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.60/tuxindrive_0.26.60_all.deb",
+  "sha256": "71ff29abda6f6d3402524dd6e91cf71f9e216dd9dfcda0e96bcc11fe9dc04985",
+  "notes": "Reliable priority scheduling, queue watchdogs and faster incremental AI backups",
+  "expires_at": "2026-12-27T16:16:16.387860+00:00",
+  "signature": "OMI0SmnEHZmCOcCCoxxO6MBsd2RsdvWEAhdJetzM0Ss/k9WfpjLM7oTFAqzXk4QmMSbxBUGO/IbluIZvU3IUAA=="
 }
