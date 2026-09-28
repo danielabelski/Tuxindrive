@@ -1,8 +1,8 @@
 {
-  "version": "0.26.57",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.57/TuxInDrive-0.26.57-macos-arm64.dmg",
-  "sha256": "164ab660e0acc79e8c7848710d607865b146a721b4ba17398bbc188a8f2f8ea1",
-  "notes": "Accurate AI-backup progress, transient runtime exclusions, and safe incremental resume",
-  "expires_at": "2026-12-26T17:18:23.581500+00:00",
-  "signature": "ac31E0HKkNsQ7ZwQ367tKLX4KoXXs8Z3G/zQqd6j6YLuvDfNKtSpnEKjNA+pdxXQPK5PTgPxqu7hV1FG3l0fAg=="
+  "version": "0.26.58",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.58/TuxInDrive-0.26.58-macos-arm64.dmg",
+  "sha256": "84a4d520ebaccd3a084d31abe5fe52e56065b74a5e631f3b02b9703c594daa8c",
+  "notes": "Resilient incremental AI backups when Google Drive invalidates a cached directory ID",
+  "expires_at": "2026-12-27T06:59:24.587217+00:00",
+  "signature": "ZDWK50lw1r6Y9WjwZQxa4pD9lmKyUXSgjp+7n30m2eMM0OmG0rnsYaHADpaMDVRDMErnM9xffeDMOpfNt4KmDA=="
 }

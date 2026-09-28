@@ -1,8 +1,8 @@
 {
-  "version": "0.26.57",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.57/tuxindrive_0.26.57_all.deb",
-  "sha256": "a54f6a8b14f376fd063f32999562f37ecf8c9c6ac919c3b6a44a351e845e7e3e",
-  "notes": "Accurate AI-backup progress, transient runtime exclusions, and safe incremental resume",
-  "expires_at": "2026-12-26T17:18:23.427154+00:00",
-  "signature": "uERUVtezqYsSGYf53lg/2oxR6mnqheqxoC9Ae7f1VPa1em+As5Gnm/IbJn0wwqBqnFdvLI16pxOxY4GHuEm0Dg=="
+  "version": "0.26.58",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.58/tuxindrive_0.26.58_all.deb",
+  "sha256": "2c7bdee8f0e618ceff0d2a7c33882942ddedd7e1b86f1978127f4d7a792b2954",
+  "notes": "Resilient incremental AI backups when Google Drive invalidates a cached directory ID",
+  "expires_at": "2026-12-27T06:59:24.419724+00:00",
+  "signature": "eXDEWLVXvJctnnGm26ysp9FC250Mqnpuom+XjLsQdkFlQciiVJC3YvfkfPQrKeXQ+lvDhsMvJWMqzHdIJ+qLAw=="
 }
