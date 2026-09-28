@@ -782,8 +782,11 @@ class SyncEngine:
         """
         try:
             with log_path.open("rb") as handle:
-                handle.seek(max(0, start_offset))
-                text = handle.read(8 * 1024 * 1024).decode(
+                handle.seek(0, os.SEEK_END)
+                end_offset = handle.tell()
+                current_start = max(0, start_offset)
+                handle.seek(max(current_start, end_offset - 8 * 1024 * 1024))
+                text = handle.read().decode(
                     "utf-8", errors="replace"
                 )
         except OSError:
@@ -2306,6 +2309,7 @@ class SyncEngine:
         duplicate_recovery_attempts: int = 0,
         force_resync: bool = False,
         recovered_duplicates: tuple[str, ...] = (),
+        provider_refresh_attempts: int = 0,
     ) -> None:
         if job.is_git:
             callback(self._run_git_sync(job, log_path, dry_run))
@@ -2545,6 +2549,28 @@ class SyncEngine:
             elif cancelled:
                 result = JobResult(job.id, False, "Synchronization cancelled", log_path, True)
             else:
+                if (
+                    provider_refresh_attempts < 1
+                    and job.is_ai_backup
+                    and job.mode is SyncMode.UPLOAD_ONLY
+                    and self._stale_google_directory_issue(log_path, run_log_offset)
+                ):
+                    with log_path.open("a", encoding="utf-8") as retry_log:
+                        retry_log.write(
+                            "Google Drive returned a missing cached directory ID during "
+                            "the AI backup; restarting once with a fresh provider listing.\n"
+                        )
+                    self._run_worker(
+                        job,
+                        log_path,
+                        callback,
+                        dry_run,
+                        duplicate_recovery_attempts=duplicate_recovery_attempts,
+                        force_resync=force_resync,
+                        recovered_duplicates=recovered_duplicates,
+                        provider_refresh_attempts=provider_refresh_attempts + 1,
+                    )
+                    return
                 requires_resync = auto_reinitialize or self._requires_resync(log_path)
                 blocked_path = self._blocked_google_path(log_path)
                 integrity_issue = self._failed_run_integrity_issue(
@@ -2943,6 +2969,32 @@ class SyncEngine:
             f"account root): rclone exited with code {return_code}; see log",
             "account root",
         )
+
+    @staticmethod
+    def _stale_google_directory_issue(log_path: Path, start_offset: int) -> bool:
+        """Detect a current-run Google Drive object-ID cache miss.
+
+        A live AI workspace may remove and recreate a generated directory while
+        rclone is uploading it.  Google then returns the vanished directory's
+        object ID as a 404 for every remaining child.  A new rclone process has
+        a fresh directory cache and can continue the incremental upload safely.
+        """
+        try:
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                end_offset = handle.tell()
+                current_start = max(0, start_offset)
+                handle.seek(max(current_start, end_offset - 8 * 1024 * 1024))
+                text = handle.read().decode(
+                    "utf-8", errors="replace"
+                )
+        except OSError:
+            return False
+        return bool(re.search(
+            r"(?im)^.*?ERROR\s*:\s*.+?:\s*Failed to copy:\s*googleapi:\s*"
+            r"Error 404:\s*File not found:\s*[^,\s]+\.?,?\s*notFound\s*$",
+            text,
+        ))
 
     @staticmethod
     def _blocked_google_path(log_path: Path) -> str:

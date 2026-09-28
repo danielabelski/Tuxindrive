@@ -1,3 +1,11 @@
+tuxindrive (0.26.58-1) unstable; urgency=medium
+
+  * Refresh Google Drive directory state after a stale-ID AI backup failure.
+  * Retry the upload once in a fresh process while preserving incremental data.
+  * Keep provider recovery bounded to AI upload jobs and current-run errors.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Mon, 28 Sep 2026 09:30:00 +0200
+
 tuxindrive (0.26.57-1) unstable; urgency=medium
 
   * Show accurate progress for current compact rclone statistics.

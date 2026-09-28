@@ -2,6 +2,16 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.58 — resilient Google Drive AI backups
+
+- Detect Google Drive 404 responses caused by a stale directory object ID when
+  a live AI workspace deletes and recreates generated directories mid-upload.
+- Restart the AI upload once in a new rclone process so its provider directory
+  listing is refreshed and already uploaded content is reused incrementally.
+- Keep the recovery bounded to one retry and to AI upload jobs; historical
+  errors, ordinary synchronization and unrelated provider failures do not
+  trigger it.
+
 ## 0.26.57 — trustworthy AI-backup progress and resume
 
 - Parse current compact rclone statistics so a running AI backup shows its

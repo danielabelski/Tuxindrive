@@ -325,6 +325,73 @@ class SyncEngineCommandTests(unittest.TestCase):
         self.assertEqual(completed[0].error_source, "Photos/image.jpg")
         self.assertIn("incomplete local copies were removed", completed[0].message)
 
+    def test_ai_backup_restarts_once_after_stale_google_directory_id(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ,
+            {"XDG_DATA_HOME": f"{temporary}/data", "XDG_CACHE_HOME": f"{temporary}/cache"},
+        ):
+            local = Path(temporary) / "codex"
+            local.mkdir()
+            job = SyncJob(
+                account_remote="google",
+                local_path=str(local),
+                remote_path="AI-Backups/computer/codex",
+                mode=SyncMode.UPLOAD_ONLY,
+                ai_connector="codex",
+                version_history=True,
+                initialized=False,
+            )
+            completed = []
+
+            def process(output, code):
+                instance = MagicMock()
+                instance.stdout = io.StringIO(output)
+                instance.wait.return_value = code
+                return instance
+
+            stale = process(
+                "ERROR : work/pages/page-091.jpg: Failed to copy: googleapi: "
+                "Error 404: File not found: folder-id., notFound\n",
+                1,
+            )
+            successful = process(
+                "INFO  : 7.505 GiB / 7.505 GiB, 100%, 1 MiB/s, ETA 0s\n",
+                0,
+            )
+            log_path = Path(temporary) / "sync.log"
+            with patch("tuxindrive.engine.resolve_rclone", return_value="/usr/bin/rclone"), \
+                 patch("tuxindrive.engine.subprocess.Popen", side_effect=[stale, successful]) as popen, \
+                 patch.object(self.engine, "_prune_remote_history") as prune:
+                self.engine._run_worker(job, log_path, completed.append, False)
+            self.assertEqual(popen.call_count, 2)
+            self.assertEqual(len(completed), 1)
+            self.assertTrue(completed[0].success)
+            self.assertIn("fresh provider listing", log_path.read_text(encoding="utf-8"))
+            prune.assert_called_once()
+
+    def test_stale_google_directory_retry_is_current_run_only(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "ERROR : old/file: Failed to copy: googleapi: Error 404: "
+                "File not found: stale-id., notFound\n",
+                encoding="utf-8",
+            )
+            offset = log.stat().st_size
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write("ERROR : current/file: Failed to copy: access denied\n")
+            self.assertFalse(self.engine._stale_google_directory_issue(log, offset))
+
+    def test_stale_google_directory_retry_reads_end_of_long_current_run(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_bytes(
+                b"INFO : transferred data\n" * 400_000
+                + b"ERROR : current/file: Failed to copy: googleapi: Error 404: "
+                b"File not found: stale-id., notFound\n"
+            )
+            self.assertTrue(self.engine._stale_google_directory_issue(log, 0))
+
     def test_duplicate_destination_preserves_parent_and_extension(self):
         destination = self.engine._duplicate_destination(
             "Final pitch presentations/Nukib1.pptx.pptx"

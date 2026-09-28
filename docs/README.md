@@ -7,7 +7,7 @@
 
 This index separates end-user instructions, operator guidance, implementation
 details, security controls, and release procedures. Documentation describes
-TuxInDrive 0.26.57 unless a section is explicitly historical. Release-specific
+TuxInDrive 0.26.58 unless a section is explicitly historical. Release-specific
 facts are identified by version; planned work is never described as shipped.
 
 ## Start here
@@ -36,7 +36,7 @@ facts are identified by version; planned work is never described as shipped.
 - [Changelog](../CHANGELOG.md) — release-by-release history.
 - [Security policy](../SECURITY.md) — supported releases and private vulnerability reporting.
 - [Release channel layout](../releases/README.md) — durable package and manifest locations.
-- [0.26.57 AI Backup media kit](ANNOUNCEMENT_AI_BACKUPS_0.26.57.md) — current factual, reusable AI Backup publication text.
+- [0.26.57 AI Backup media kit](ANNOUNCEMENT_AI_BACKUPS_0.26.57.md) — archived factual AI Backup publication text.
 - [0.26.31 media kit](ANNOUNCEMENT_0.26.31.md) — archived Network Lab community-release text.
 - [0.26.23 announcement notes](ANNOUNCEMENT_0.26.23.md) — archived search-release text.
 

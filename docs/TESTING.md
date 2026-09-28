@@ -18,7 +18,7 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The TuxInDrive development suite contains **539 automated tests: 526 Python tests and 13 Android JVM tests**. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, animated aggregate tray state and historical upgrades. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The TuxInDrive development suite contains **542 automated tests: 529 Python tests and 13 Android JVM tests**. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, animated aggregate tray state and historical upgrades. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 ## Test groups
 
@@ -33,7 +33,7 @@ The TuxInDrive development suite contains **539 automated tests: 526 Python test
 | `test_delta.py` | 1 | Rolling BLAKE2 block signatures identify only modified ranges and calculate transferred bytes. |
 | `test_diagnostics.py` | 1 | Startup failures are written before GTK imports, allowing diagnosis when the graphical runtime cannot start. |
 | `test_platform_support.py` | 5 | Safe distribution parsing, Linux/macOS/Windows machine-readable capabilities and unsupported-architecture blocking. |
-| `test_engine.py` | 58 | Full and incremental modes, atomic reservation, non-blocking mount startup, aggregate streaming budgets, global rates/admission, jitter/backoff, deletion/conflict safety, streaming/mount recovery, offline hydration, marker confinement, symlink rejection and engine replacement. |
+| `test_engine.py` | 60 | Full and incremental modes, atomic reservation, non-blocking mount startup, aggregate streaming budgets, global rates/admission, jitter/backoff, deletion/conflict safety, streaming/mount recovery, offline hydration, marker confinement, symlink rejection and engine replacement. |
 | `test_file_preview.py` | 13 | Default-local bounded text/image/document previews, no-follow reads, folder non-enumeration, UTF handling, archive traversal/ZIP-bomb rejection, and shell-free page/time-limited PDF extraction. |
 | `test_github_sync.py` | 6 | Credential-free GitHub URL/branch/item safety, redirect migration, global admission and guarded commit/fetch/rebase/push orchestration. |
 | `test_folder_layout.py` | 11 | Persistent selection during asynchronous cloud-tree loading, safe account-switch defaults, before/after drag ordering, cross-group moves, group-header append, Ungrouped fallback, self-drop handling, endpoint-path preservation, GTK text-payload round-trip and malformed-payload rejection. |
@@ -112,9 +112,9 @@ Android JVM coverage is kept beside the mobile source: `MobileValidationTest` co
 
 ```bash
 sh scripts/build-deb.sh
-dpkg-deb --info dist/tuxindrive_0.26.57_all.deb
-dpkg-deb --contents dist/tuxindrive_0.26.57_all.deb
-sha256sum dist/tuxindrive_0.26.57_all.deb
+dpkg-deb --info dist/tuxindrive_0.26.58_all.deb
+dpkg-deb --contents dist/tuxindrive_0.26.58_all.deb
+sha256sum dist/tuxindrive_0.26.58_all.deb
 ```
 
 The CI **Static security analysis** step must run before tests and packaging:
@@ -129,8 +129,8 @@ The release is blocked on any high-severity Bandit result or unresolved dependen
 Release manifests must be signed outside Git with the Ed25519 release key:
 
 ```bash
-python3 scripts/sign-update.py --version 0.26.57 \
-  --package dist/tuxindrive_0.26.57_all.deb \
+python3 scripts/sign-update.py --version 0.26.58 \
+  --package dist/tuxindrive_0.26.58_all.deb \
   --output update/latest-v2.json \
   --private-key /secure/offline/TuxInDrive-update-signing-private.pem
 ```
@@ -146,8 +146,8 @@ private bootstrap and installed module layout:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.57_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.57_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.58_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.58_all.deb
 PYTHONPATH=src python3 -m unittest -v tests.test_server
 ```
 
