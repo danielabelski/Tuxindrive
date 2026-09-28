@@ -2,6 +2,13 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.59 — optional manual-only AI backups
+
+- Allow new and existing AI-tool backups to operate in a manual-only mode that
+  never runs from the scheduler and remains available through **Sync now**.
+- Show **Manual only** on the job card and disable the irrelevant interval
+  control while that mode is selected.
+
 ## 0.26.58 — resilient Google Drive AI backups
 
 - Detect Google Drive 404 responses caused by a stale directory object ID when

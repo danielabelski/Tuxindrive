@@ -68,10 +68,32 @@ class AIBackupTests(unittest.TestCase):
                 build_backup_jobs([codex], account_remote="")
 
     def test_connector_marker_round_trips_in_configuration(self):
-        job = SyncJob("drive", "/tmp/codex", ai_connector="codex")
+        job = SyncJob(
+            "drive", "/tmp/codex", ai_connector="codex", manual_only=True
+        )
         restored = AppConfig.from_dict(AppConfig(jobs=[job]).to_dict()).jobs[0]
         self.assertTrue(restored.is_ai_backup)
         self.assertEqual(restored.ai_connector, "codex")
+        self.assertTrue(restored.manual_only)
+        self.assertFalse(restored.allows_automatic_runs)
+
+    def test_manual_backup_is_not_scheduled_but_remains_enabled(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            (home / ".codex").mkdir()
+            codex = connector_by_key("codex", home=home, system="Linux", environment={})
+            job = build_backup_jobs(
+                [codex], account_remote="drive", manual_only=True,
+                hostname="workstation",
+            )[0]
+            self.assertTrue(job.enabled)
+            self.assertTrue(job.manual_only)
+            self.assertFalse(job.allows_automatic_runs)
+            self.assertEqual(job.name, "Codex manual backup")
+            self.assertEqual(job.last_status, "Manual backup ready — use Sync now")
+
+        ordinary = SyncJob("drive", "/tmp/files", manual_only=True)
+        self.assertTrue(ordinary.allows_automatic_runs)
 
     def test_existing_ninety_day_ai_backup_migrates_to_seven_days(self):
         job = SyncJob(

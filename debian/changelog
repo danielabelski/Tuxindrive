@@ -1,3 +1,11 @@
+tuxindrive (0.26.59-1) unstable; urgency=medium
+
+  * Add manual-only scheduling for new and existing AI-tool backups.
+  * Keep Sync now available while preventing every automatic scheduler run.
+  * Show the selected manual mode on the job card and in the editor.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Mon, 28 Sep 2026 14:15:00 +0200
+
 tuxindrive (0.26.58-1) unstable; urgency=medium
 
   * Refresh Google Drive directory state after a stale-ID AI backup failure.

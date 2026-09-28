@@ -150,6 +150,7 @@ def build_backup_jobs(
     account_remote: str,
     remote_base: str = "AI Backups",
     interval_minutes: int = 60,
+    manual_only: bool = False,
     hostname: str | None = None,
 ) -> list[SyncJob]:
     if not account_remote.strip():
@@ -166,7 +167,7 @@ def build_backup_jobs(
             suffix = "" if len(connector.available_paths) == 1 else f"-{index}"
             remote = f"{base}/{machine}/{connector.key}{suffix}"
             jobs.append(SyncJob(
-                name=f"{connector.name} automatic backup",
+                name=f"{connector.name} {'manual' if manual_only else 'automatic'} backup",
                 account_remote=account_remote.strip(),
                 local_path=str(source),
                 remote_path=remote,
@@ -180,5 +181,10 @@ def build_backup_jobs(
                 ransomware_protection=True,
                 max_delete=25,
                 ai_connector=connector.key,
+                manual_only=manual_only,
+                last_status=(
+                    "Manual backup ready — use Sync now"
+                    if manual_only else "Not synchronized yet"
+                ),
             ))
     return jobs

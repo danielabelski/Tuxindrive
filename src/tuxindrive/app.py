@@ -984,10 +984,20 @@ class AIBackupDialog(ResponsiveDialog):
         self.remote_base.set_text("AI Backups")
         self.interval = Gtk.SpinButton.new_with_range(5, 1440, 5)
         self.interval.set_value(60)
+        self.manual_only = Gtk.CheckButton(
+            label="Manual only — run backups with Sync now"
+        )
+        self.manual_only.set_tooltip_text(
+            "Do not start these AI backups on a schedule. They remain available through Sync now."
+        )
+        self.manual_only.connect(
+            "toggled", lambda button: self.interval.set_sensitive(not button.get_active())
+        )
         for index, (label, widget) in enumerate((
             ("Cloud account", self.account),
             ("Cloud backup folder", self.remote_base),
             ("Backup interval (minutes)", self.interval),
+            ("Automatic scheduling", self.manual_only),
         )):
             grid.attach(Gtk.Label(label=label, xalign=0), 0, index, 1, 1)
             grid.attach(widget, 1, index, 1, 1)
@@ -1009,6 +1019,7 @@ class AIBackupDialog(ResponsiveDialog):
             account_remote=self.account.get_active_id() or "",
             remote_base=self.remote_base.get_text(),
             interval_minutes=self.interval.get_value_as_int(),
+            manual_only=self.manual_only.get_active(),
         )
 
     def validation_error(self, message: str) -> None:
@@ -1077,6 +1088,18 @@ class SyncJobDialog(ResponsiveDialog):
         self.realtime_sync.set_tooltip_text(
             "Watches local saves and polls provider changes; transfers only changed paths."
         )
+        self.manual_only = Gtk.CheckButton(
+            label="Manual only — run this AI backup with Sync now"
+        )
+        self.manual_only.set_active(existing.manual_only if existing else False)
+        self.manual_only.set_tooltip_text(
+            "Disables scheduled runs without disabling the backup or its Sync now button."
+        )
+        self.manual_only.connect(
+            "toggled", lambda button: self.interval.set_sensitive(not button.get_active())
+        )
+        if existing and existing.is_ai_backup:
+            self.interval.set_sensitive(not self.manual_only.get_active())
         self.block_delta = Gtk.CheckButton(label="Use block-level delta planning for changed files")
         self.block_delta.set_active(existing.block_delta_transfer if existing else True)
         self.block_delta.set_tooltip_text("Direct peer jobs exchange content-addressed changed blocks; cloud backends use their native transfer capabilities.")
@@ -1180,6 +1203,8 @@ class SyncJobDialog(ResponsiveDialog):
             ("Maximum file age (days; 0 = any age)", self.selective_max_age),
             ("Rule dry run", preview_row),
         ]
+        if existing and existing.is_ai_backup:
+            rows.insert(8, ("AI backup scheduling", self.manual_only))
         for row, (label, widget) in enumerate(rows):
             grid.attach(Gtk.Label(label=label, xalign=0), 0, row, 1, 1)
             grid.attach(widget, 1, row, 1, 1)
@@ -1295,6 +1320,7 @@ class SyncJobDialog(ResponsiveDialog):
             value.peer_role = self.existing.peer_role
             value.one_time_drop_id = self.existing.one_time_drop_id
             value.ai_connector = self.existing.ai_connector
+            value.manual_only = self.manual_only.get_active() if value.ai_connector else False
             return [value]
         return values
 
@@ -4620,6 +4646,7 @@ class MainWindow(Gtk.ApplicationWindow):
                     if job.is_git else
                     f"{job.cloud_location_label}:/{job.remote_path}"
                 )
+                + (" · Manual only" if job.is_ai_backup and job.manual_only else "")
                 + f"  →  {job.local_path}"
             ),
             xalign=0,
@@ -5049,7 +5076,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.controller.reconfigure_callbacks()
                 self.refresh()
                 for job in jobs:
-                    self.controller.run_job(job)
+                    if job.allows_automatic_runs:
+                        self.controller.run_job(job)
                 break
         dialog.destroy()
 
@@ -6987,7 +7015,12 @@ class TuxInDriveApplication(Gtk.Application):
         now = datetime.now(timezone.utc)
         policy_decision: PolicyDecision | None = None
         for job in self.config.jobs:
-            if not job.enabled or job.mode is SyncMode.VIRTUAL_DRIVE or job.id in self.engine.running_jobs:
+            if (
+                not job.enabled
+                or not job.allows_automatic_runs
+                or job.mode is SyncMode.VIRTUAL_DRIVE
+                or job.id in self.engine.running_jobs
+            ):
                 continue
             baseline = self._last_full_completed.get(job.id) or self._last_started.get(job.id)
             if baseline is None and job.last_run:

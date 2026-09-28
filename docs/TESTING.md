@@ -18,13 +18,13 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The TuxInDrive development suite contains **542 automated tests: 529 Python tests and 13 Android JVM tests**. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, animated aggregate tray state and historical upgrades. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The TuxInDrive development suite contains **543 automated tests: 530 Python tests and 13 Android JVM tests**. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic and manual-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, animated aggregate tray state and historical upgrades. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 ## Test groups
 
 | Test module | Tests | What it verifies |
 |---|---:|---|
-| `test_ai_backups.py` | 8 | Local Codex, Claude Code, Gemini CLI, Cursor and Continue discovery; override handling; secret exclusions; upload-only scheduling; connector persistence; seven-day retention migration; safe remote components and symlink rejection. |
+| `test_ai_backups.py` | 9 | Local Codex, Claude Code, Gemini CLI, Cursor and Continue discovery; override handling; secret exclusions; automatic and manual-only upload scheduling; connector persistence; seven-day retention migration; safe remote components and symlink rejection. |
 | `test_audit.py` | 4 | Private audit persistence, filtering, bounded newest-first reads across chunk boundaries, malformed historical-line handling and private CSV/JSONL export. |
 | `test_bandwidth.py` | 13 | Directional syntax and invalid values, stricter global/job limits, automatic headroom/fair division, independent upload/download clocks, network-slot admission and release, update byte clock and bounded scan jitter. |
 | `test_bootstrap.py` | 7 | Linux/macOS transfer-engine selection, rejection and identity-cached revalidation of incompatible/replaced rclone versions, supported CPU architectures, and pinned release checksums. |
@@ -112,9 +112,9 @@ Android JVM coverage is kept beside the mobile source: `MobileValidationTest` co
 
 ```bash
 sh scripts/build-deb.sh
-dpkg-deb --info dist/tuxindrive_0.26.58_all.deb
-dpkg-deb --contents dist/tuxindrive_0.26.58_all.deb
-sha256sum dist/tuxindrive_0.26.58_all.deb
+dpkg-deb --info dist/tuxindrive_0.26.59_all.deb
+dpkg-deb --contents dist/tuxindrive_0.26.59_all.deb
+sha256sum dist/tuxindrive_0.26.59_all.deb
 ```
 
 The CI **Static security analysis** step must run before tests and packaging:
@@ -129,8 +129,8 @@ The release is blocked on any high-severity Bandit result or unresolved dependen
 Release manifests must be signed outside Git with the Ed25519 release key:
 
 ```bash
-python3 scripts/sign-update.py --version 0.26.58 \
-  --package dist/tuxindrive_0.26.58_all.deb \
+python3 scripts/sign-update.py --version 0.26.59 \
+  --package dist/tuxindrive_0.26.59_all.deb \
   --output update/latest-v2.json \
   --private-key /secure/offline/TuxInDrive-update-signing-private.pem
 ```
@@ -146,8 +146,8 @@ private bootstrap and installed module layout:
 
 ```bash
 sh scripts/build-server-deb.sh
-dpkg-deb --info dist/tuxindrive-server_0.26.58_all.deb
-dpkg-deb --contents dist/tuxindrive-server_0.26.58_all.deb
+dpkg-deb --info dist/tuxindrive-server_0.26.59_all.deb
+dpkg-deb --contents dist/tuxindrive-server_0.26.59_all.deb
 PYTHONPATH=src python3 -m unittest -v tests.test_server
 ```
 
