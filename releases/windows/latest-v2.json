@@ -1,8 +1,8 @@
 {
-  "version": "0.26.58",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.58/TuxInDrive-0.26.58-windows-x64-setup.exe",
-  "sha256": "0f0d10ba2ad7d7317dffd159d1a812d14eedcdc9dacf46b487d6817fd93d30ce",
-  "notes": "Resilient incremental AI backups when Google Drive invalidates a cached directory ID",
-  "expires_at": "2026-12-27T06:59:24.497798+00:00",
-  "signature": "btuQhqv3Dqm2Qz9ZqH/u9RFg/aWqUsx3LFXIvNvY6AXLCm74lWETIH0wufKAwp+jRCQTycUWBBY5tmaZw1BvCg=="
+  "version": "0.26.59",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/TuxInDrive-0.26.59-windows-x64-setup.exe",
+  "sha256": "ded100757624196cc2ae6223896084e5c623285caaa56d1b25abd67023305987",
+  "notes": "Optional manual-only AI backups with Sync now always available",
+  "expires_at": "2026-12-27T12:08:05.119717+00:00",
+  "signature": "5Ab78f2CvWPmBF4zw20/XcLDhSSlXDvo7jL3IyBnug+dCWkdaaZb2THwCouZf460+Jm2VkkQpMP/zq1p5ghqDw=="
 }

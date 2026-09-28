@@ -1,8 +1,8 @@
 {
-  "version": "0.26.58",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.58/TuxInDrive-0.26.58-android.apk",
-  "sha256": "2ed3701c7c90a444d154915cb64703b9a8ea958480d411f4c65e38795e86545a",
-  "notes": "Resilient incremental AI backups when Google Drive invalidates a cached directory ID",
-  "expires_at": "2026-12-27T06:59:24.851819+00:00",
-  "signature": "wdLBdix1dhCIc29MScLXgSDz1swVa6eRYNidNQ1X1tpCTOsMm6w7cmnI3/1dhEaPpqzmukoj7pl60jTyTdNJDA=="
+  "version": "0.26.59",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/TuxInDrive-0.26.59-android.apk",
+  "sha256": "01fd06b2237c5ddcec729aa5a8f9fdb8e88ebc3d41e9b2982b71ec036fac2b27",
+  "notes": "Optional manual-only AI backups with Sync now always available",
+  "expires_at": "2026-12-27T12:08:05.452610+00:00",
+  "signature": "ddsgu8Qg4vT+g8N8E+rMiBW7rmc7QWAUpvNqOVqMNksaLXWJtZYW0ce3UHaJ5r4ur4wz26Y/21STNGFnx72xCw=="
 }

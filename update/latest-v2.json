@@ -1,8 +1,8 @@
 {
-  "version": "0.26.58",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.58/tuxindrive_0.26.58_all.deb",
-  "sha256": "2c7bdee8f0e618ceff0d2a7c33882942ddedd7e1b86f1978127f4d7a792b2954",
-  "notes": "Resilient incremental AI backups when Google Drive invalidates a cached directory ID",
-  "expires_at": "2026-12-27T06:59:24.419724+00:00",
-  "signature": "eXDEWLVXvJctnnGm26ysp9FC250Mqnpuom+XjLsQdkFlQciiVJC3YvfkfPQrKeXQ+lvDhsMvJWMqzHdIJ+qLAw=="
+  "version": "0.26.59",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.59/tuxindrive_0.26.59_all.deb",
+  "sha256": "f0e5581c90db79b4bf7865361dede3ca2ec8fba82530340824c896a72af68a54",
+  "notes": "Optional manual-only AI backups with Sync now always available",
+  "expires_at": "2026-12-27T12:08:05.046332+00:00",
+  "signature": "Ip6mbPN6du0xXgIuBnKStFhmTcQgLG+nd+DhtVaKW9sLJISJl6gsJm/nmcMFMZnA+6chk0uxqTKozkrvv2VkBw=="
 }
