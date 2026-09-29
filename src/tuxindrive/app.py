@@ -78,7 +78,7 @@ from .folder_layout import (
 )
 from .peer import DiscoveredPeer, PeerError, PeerInvitation, PeerManager, key_fingerprint, local_network_address, normalize_public_key, validate_host, validate_port
 from .recovery import AuditIssue, IntegrityAuditor, RecoveryEntry, SafetyError
-from .rclone import ConfigQuestion, ConfigResult, DriveLocation, RcloneClient, RcloneError
+from .rclone import ConfigQuestion, ConfigResult, DriveLocation, RcloneClient, RcloneError, google_scoped_remote
 from .proton import ProtonDriveClient, ProtonDriveError
 from .updater import UpdateManager, UpdateRelease
 from .policies import PolicyDecision, TransferPolicy
@@ -1014,9 +1014,17 @@ class AIBackupDialog(ResponsiveDialog):
             item for item in self.available
             if self.checks[item.key].get_active() and self.checks[item.key].get_sensitive()
         ]
+        remote = self.account.get_active_id() or ""
+        account = next((item for item in self.accounts if item.remote == remote), None)
+        scope = (
+            google_scoped_remote(remote, "my_drive")
+            if account and account.provider is Provider.GOOGLE_DRIVE
+            else remote
+        )
         return build_backup_jobs(
             selected,
-            account_remote=self.account.get_active_id() or "",
+            account_remote=remote,
+            remote_scope=scope,
             remote_base=self.remote_base.get_text(),
             interval_minutes=self.interval.get_value_as_int(),
             manual_only=self.manual_only.get_active(),

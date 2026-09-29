@@ -392,6 +392,41 @@ class SyncEngineCommandTests(unittest.TestCase):
             )
             self.assertTrue(self.engine._stale_google_directory_issue(log, 0))
 
+    def test_stale_google_directory_detects_parent_creation_failure(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / "sync.log"
+            log.write_text(
+                "ERROR : work/file.pdf: Failed to copy: failed to make directory: "
+                "googleapi: Error 404: File not found: stale-drive., notFound\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(self.engine._stale_google_directory_issue(log, 0))
+
+    def test_running_transfer_is_stopped_after_no_payload_progress(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            local = Path(temporary) / "codex"
+            local.mkdir()
+            job = SyncJob(
+                "google", str(local), mode=SyncMode.UPLOAD_ONLY,
+                ai_connector="codex", version_history=False,
+            )
+            process = MagicMock()
+            process.stdout = io.StringIO(
+                "INFO  : 0 B / 500 MiB, 0%, 0 B/s, ETA - (xfr#0/1000)\n"
+            )
+            process.wait.return_value = -15
+            completed = []
+            with patch("tuxindrive.engine.resolve_rclone", return_value="/usr/bin/rclone"), \
+                 patch("tuxindrive.engine.subprocess.Popen", return_value=process), \
+                 patch("tuxindrive.engine.time.monotonic", side_effect=[0.0, 1900.0]), \
+                 patch("tuxindrive.engine.terminate_process") as terminate:
+                self.engine._run_worker(
+                    job, Path(temporary) / "sync.log", completed.append, False
+                )
+            terminate.assert_called_once_with(process)
+            self.assertFalse(completed[0].success)
+            self.assertIn("30 minutes without payload progress", completed[0].message)
+
     def test_duplicate_destination_preserves_parent_and_extension(self):
         destination = self.engine._duplicate_destination(
             "Final pitch presentations/Nukib1.pptx.pptx"

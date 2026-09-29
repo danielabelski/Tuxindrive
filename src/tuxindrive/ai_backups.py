@@ -148,6 +148,7 @@ def build_backup_jobs(
     selected: list[AIBackupConnector] | tuple[AIBackupConnector, ...],
     *,
     account_remote: str,
+    remote_scope: str = "",
     remote_base: str = "AI Backups",
     interval_minutes: int = 60,
     manual_only: bool = False,
@@ -169,6 +170,7 @@ def build_backup_jobs(
             jobs.append(SyncJob(
                 name=f"{connector.name} {'manual' if manual_only else 'automatic'} backup",
                 account_remote=account_remote.strip(),
+                remote_scope=remote_scope.strip(),
                 local_path=str(source),
                 remote_path=remote,
                 mode=SyncMode.UPLOAD_ONLY,

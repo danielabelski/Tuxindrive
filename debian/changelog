@@ -1,3 +1,11 @@
+tuxindrive (0.26.61-1) unstable; urgency=medium
+
+  * Pin legacy Google AI backups to an explicit My Drive scope.
+  * Stop repeated missing-directory failures and retry once with fresh state.
+  * Abort transfers that make no payload progress for thirty minutes.
+
+ -- TuxInDrive Maintainers <maintainers@tuxindrive.invalid>  Tue, 29 Sep 2026 09:35:00 +0200
+
 tuxindrive (0.26.60-1) unstable; urgency=medium
 
   * Make transfer admission priority-aware and FIFO within each priority.

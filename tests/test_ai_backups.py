@@ -9,7 +9,7 @@ from tuxindrive.ai_backups import (
     connectors,
     safe_remote_component,
 )
-from tuxindrive.models import AppConfig, SyncJob, SyncMode
+from tuxindrive.models import Account, AppConfig, Provider, SyncJob, SyncMode
 
 
 class AIBackupTests(unittest.TestCase):
@@ -59,6 +59,18 @@ class AIBackupTests(unittest.TestCase):
             self.assertIn("**/node_modules/**", job.exclude_patterns)
             self.assertIn("**/build/**", job.exclude_patterns)
             self.assertTrue(set(SECRET_EXCLUDES).issubset(job.exclude_patterns))
+
+    def test_google_ai_backup_uses_explicit_scope(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            (home / ".codex").mkdir()
+            codex = connector_by_key("codex", home=home, system="Linux", environment={})
+            scope = "drive,team_drive=,root_folder_id=root,shared_with_me=false"
+            job = build_backup_jobs(
+                [codex], account_remote="drive", remote_scope=scope,
+            )[0]
+            self.assertEqual(job.remote_scope, scope)
+            self.assertTrue(job.remote_spec.startswith(f"{scope}:"))
 
     def test_missing_tools_and_invalid_account_create_no_unsafe_job(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -120,6 +132,26 @@ class AIBackupTests(unittest.TestCase):
         restored_legacy = SyncJob.from_dict(legacy)
         self.assertIn("*.part", restored_legacy.exclude_patterns)
         self.assertIn("node_repl/active_execs/**", restored_legacy.exclude_patterns)
+
+    def test_legacy_google_ai_backup_is_pinned_to_my_drive(self):
+        account = Account("drive", Provider.GOOGLE_DRIVE, "Google Drive")
+        job = SyncJob("drive", "/tmp/codex", ai_connector="codex")
+        restored = AppConfig.from_dict(AppConfig(accounts=[account], jobs=[job]).to_dict())
+        migrated = restored.jobs[0]
+        self.assertEqual(
+            migrated.remote_scope,
+            "drive,team_drive=,root_folder_id=root,shared_with_me=false",
+        )
+        self.assertEqual(migrated.cloud_location_name, "My Drive")
+
+    def test_explicit_google_ai_scope_is_preserved(self):
+        account = Account("drive", Provider.GOOGLE_DRIVE, "Google Drive")
+        job = SyncJob(
+            "drive", "/tmp/codex", ai_connector="codex",
+            remote_scope="drive,team_drive=shared-1,root_folder_id=",
+        )
+        restored = AppConfig.from_dict(AppConfig(accounts=[account], jobs=[job]).to_dict())
+        self.assertEqual(restored.jobs[0].remote_scope, job.remote_scope)
 
     def test_remote_component_is_bounded_and_cannot_traverse(self):
         self.assertEqual(safe_remote_component("../../work laptop", "computer"), "work-laptop")

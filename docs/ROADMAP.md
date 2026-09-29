@@ -7,7 +7,18 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.60
+## Current baseline: 0.26.61
+
+### Completed in 0.26.61: bounded Google AI backup recovery
+
+- Pin legacy Google AI backups with no saved cloud location to My Drive so a
+  stale Shared Drive identifier cannot be inherited from the rclone remote.
+- Preserve explicitly selected Shared Drive scopes and give new Google AI
+  backups an explicit My Drive scope.
+- Stop a run after repeated missing-directory responses, refresh provider state
+  once, and fail clearly if the destination remains invalid.
+- Terminate a transfer after thirty minutes without payload progress so a
+  provider failure cannot leave the backup active indefinitely.
 
 ### Completed in 0.26.60: reliable AI backup admission and scanning
 

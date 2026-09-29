@@ -674,9 +674,26 @@ class AppConfig:
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "AppConfig":
+        accounts = [Account.from_dict(item) for item in value.get("accounts", [])]
+        jobs = [SyncJob.from_dict(item) for item in value.get("jobs", [])]
+        providers = {account.remote: account.provider for account in accounts}
+        for job in jobs:
+            if (
+                job.is_ai_backup
+                and not job.remote_scope
+                and providers.get(job.account_remote) is Provider.GOOGLE_DRIVE
+            ):
+                # Old AI jobs used the bare rclone remote and could therefore
+                # inherit a removed Shared Drive ID from its configuration.
+                # Pin legacy jobs to My Drive just like the normal folder UI.
+                job.remote_scope = (
+                    f"{job.account_remote},team_drive=,root_folder_id=root,"
+                    "shared_with_me=false"
+                )
+                job.cloud_location_name = "My Drive"
         return cls(
-            accounts=[Account.from_dict(item) for item in value.get("accounts", [])],
-            jobs=[SyncJob.from_dict(item) for item in value.get("jobs", [])],
+            accounts=accounts,
+            jobs=jobs,
             folder_groups=[FolderGroup.from_dict(item) for item in value.get("folder_groups", [])],
             peer_shares=[PeerShare.from_dict(item) for item in value.get("peer_shares", [])],
             settings=AppSettings.from_dict(value.get("settings", {})),

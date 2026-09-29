@@ -89,6 +89,8 @@ def parse_rclone_progress(line: str) -> int | None:
 class SyncEngine:
     _MAX_ACTIVE_TRANSFERS = 2
     _QUEUE_TIMEOUT_SECONDS = 600.0
+    _NO_PROGRESS_TIMEOUT_SECONDS = 1800.0
+    _STALE_GOOGLE_ERROR_LIMIT = 10
     _MAX_DUPLICATE_RECOVERY_ATTEMPTS = 5
     _ORPHANED_BISYNC_LOCK_GRACE_SECONDS = 120.0
     _OFFLINE_READ_INACTIVITY_TIMEOUT = 60.0
@@ -2497,14 +2499,40 @@ class SyncEngine:
                     self._job_progress[job.id] = 0
                 self._record_network(job.id)
                 assert process.stdout is not None
+                last_transfer_progress = time.monotonic()
+                progress_marker: tuple[str, str] | None = None
+                stale_google_errors = 0
+                no_progress_timeout = False
                 for line in process.stdout:
                     log.write(line)
                     progress = parse_rclone_progress(line)
                     if progress is not None:
                         with self._lock:
                             self._job_progress[job.id] = progress
+                    marker = self._transfer_progress_marker(line)
+                    if marker is not None and marker != progress_marker:
+                        if marker != ("0", "0"):
+                            last_transfer_progress = time.monotonic()
+                        progress_marker = marker
+                    if self._is_stale_google_directory_line(line):
+                        stale_google_errors += 1
+                        if stale_google_errors >= self._STALE_GOOGLE_ERROR_LIMIT:
+                            log.write(
+                                "Repeated Google directory 404 errors; stopping this "
+                                "process before one bounded fresh-listing retry.\n"
+                            )
+                            terminate_process(process)
+                            break
+                    if time.monotonic() - last_transfer_progress >= self._NO_PROGRESS_TIMEOUT_SECONDS:
+                        no_progress_timeout = True
+                        log.write(
+                            "No payload progress for 30 minutes; stopping the transfer "
+                            "so it cannot remain active indefinitely.\n"
+                        )
+                        terminate_process(process)
+                        break
                 return_code = process.wait()
-                cancelled = return_code in (-signal.SIGTERM, 143)
+                cancelled = return_code in (-signal.SIGTERM, 143) and not no_progress_timeout
                 log.write(f"[{datetime.now(timezone.utc).isoformat()}] Exit {return_code}\n")
             if return_code == 0:
                 with log_path.open("a", encoding="utf-8") as history_log:
@@ -2617,7 +2645,13 @@ class SyncEngine:
                 integrity_issue = self._failed_run_integrity_issue(
                     log_path, run_log_offset
                 )
-                if integrity_issue is not None:
+                if no_progress_timeout:
+                    error_source = "account root"
+                    message = (
+                        "Synchronization stopped after 30 minutes without payload "
+                        "progress; verify network and cloud destination, then retry"
+                    )
+                elif integrity_issue is not None:
                     error_source, message = integrity_issue
                 else:
                     message, error_source = self._failure_diagnostic(
@@ -3031,11 +3065,26 @@ class SyncEngine:
                 )
         except OSError:
             return False
+        return any(
+            SyncEngine._is_stale_google_directory_line(line)
+            for line in text.splitlines()
+        )
+
+    @staticmethod
+    def _is_stale_google_directory_line(line: str) -> bool:
         return bool(re.search(
-            r"(?im)^.*?ERROR\s*:\s*.+?:\s*Failed to copy:\s*googleapi:\s*"
+            r"(?i)ERROR\s*:\s*.+?:\s*Failed to copy:.*?googleapi:\s*"
             r"Error 404:\s*File not found:\s*[^,\s]+\.?,?\s*notFound\s*$",
-            text,
+            line.strip(),
         ))
+
+    @staticmethod
+    def _transfer_progress_marker(line: str) -> tuple[str, str] | None:
+        match = re.search(
+            r"([0-9]+(?:\.[0-9]+)?)\s+[KMGTPE]?i?B\s*/.*?\(xfr#(\d+)",
+            line,
+        )
+        return match.groups() if match else None
 
     @staticmethod
     def _blocked_google_path(log_path: Path) -> str:
