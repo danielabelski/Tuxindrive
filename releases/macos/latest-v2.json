@@ -1,8 +1,8 @@
 {
-  "version": "0.26.60",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.60/TuxInDrive-0.26.60-macos-arm64.dmg",
-  "sha256": "34c374947b35fdd788729dea77e00c813a20e70891f5d086a655275f29b7a336",
-  "notes": "Reliable priority scheduling, queue watchdogs and faster incremental AI backups",
-  "expires_at": "2026-12-27T16:16:16.541452+00:00",
-  "signature": "q8o7JI65atZDlTEnA5ZCKCSTwQ/QvR6rxqdcilQFF2BVdflkO8xElgF4qsCrJ4KZvqDHEzsdk54A+F3OMDOsBg=="
+  "version": "0.26.61",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.61/TuxInDrive-0.26.61-macos-arm64.dmg",
+  "sha256": "23271b89938178f0ad2490a398362aa6fe589c6a3fdf4cc7dd5c4a540f8a82b4",
+  "notes": "Google AI backup destination recovery and bounded no-progress protection",
+  "expires_at": "2026-12-28T07:52:51.839759+00:00",
+  "signature": "8fLwTyOglSXzJ5YkuUt8Rzu/sz3PS4A4pVyXyejM23KKr5sfrp1SAcq69NZMw5ReZMONz2gQ7vOJI11LdlhqCQ=="
 }

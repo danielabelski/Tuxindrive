@@ -1,8 +1,8 @@
 {
-  "version": "0.26.60",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.60/tuxindrive_0.26.60_all.deb",
-  "sha256": "71ff29abda6f6d3402524dd6e91cf71f9e216dd9dfcda0e96bcc11fe9dc04985",
-  "notes": "Reliable priority scheduling, queue watchdogs and faster incremental AI backups",
-  "expires_at": "2026-12-27T16:16:16.387860+00:00",
-  "signature": "OMI0SmnEHZmCOcCCoxxO6MBsd2RsdvWEAhdJetzM0Ss/k9WfpjLM7oTFAqzXk4QmMSbxBUGO/IbluIZvU3IUAA=="
+  "version": "0.26.61",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.61/tuxindrive_0.26.61_all.deb",
+  "sha256": "a9544bfb24cd792b74c95840f1b71709d9d53cb4cc32adf5e6e5843a387e9f0a",
+  "notes": "Google AI backup destination recovery and bounded no-progress protection",
+  "expires_at": "2026-12-28T07:52:51.687775+00:00",
+  "signature": "MkhKPHCx236DSvwgAL3ioMGFZUNp1i4T7NuAzKaBa9flXxDm3Apd8syTTuBPmk3/FVeI++qFBH+2N/nmRB97CQ=="
 }
