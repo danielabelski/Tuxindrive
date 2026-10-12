@@ -1,8 +1,8 @@
 {
-  "version": "0.26.76",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.76/TuxInDrive-0.26.76-android.apk",
-  "sha256": "12084d0b7172a40c55a371c440ee5de3972fcf13af934e8c9639386c0c5bd009",
-  "notes": "Temporary DNS/network recovery with persisted backoff, accurate errors and preserved manual/data-safety gates.",
-  "expires_at": "2027-01-10T18:59:02.605157+00:00",
-  "signature": "4gkU6/skvlXy7+t1WT/aob+JT3GysdpejGt5SyMXFzi92jyJnbz8YaIiCRnB6HMB7D01VLtTkckp4IiRf3lTAw=="
+  "version": "0.26.77",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.77/TuxInDrive-0.26.77-android.apk",
+  "sha256": "8695123b26669a2b51cee840fa72e84b7085a5fdaee54f2c76bf323f73320dea",
+  "notes": "Resilient Gmail attachment indexing with bounded MIME parsing, visible partial-scan warnings and preservation of existing results.",
+  "expires_at": "2027-01-10T20:27:05.409734+00:00",
+  "signature": "DE9KiXeai3GVUBN04j2a/xUdk3ZA7EuzUlBB1qlQdofuRGhB2cRE0up9ONgUjASnfER9rCLKkWFH+bLWfd61DQ=="
 }

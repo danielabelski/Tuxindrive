@@ -1,8 +1,8 @@
 {
-  "version": "0.26.76",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.76/tuxindrive_0.26.76_all.deb",
-  "sha256": "fae8293d8748fedc6a00b50b6d3b29cca7288e6b1f5111ca6a96dfc5fa861960",
-  "notes": "Temporary DNS/network recovery with persisted backoff, accurate errors and preserved manual/data-safety gates.",
-  "expires_at": "2027-01-10T18:59:02.402163+00:00",
-  "signature": "CypVt1fvayVgM5ng+teivPP03ytKovO7t/SYEaaZ9CFm9bNyLW3mW/LdfjDAYsJ7eiwuR9OouU8PDDaGkJIpAQ=="
+  "version": "0.26.77",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.77/tuxindrive_0.26.77_all.deb",
+  "sha256": "8003cb5ff77472444680be4872cc41f039340971c14414ad322856fe7f434089",
+  "notes": "Resilient Gmail attachment indexing with bounded MIME parsing, visible partial-scan warnings and preservation of existing results.",
+  "expires_at": "2027-01-10T20:27:04.974240+00:00",
+  "signature": "0DqzFNJCSwc6/MOI2VhZQnmlXTVyPpYMJLdvVftstX5nHb4Z+J1iEBzfMpEvQaM1rLaP4hu4QG3HLXXhGHn9AA=="
 }

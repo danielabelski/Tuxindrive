@@ -1,8 +1,8 @@
 {
-  "version": "0.26.76",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.76/TuxInDrive-0.26.76-macos-arm64.dmg",
-  "sha256": "6e8108b41089a2dd8b0bfd418760450bf6459f97f491ee94d6d34216b35d287d",
-  "notes": "Temporary DNS/network recovery with persisted backoff, accurate errors and preserved manual/data-safety gates.",
-  "expires_at": "2027-01-10T18:59:02.452270+00:00",
-  "signature": "YHTczNZeeHzVHVDmjXgckdE6LjA75t4fC3C+ZC8qwXfBnsromTDlEjbuwlHzCRKwvfJSgExH+jlYySpn16PUBg=="
+  "version": "0.26.77",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.77/TuxInDrive-0.26.77-macos-arm64.dmg",
+  "sha256": "41612484ef7d91b3726d2f076694696fc30b25b688f3612157894a628c1adca9",
+  "notes": "Resilient Gmail attachment indexing with bounded MIME parsing, visible partial-scan warnings and preservation of existing results.",
+  "expires_at": "2027-01-10T20:27:05.029285+00:00",
+  "signature": "SEu3dQgyksccnCY+UF3dBcOySMLM314IdDxHzF9ZNjC/FGkUi0K/VzdBVtDJixepucECvy/zZ2TaSwjfMYO/Aw=="
 }
