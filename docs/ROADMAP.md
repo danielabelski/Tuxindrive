@@ -7,7 +7,14 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.75
+## Current baseline: 0.26.76
+
+### Implemented in 0.26.76: temporary DNS/network recovery
+
+- Diagnose explicit DNS/transport failures without suggesting account reconnection.
+- Persist capped automatic retry waits across restarts and gate callbacks too.
+- Keep manual pauses, manual-only backups and hard data-safety failures protected.
+- Require one explicit retry for jobs already disabled by an older release.
 
 ### Implemented in 0.26.75: simple sign-in and visible mail indexing
 

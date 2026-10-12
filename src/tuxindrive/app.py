@@ -110,6 +110,7 @@ from .mail_connectors import MailClient, safe_message_url
 from .mail_index import MailSearchIndex, MailSearchResult
 from .file_preview import PreviewData, PreviewError, preview_path
 from .error_details import details_for_job
+from .network_recovery import plan_network_retry, retry_wait_seconds
 from .live_log import newest_first_log
 from .recovery_advisor import advice_for_error
 from .managed_policy import ManagedPolicy, load_managed_policy
@@ -7492,6 +7493,12 @@ class TuxInDriveApplication(Gtk.Application):
         quiet: bool = False,
         decision: PolicyDecision | None = None,
     ) -> None:
+        if quiet and (not job.enabled or not job.allows_automatic_runs):
+            return
+        if quiet and retry_wait_seconds(job, datetime.now(timezone.utc)) > 0:
+            return
+        if not quiet:
+            job.clear_failures()
         self.engine.configure_jobs(self.config.jobs, self.config.accounts)
         if not job.enabled and not quiet:
             job.enabled = True
@@ -7646,6 +7653,7 @@ class TuxInDriveApplication(Gtk.Application):
             job.clear_failures()
         elif not result.cancelled:
             failure_count = job.record_failure(result.message)
+        network_failure = plan_network_retry(job, result, now)
         if result.requires_resync:
             job.initialized = False
             job.enabled = False
@@ -7670,7 +7678,7 @@ class TuxInDriveApplication(Gtk.Application):
                 f"downloads.{recovery}"
             )
             job.last_error = job.last_status
-        if failure_count >= 3 and job.enabled:
+        if failure_count >= 3 and job.enabled and not network_failure:
             job.enabled = False
             job.last_status = (
                 f"{result.message} Automatic sync paused after 3 identical "
@@ -7751,7 +7759,8 @@ class TuxInDriveApplication(Gtk.Application):
                 else:
                     self.window.message(f"{job.name}: {job.last_status}", Gtk.MessageType.ERROR)
         if (not result.incremental or not result.success) and not result.cancelled:
-            self.notify(job.name, result.message)
+            if not network_failure or job.network_failures <= 1:
+                self.notify(job.name, job.last_status if network_failure else result.message)
         return False
 
     def _retry_mount(self, job_id: str) -> bool:
@@ -7816,19 +7825,21 @@ class TuxInDriveApplication(Gtk.Application):
                 or job.id in self.engine.running_jobs
             ):
                 continue
+            if retry_wait_seconds(job, now) > 0:
+                continue
             baseline = self._last_full_completed.get(job.id) or self._last_started.get(job.id)
             if baseline is None and job.last_run:
                 baseline = persisted_run_time(job.last_run, now)
                 if baseline is None:
                     LOGGER.warning("Ignoring invalid persisted last_run for job %s", job.id)
-            due = baseline is None or (now - baseline).total_seconds() >= job.interval_minutes * 60
+            due = bool(job.network_retry_at) or baseline is None or (now - baseline).total_seconds() >= job.interval_minutes * 60
             # A healthy callback already preserves the configured remote scan
             # latency. Keep full bisync as an hourly safety checkpoint instead
             # of duplicating the same recursive provider traversal every tick.
-            if due and self.engine.callback_healthy(job.id) and baseline is not None:
+            if due and not job.network_retry_at and self.engine.callback_healthy(job.id) and baseline is not None:
                 due = (now - baseline).total_seconds() >= 3600
             if (
-                due and job.initialized and job.realtime_sync
+                due and not job.network_retry_at and job.initialized and job.realtime_sync
                 and self.engine.has_durable_bisync_baseline(job)
                 and self._runtime_ready_monotonic
                 and monotonic - self._runtime_ready_monotonic < 120

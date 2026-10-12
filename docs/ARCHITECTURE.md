@@ -214,6 +214,15 @@ constrains provider availability, bandwidth, content indexing, cloud copy and
 audit export. `recovery_advisor.py` maps persisted redacted failures to offline
 operator guidance; it does not probe providers while an error dialog opens.
 
+`network_recovery.py` recognizes explicit temporary transport errors from a
+bounded current-attempt log tail, with permanent/safety errors taking precedence.
+The engine reports a failed preview's real cause without launching a transfer.
+The desktop controller persists capped backoff in `SyncJob.network_failures`
+and `network_retry_at`, keeps ordinary automatic jobs enabled, and routes due
+retries through the existing policy/admission queue. Both scheduler and callback
+paths enforce the wait; manual Sync now may clear it. Disabled/manual-only jobs
+are never implicitly resumed, and hard safety flags do not use this retry path.
+
 ### Incremental callbacks
 
 `callbacks.py` combines event-driven local monitoring with adaptive remote

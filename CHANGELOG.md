@@ -2,6 +2,21 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.76 — automatic recovery from temporary DNS/network failures
+
+- Show the real DNS/connection cause when the safety preview fails, instead of
+  hiding it behind a generic preview message or suggesting OAuth reconnection.
+- Keep automatic desktop sync jobs enabled during explicit temporary transport
+  failures and retry after 1, 2, 5, 10, then 15 minutes, capped at 15 minutes.
+  Persist the wait across restarts and apply it to both full and incremental work.
+- Keep manual pauses and manual-only AI backups manual. Previously disabled
+  jobs require one explicit Sync now; an upgrade does not silently enable them.
+- Preserve the three-failure stop for other errors and all integrity, deletion,
+  baseline, permission and authorization safety gates. Never reset the baseline
+  or start the real transfer after a failed safety preview.
+- Bound failure-log reads to the current attempt and avoid repeated identical
+  network-error notifications while retaining job-card and tray error details.
+
 ## 0.26.75 — simpler mail sign-in and visible attachment indexing
 
 - Reuse an existing, unambiguous Gmail application configuration on this

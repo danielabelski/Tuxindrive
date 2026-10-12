@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from .network_recovery import transient_network_issue
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +95,15 @@ _RULES: tuple[tuple[re.Pattern[str], RecoveryAdvice], ...] = (
 def advice_for_error(reason: str, excerpt: str = "") -> RecoveryAdvice:
     """Return bounded, provider-independent guidance without network access."""
     text = f"{reason}\n{excerpt}"[:32_000]
+    issue = transient_network_issue(text)
+    if issue is not None:
+        return RecoveryAdvice(
+            issue.code,
+            "Restore DNS/network connectivity; keep the account connected",
+            issue.summary + ". This does not mean the provider rejected your credentials.",
+            ("Check the network's DNS resolver and any configured VPN; do not delete credentials or reset sync state.",
+             "Automatic folders retry with backoff. For a manually paused folder or manual-only backup, choose Sync now when connectivity returns."),
+        )
     for pattern, advice in _RULES:
         if pattern.search(text):
             return advice

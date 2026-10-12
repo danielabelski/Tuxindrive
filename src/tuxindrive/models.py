@@ -463,6 +463,8 @@ class SyncJob:
     last_error_log: str = ""
     consecutive_failures: int = 0
     last_failure_signature: str = ""
+    network_failures: int = 0
+    network_retry_at: str = ""
 
     @property
     def remote_spec(self) -> str:
@@ -592,6 +594,8 @@ class SyncJob:
     def clear_failures(self) -> None:
         self.consecutive_failures = 0
         self.last_failure_signature = ""
+        self.network_failures = 0
+        self.network_retry_at = ""
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "SyncJob":
@@ -627,6 +631,8 @@ class SyncJob:
             and all(char in "0123456789abcdef" for char in signature)
             else ""
         )
+        data["network_failures"] = min(5, max(0, int(data.get("network_failures", 0) or 0)))
+        data["network_retry_at"] = str(data.get("network_retry_at", "") or "")[:100]
         allowed = set(cls.__dataclass_fields__)
         return cls(**{key: item for key, item in data.items() if key in allowed})
 

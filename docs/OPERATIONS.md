@@ -136,6 +136,34 @@ DNS, proxy, or local policy.
 
 ## Synchronization recovery
 
+### Temporary DNS or network failure
+
+From 0.26.76, explicit DNS lookup failures and temporary transport failures
+remain separate from rejected credentials. An error such as `lookup
+oauth2.googleapis.com on 127.0.0.53:53: server misbehaving` means the request
+could not reach Google's authorization server; it does not prove that Google
+rejected the token. Inspect the network's DNS resolver, router or VPN rather
+than deleting credentials or synchronization state.
+
+Ordinary enabled desktop jobs retry after 1, 2, 5, 10, then 15 minutes. Later
+attempts stay capped at 15 minutes; the scheduled wait survives app restarts.
+The 30-second scheduler admits at most one automatic job per tick and still
+respects bandwidth, battery, metered-network and schedule policy. Incremental
+callbacks cannot bypass the wait. Job cards show the next local retry time;
+repeated identical network failures do not repeatedly notify the desktop.
+
+**Sync now** explicitly bypasses a wait and resets its counters. Disabled jobs
+and manual-only AI backups do not start automatically. For folders disabled
+by an older release's three-failure rule, choose **Sync now** once after
+connectivity returns. An upgrade deliberately does not re-enable old disabled
+jobs, because that state can also represent an explicit user pause.
+
+The real transfer is never started after a failed safety preview. Authentication,
+permissions, integrity failures, suspicious bulk changes and missing baselines
+retain their existing safety handling. Streaming mounts use their separate
+mount-reconnection lifecycle. This change does not modify system DNS settings
+or resolve the separate retirement of rclone's shared Google Drive OAuth client.
+
 ### Safety preview blocks a run
 
 Review the proposed count and direction. Confirm that the local and cloud

@@ -843,6 +843,39 @@ class SyncEngineCommandTests(unittest.TestCase):
             terminate.assert_called_once_with(process)
             self.assertIn("No provider output", preview.read_text(encoding="utf-8"))
 
+    def test_dns_preview_failure_reports_cause_and_never_starts_real_sync(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {"XDG_DATA_HOME": f"{temporary}/data"},
+        ):
+            job = SyncJob("cloud", f"{temporary}/local", initialized=True)
+            Path(job.local_path).mkdir()
+            workdir = self.engine._prepare_bisync_workdir(job)
+            (workdir / "sync.path1.lst").write_text("local", encoding="utf-8")
+            (workdir / "sync.path2.lst").write_text("remote", encoding="utf-8")
+            completed = []
+
+            def fail_preview(_command, preview_path):
+                preview_path.write_text(
+                    "ERROR: couldn't fetch token: lookup oauth2.googleapis.com "
+                    "on 127.0.0.53:53: server misbehaving\n"
+                    "Bisync aborted. Error is retryable without --resync due to --resilient mode.\n",
+                    encoding="utf-8",
+                )
+                return 1
+
+            with patch("tuxindrive.engine.resolve_rclone", return_value="rclone"), \
+                 patch.object(self.engine, "_run_safety_preview", side_effect=fail_preview), \
+                 patch("tuxindrive.engine.subprocess.Popen") as transfer:
+                self.engine._run_worker(job, Path(temporary) / "sync.log", completed.append, False)
+            transfer.assert_not_called()
+            self.assertEqual(len(completed), 1)
+            self.assertTrue(completed[0].transient_network_failure)
+            self.assertIn("DNS lookup failed for oauth2.googleapis.com", completed[0].message)
+            self.assertFalse(completed[0].requires_resync)
+            self.assertTrue(job.initialized)
+            self.assertTrue((workdir / "sync.path1.lst").exists())
+            self.assertTrue((workdir / "sync.path2.lst").exists())
+
     def test_safety_preview_uses_verified_baseline_without_walking_local_tree(self):
         with tempfile.TemporaryDirectory() as temporary, patch.dict(
             os.environ, {"XDG_DATA_HOME": f"{temporary}/data"},

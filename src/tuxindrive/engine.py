@@ -39,6 +39,7 @@ from .process_control import new_process_group, spawn_process, stop_process, ter
 from .file_permissions import private_descriptor
 from .bandwidth import GlobalBandwidthController
 from .error_details import redact_error_text
+from .network_recovery import log_network_issue, retry_wait_seconds, transient_network_issue
 
 
 @dataclass(slots=True)
@@ -59,6 +60,7 @@ class JobResult:
     lease_blocked: bool = False
     network_sessions: int = 0
     payload_bytes: int = 0
+    transient_network_failure: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -2053,6 +2055,10 @@ class SyncEngine:
         changes: list[FileChange],
         callback: Callable[[JobResult], None],
     ) -> bool:
+        if not job.enabled or not job.allows_automatic_runs or retry_wait_seconds(
+            job, datetime.now(timezone.utc)
+        ) > 0:
+            return False
         with self._lock:
             if (
                 job.id in self._processes
@@ -2463,7 +2469,16 @@ class SyncEngine:
                         auto_reinitialize = True
                         failure_log_path = log_path
                     else:
-                        raise RuntimeError("the safety preview could not be completed; the real sync was not started")
+                        issue = log_network_issue(preview_path)
+                        detail, source = self._failure_diagnostic(preview_path, preview_returncode)
+                        callback(JobResult(
+                            job.id, False,
+                            "Synchronization could not start: the safety preview could not be completed; "
+                            "the real sync was not started. " + (issue.summary if issue else detail),
+                            preview_path, error_source="provider connection" if issue else source,
+                            transient_network_failure=issue is not None,
+                        ))
+                        return
                 else:
                     failure_log_path = log_path
                     # Never recursively walk the live local tree while holding
@@ -2754,8 +2769,12 @@ class SyncEngine:
                     error_source, message = integrity_issue
                 else:
                     message, error_source = self._failure_diagnostic(
-                        log_path, return_code
+                        log_path, return_code, run_log_offset
                     )
+                network_issue = log_network_issue(log_path, run_log_offset)
+                if network_issue is not None and integrity_issue is None and not requires_resync:
+                    message = f"Synchronization interrupted: {network_issue.summary}"
+                    error_source = "provider connection"
                 result = JobResult(
                     job.id,
                     False,
@@ -2765,13 +2784,15 @@ class SyncEngine:
                     blocked_path=blocked_path,
                     error_source=error_source,
                     integrity_blocked=integrity_issue is not None,
+                    transient_network_failure=network_issue is not None,
                 )
         except (OSError, RuntimeError) as exc:
             result = JobResult(
                 job.id,
                 False,
-                f"Synchronization could not start: {exc}",
+                f"Synchronization could not start: {redact_error_text(str(exc))}",
                 failure_log_path,
+                transient_network_failure=transient_network_issue(str(exc)) is not None,
             )
         finally:
             with self._lock:
@@ -3128,10 +3149,17 @@ class SyncEngine:
         return SyncEngine._failure_diagnostic(log_path, return_code)[0]
 
     @staticmethod
-    def _failure_diagnostic(log_path: Path, return_code: int) -> tuple[str, str]:
+    def _failure_diagnostic(log_path: Path, return_code: int, offset: int = 0) -> tuple[str, str]:
         try:
-            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        except OSError:
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                start = max(max(0, offset), handle.tell() - 64 * 1024)
+                handle.seek(start)
+                raw = handle.read(64 * 1024)
+            if start > offset:
+                raw = raw.split(b"\n", 1)[-1]
+            lines = raw.decode("utf-8", errors="replace").splitlines()
+        except (OSError, ValueError):
             lines = []
         ansi = re.compile(r"\x1b\[[0-9;]*m")
         cleaned_lines = [ansi.sub("", line).strip() for line in lines[-2000:]]

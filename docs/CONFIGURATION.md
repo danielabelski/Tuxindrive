@@ -75,6 +75,14 @@ defined by the current model, which provides forward-compatible upgrades.
 Enumerated values are strict; malformed configuration is rejected. Runtime
 job state (`initialized`, last run/status/error) is persisted with the job.
 
+From 0.26.76, `network_failures` (0–5) and `network_retry_at` (an aware ISO
+timestamp, empty by default) persist temporary transport-failure backoff.
+The fixed retry sequence is 60, 120, 300, 600 and 900 seconds. Success, explicit
+Sync now, cancellation or a non-network failure clears this state. Invalid
+timestamps or a clock jump beyond the maximum wait cannot block work forever.
+These fields never authorize re-enabling a disabled job or running a manual-only
+backup. Streaming mounts continue to use their separate lifecycle policy.
+
 ## Application settings
 
 | Field | Default | Meaning |

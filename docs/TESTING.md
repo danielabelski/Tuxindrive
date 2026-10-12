@@ -25,7 +25,7 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The source defines **663 unit checks: 649 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Fourteen Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and 0.26.71 Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The source defines **695 unit checks: 681 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-four Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 The credential/backup regressions use synthetic data and cover mocked timeout
 cleanup, no key replacement on credential-store failure,
@@ -39,6 +39,17 @@ PYTHONPATH=src TUXINDRIVE_TEST_RCLONE=/absolute/path/to/rclone \
 ```
 
 No live cloud account or personal chat files are used by these regressions.
+
+### Temporary DNS/network recovery (0.26.76)
+
+`tests.test_network_recovery` and the focused preview regression in
+`tests.test_engine` cover DNS failures during token refresh, cross-platform
+transport messages, permanent-error precedence, capped persisted backoff,
+clock validation, manual pause/manual-only behavior, success/cancellation,
+current-attempt bounded logs, callback admission and actual desktop controller
+methods without GTK startup. A failed preview must never launch the real sync
+or alter valid bisync baselines. Generic unknown/authentication errors still
+follow the three-failure safety stop. No live cloud credentials are used.
 
 ### Mail integration: synthetic data and explicit live-validation boundary
 
@@ -132,7 +143,8 @@ directories; cloud synchronization is never started.
 | `test_delta.py` | 1 | Rolling BLAKE2 block signatures identify only modified ranges and calculate transferred bytes. |
 | `test_diagnostics.py` | 1 | Startup failures are written before GTK imports, allowing diagnosis when the graphical runtime cannot start. |
 | `test_platform_support.py` | 5 | Safe distribution parsing, Linux/macOS/Windows machine-readable capabilities and unsupported-architecture blocking. |
-| `test_engine.py` | 97 | Full and incremental modes, atomic reservation, non-blocking mount startup, aggregate streaming budgets, global rates/admission, jitter/backoff, deletion/conflict safety, streaming/mount recovery, owned mount shutdown, offline hydration, marker confinement, symlink rejection and engine replacement. |
+| `test_engine.py` | 98 | Full and incremental modes, atomic reservation, non-blocking mount startup, aggregate streaming budgets, global rates/admission, jitter/backoff, deletion/conflict safety, streaming/mount recovery, owned mount shutdown, offline hydration, marker confinement, symlink rejection and engine replacement. |
+| `test_network_recovery.py` | 18 | Conservative DNS/transport classification, safety precedence, persisted capped backoff, manual-only/pause boundaries, current-run log tails and actual controller/callback admission. |
 | `test_file_preview.py` | 13 | Default-local bounded text/image/document previews, no-follow reads, folder non-enumeration, UTF handling, archive traversal/ZIP-bomb rejection, and shell-free page/time-limited PDF extraction. |
 | `test_github_sync.py` | 6 | Credential-free GitHub URL/branch/item safety, redirect migration, global admission and guarded commit/fetch/rebase/push orchestration. |
 | `test_folder_layout.py` | 11 | Persistent selection during asynchronous cloud-tree loading, safe account-switch defaults, before/after drag ordering, cross-group moves, group-header append, Ungrouped fallback, self-drop handling, endpoint-path preservation, GTK text-payload round-trip and malformed-payload rejection. |
