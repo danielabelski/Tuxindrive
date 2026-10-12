@@ -25,7 +25,7 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The source defines **695 unit checks: 681 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-four Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The source defines **712 unit checks: 698 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-four Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 The credential/backup regressions use synthetic data and cover mocked timeout
 cleanup, no key replacement on credential-store failure,
@@ -52,6 +52,15 @@ or alter valid bisync baselines. Generic unknown/authentication errors still
 follow the three-failure safety stop. No live cloud credentials are used.
 
 ### Mail integration: synthetic data and explicit live-validation boundary
+
+The 0.26.77 MIME regressions cover unreadable messages between valid messages,
+message-atomic staging, opaque/empty MIME bodies, deeper projections and their
+boundary sentinel, bounded depth/part counts, malformed metadata, message-limit
+accounting, unsuppressed network/quota/authentication/cancellation errors,
+wrong-message identity, partial-index retention, warning persistence, safe old
+schema migration, and actual account-card/dialog functions without GTK startup.
+One maintainer-mailbox metadata request validates the deeper projection syntax;
+it is not evidence of a full scan or all-account compatibility.
 
 The mail extension through 0.26.75 includes 46 offline checks for read-only OAuth/PKCE,
 callback state validation, native-token storage, safe provider/pagination URLs,
@@ -152,7 +161,7 @@ directories; cloud synchronization is never started.
 | `test_tray.py` | 8 | Animation frames, paused-job alerts, credential redaction, bounded summaries, runtime failures, and unresolved-error priority over successful or active transfers. |
 | `test_tray_gtk.py` | 4 | Opt-in real GTK summaries in both menus, overflow activation, direct Error details routing, rename/resolution refresh and runtime failures. |
 | `test_migration.py` | 9 | AES-GCM profile round trips, wrong-password/tamper rejection, visible and legacy cloud discovery/migration, complete unlock-key handoff, compact mobile export, secret opt-in, private permissions and validation. |
-| `test_mail_attachments.py` | 40 | Offline read-only OAuth/PKCE and state checks, public Microsoft client defaults, native-token persistence, metadata-only Gmail/Graph projection, provider-origin and URL confinement, response/download budgets, reusable text, per-account private indexes, cancellation and partial-scan retention. |
+| `test_mail_attachments.py` | 63 | Offline read-only OAuth/PKCE and state checks, public Microsoft client defaults, native-token persistence, metadata-only Gmail/Graph projection, provider-origin and URL confinement, response/download budgets, reusable text, per-account private indexes, cancellation and partial-scan retention. |
 | `test_mail_gtk.py` | 4 | Opt-in isolated actual dialogs: no implicit browser/token access, visible options applied before refresh, text disable/purge, offline mail results and original-message navigation with synthetic accounts. |
 | `test_offline_action.py` | 9 | Mounted-drive fast dispatch, cold-start queuing, both supported command-line availability option forms, lexical file routing without FUSE resolution, sibling-prefix rejection, exact file-rule isolation, nested offline/online-only precedence, and green-state publication only for locally verified rules. |
 | `test_nautilus_extension.py` | 12 | Exact path/menu isolation, cached/coalesced badge refresh, URI lifecycle, Nautilus 4.1 construction, sensitivity and verified offline transitions. |

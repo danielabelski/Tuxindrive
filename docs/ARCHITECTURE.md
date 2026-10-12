@@ -79,7 +79,13 @@ loopback callback and native-only credential storage), `mail_connectors.py`
 (bounded read-only Gmail/Graph metadata and opt-in bytes), and `mail_index.py`
 (private separate SQLite cache and literal Unicode search). Only explicit
 mailbox refresh contacts providers. Complete scans prune stale rows;
-failed/cancelled or limited scans preserve previous metadata. One refresh/
+failed/cancelled or limited scans preserve previous metadata. From 0.26.77,
+Gmail MIME parsing stages each message atomically and isolates unreadable
+messages from valid results. Skipped-message counts force incomplete scan
+semantics (no stale-row deletion), migrate into the private scan-state table,
+and persist into dialog/account-card warnings. Transport/authentication errors
+remain fatal. Metadata projection/traversal uses 32-level and 2,048-part limits
+with a terminal child sentinel. One refresh/
 maintenance lock prevents late work from resurrecting removed accounts/text.
 The GUI merges offline results and validates provider message URLs before
 opening them. Mail account settings are separate from sync jobs and profile

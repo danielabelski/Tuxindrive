@@ -145,6 +145,13 @@ distinguishes a missing scan from one that found no attachments; limited scans
 report that more history may remain. Live Microsoft metadata indexing has been
 checked on one mailbox, not every organization or shared-mailbox setup.
 
+**From 0.26.77:** Gmail indexing continues past unreadable messages instead of
+aborting the entire refresh. **Partial scan: N unreadable message(s) skipped**
+means valid results were indexed, but old entries were retained without pruning.
+The warning persists on the account card; run **Index attachments now** again
+to retry skipped messages. A partial zero-result scan does not mean an empty
+mailbox. Authorization, quota and network failures still stop safely.
+
 **Added in 0.26.71 desktop builds:** search now also offers **Mail
 accounts** and the **Files and mail / Synchronized files / Mail attachments**
 scope selector. Gmail/Microsoft 365 indexing requires separate read-only OAuth
@@ -887,10 +894,10 @@ Reinstall the current package with `sudo apt install ./tuxindrive_0.26.61_all.de
 - Do not point multiple normal jobs at overlapping local folders.
 - Removing a TuxInDrive job does not delete its local or cloud files.
 
-### Security upgrade checklist for 0.26.76
+### Security upgrade checklist for 0.26.77
 
-1. Install `tuxindrive_0.26.76_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
-2. Confirm **Settings → Check for updates** reports 0.26.76 and no signature or expiry error.
+1. Install `tuxindrive_0.26.77_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
+2. Confirm **Settings → Check for updates** reports 0.26.77 and no signature or expiry error.
 3. Reconnect only when the provider actually rejects authorization, not for DNS failures. pCloud requires the Client ID and secret of an approved pCloud application because its shared rclone OAuth application was revoked. Verify that `~/.config/rclone/rclone.conf` is encrypted and mode `0600`; do not print or upload it.
 4. Confirm the `TuxInDrive rclone configuration` entry exists in GNOME Passwords and Keys/Secret Service. Do not delete it without an export/recovery plan.
 5. Review peer invitations, revoke unused device and Onion credentials, and exchange replacements through an authenticated channel when compromise is suspected.

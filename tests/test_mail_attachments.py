@@ -1,11 +1,15 @@
 from tests import signal_safety as _signal_safety  # noqa: F401
 
+import ast
 import base64
 import io
 import json
+import sqlite3
 import tempfile
 import time
+import threading
 import unittest
+from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
 from threading import Event, Thread
@@ -17,11 +21,14 @@ from urllib.request import Request
 
 from tuxindrive.mail_auth import (
     GMAIL_SCOPE, GRAPH_SCOPE, MICROSOFT_MAIL_CLIENT_ID, MailAccount, MailAccountStore, MailAuthorization,
-    MailCancelled, MailError, MailTokenStore, NoRedirect, authorization_parameters,
+    MailCancelled, MailError, MailProvider, MailTokenStore, NoRedirect, authorization_parameters,
     _grant, configured_gmail_application, default_mail_client_id, http_bytes, valid_callback,
 )
-from tuxindrive.mail_connectors import MailAttachment, MailClient, MailScan, _gmail_fields, safe_message_url
-from tuxindrive.mail_index import MailSearchIndex
+from tuxindrive.mail_connectors import (
+    MAX_MIME_DEPTH, MAX_MIME_PARTS, MailAttachment, MailClient, MailScan,
+    _gmail_fields, safe_message_url,
+)
+from tuxindrive.mail_index import MailIndexState, MailIndexStats, MailSearchIndex
 
 
 GMAIL = MailAccount("a" * 32, "gmail", "Personal mail", "desktop.apps.googleusercontent.com")
@@ -270,7 +277,8 @@ class MailConnectorTests(unittest.TestCase):
             "mimeType": "multipart/mixed", "headers": [{"name": "Subject", "value": "Bill"}],
             "parts": [{"partId": "1", "filename": "invoice.pdf", "mimeType": "application/pdf",
                        "body": {"attachmentId": "file", "size": 5}},
-                      {"partId": "2", "filename": "logo.png", "headers": [{"name": "Content-Disposition", "value": "inline"}],
+                      {"partId": "2", "filename": "logo.png", "mimeType": "image/png",
+                       "headers": [{"name": "Content-Disposition", "value": "inline"}],
                        "body": {"attachmentId": "logo", "size": 10}}]}}
         with patch.object(client, "_json", side_effect=[{"emailAddress": "actual@example.invalid"},
                           {"messages": [{"id": "one"}]}, message]) as request:
@@ -367,6 +375,218 @@ class MailConnectorTests(unittest.TestCase):
             with self.assertRaises(MailError):
                 safe_message_url(url, "gmail")
         self.assertEqual(safe_message_url(attachment().message_url, "gmail"), attachment().message_url)
+
+
+class MailMimeRecoveryTests(unittest.TestCase):
+    @staticmethod
+    def message(identifier="good", **changes):
+        item = {"id": identifier, "threadId": identifier, "payload": {
+            "mimeType": "multipart/mixed", "body": {"size": 0},
+            "parts": [{"partId": "1", "filename": "good.txt", "mimeType": "text/plain",
+                       "body": {"attachmentId": "file", "size": 3}}]}}
+        item.update(changes)
+        return item
+
+    def scan(self, messages, *, account=GMAIL, next_page="", failure=None):
+        client = MailClient(account, Mock())
+        progress = Mock()
+        page = {"messages": [{"id": item["id"]} for item in messages]}
+        if next_page:
+            page["nextPageToken"] = next_page
+        responses = [{"emailAddress": "synthetic@example.invalid"}, page, *messages]
+        if failure:
+            responses[-1] = failure
+        with patch.object(client, "_json", side_effect=responses) as request:
+            scan = client.scan(progress)
+        return scan, progress, request
+
+    def test_bad_message_between_valid_messages_is_skipped_without_losing_valid_rows(self):
+        bad = self.message("bad", payload={"mimeType": "multipart/mixed", "body": {"size": 10}})
+        scan, progress, _ = self.scan([self.message("before"), bad, self.message("after")])
+        self.assertEqual([item.message_id for item in scan.attachments], ["before", "after"])
+        self.assertEqual((scan.messages, scan.skipped_messages, scan.complete), (3, 1, False))
+        self.assertEqual(progress.call_count, 3)
+
+    def test_partially_parsed_bad_message_does_not_leak_its_valid_sibling(self):
+        bad = self.message("bad")
+        bad["payload"]["parts"].append({"mimeType": "multipart/mixed", "body": {"size": 10}})
+        scan, _, _ = self.scan([bad, self.message()])
+        self.assertEqual([item.message_id for item in scan.attachments], ["good"])
+        self.assertEqual(scan.skipped_messages, 1)
+
+    def test_named_opaque_mime_attachment_and_empty_container_are_accepted(self):
+        opaque = self.message("opaque", payload={"partId": "1", "filename": "attached.mime",
+                              "mimeType": "multipart/mixed", "body": {"attachmentId": "external", "size": 10}})
+        inline = self.message("inline", payload={"partId": "1", "filename": "inline.mime",
+                              "mimeType": "multipart/mixed", "body": {"size": 10}})
+        empty = self.message("empty", payload={"mimeType": "multipart/mixed", "body": {"size": 0}})
+        scan, _, request = self.scan([opaque, inline, empty])
+        self.assertEqual([item.attachment_id for item in scan.attachments], ["external", "part:1"])
+        self.assertEqual((scan.messages, scan.skipped_messages, scan.complete), (3, 0, True))
+        self.assertTrue(all("data" not in call.kwargs.get("params", {}).get("fields", "")
+                            for call in request.call_args_list))
+
+    def test_deeper_valid_mime_tree_is_supported_and_projection_has_boundary_sentinel(self):
+        payload = self.message()["payload"]
+        for _ in range(15):
+            payload = {"mimeType": "multipart/mixed", "body": {"size": 0}, "parts": [payload]}
+        scan, _, _ = self.scan([self.message(payload=payload)])
+        self.assertEqual(len(scan.attachments), 1)
+        self.assertTrue(scan.complete)
+        self.assertIn("parts(partId,mimeType)", _gmail_fields())
+        self.assertNotIn("data", _gmail_fields())
+        self.assertIn("data", _gmail_fields(content=True))
+
+    def test_mime_depth_and_part_budgets_skip_only_the_unreadable_message(self):
+        deep = self.message()["payload"]
+        for _ in range(MAX_MIME_DEPTH + 1):
+            deep = {"mimeType": "multipart/mixed", "parts": [deep]}
+        wide = {"mimeType": "multipart/mixed", "parts": [{"mimeType": "text/plain"}] * MAX_MIME_PARTS}
+        for payload in (deep, wide):
+            with self.subTest(kind="deep" if payload is deep else "wide"):
+                scan, _, _ = self.scan([self.message("bad", payload=payload), self.message()])
+                self.assertEqual((len(scan.attachments), scan.skipped_messages, scan.complete), (1, 1, False))
+
+    def test_invalid_mime_collections_bodies_headers_and_sizes_are_isolated(self):
+        invalid = [None, {}, {"mimeType": "multipart/mixed", "parts": None},
+                   {"mimeType": "text/plain", "body": []},
+                   {"mimeType": "text/plain", "headers": [None]},
+                   {"mimeType": "text/plain", "filename": "bad.txt", "partId": "1", "body": {"size": -1}},
+                   {"mimeType": "multipart/mixed", "filename": "bad.mime", "partId": "1", "body": {}}]
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                scan, _, _ = self.scan([self.message("bad", payload=payload), self.message()])
+                self.assertEqual((len(scan.attachments), scan.skipped_messages), (1, 1))
+
+    def test_skipped_messages_count_toward_configured_scan_limit(self):
+        account = replace(GMAIL, max_messages=2)
+        bad = self.message("bad", payload={})
+        scan, progress, request = self.scan([bad, bad, self.message()], account=account, next_page="next")
+        self.assertEqual((scan.messages, scan.skipped_messages, scan.complete), (2, 2, False))
+        self.assertEqual(progress.call_count, 2)
+        self.assertEqual(request.call_count, 4)
+
+    def test_transport_quota_permissions_and_cancellation_are_not_skipped(self):
+        for error in (MailError("synthetic network error"), MailError("synthetic rate limit"),
+                      MailError("synthetic permission error"), MailCancelled("synthetic cancellation")):
+            with self.subTest(error=error), self.assertRaises(type(error)):
+                self.scan([self.message("first"), self.message("second")], failure=error)
+
+    def test_wrong_message_identity_still_fails_closed(self):
+        client = MailClient(GMAIL, Mock())
+        with patch.object(client, "_json", side_effect=[{"emailAddress": "synthetic@example.invalid"},
+                          {"messages": [{"id": "expected"}]}, self.message("wrong")]), self.assertRaises(MailError):
+            client.scan()
+
+    def test_partial_scan_commits_valid_rows_retains_old_rows_and_persists_warning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = MailSearchIndex(Path(directory) / "mail.sqlite3")
+            index.refresh(GMAIL, SyntheticClient(items=[attachment(message_id="old")]))
+            client = SyntheticClient()
+            scan = MailScan((attachment(message_id="new"),), 2, False, 1)
+            with patch.object(client, "scan", return_value=scan):
+                stats = index.refresh(GMAIL, client)
+            self.assertEqual((stats.indexed, stats.removed, stats.skipped_messages, stats.complete), (1, 0, 1, False))
+            reopened = MailSearchIndex(index.path)
+            self.assertEqual(reopened.count(GMAIL.id), 2)
+            self.assertEqual((reopened.last_scan(GMAIL.id).skipped_messages, reopened.last_scan(GMAIL.id).complete), (1, False))
+            healthy = reopened.refresh(GMAIL, SyntheticClient(items=[attachment(message_id="new")]))
+            self.assertEqual((healthy.removed, healthy.skipped_messages, healthy.complete), (1, 0, True))
+
+    def test_skip_warning_cannot_prune_old_rows_even_if_client_claims_complete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = MailSearchIndex(Path(directory) / "mail.sqlite3")
+            index.refresh(GMAIL, SyntheticClient())
+            client = SyntheticClient()
+            with patch.object(client, "scan", return_value=MailScan((), 1, True, 1)):
+                stats = index.refresh(GMAIL, client)
+            self.assertEqual((index.count(), stats.removed, stats.complete), (1, 0, False))
+
+    def test_first_index_populates_valid_messages_after_an_unreadable_message(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = MailSearchIndex(Path(directory) / "mail.sqlite3")
+            client = MailClient(GMAIL, Mock())
+            responses = [{"emailAddress": "synthetic@example.invalid"},
+                         {"messages": [{"id": "bad"}, {"id": "good"}]},
+                         self.message("bad", payload={}), self.message()]
+            with patch.object(client, "_json", side_effect=responses), patch.object(client, "download") as download:
+                stats = index.refresh(GMAIL, client)
+            self.assertEqual((index.count(), stats.indexed, stats.skipped_messages, stats.complete), (1, 1, 1, False))
+            self.assertEqual(len(index.search("good.txt")), 1)
+            download.assert_not_called()
+
+    def test_invalid_skipped_counts_preserve_previous_rows_and_scan_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = MailSearchIndex(Path(directory) / "mail.sqlite3")
+            index.refresh(GMAIL, SyntheticClient())
+            previous = index.last_scan(GMAIL.id)
+            client = SyntheticClient()
+            for count in (-1, True, 3):
+                with self.subTest(count=count), patch.object(client, "scan", return_value=MailScan((), 2, True, count)), self.assertRaises(MailError):
+                    index.refresh(GMAIL, client)
+                self.assertEqual(index.count(), 1)
+                self.assertEqual(index.last_scan(GMAIL.id), previous)
+
+    def test_previous_scan_schema_migrates_without_losing_metadata_or_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mail.sqlite3"
+            with closing(sqlite3.connect(path)) as connection, connection:
+                connection.execute("CREATE TABLE mail_scan_state(account_id TEXT PRIMARY KEY, completed_at REAL NOT NULL, messages INTEGER NOT NULL, complete INTEGER NOT NULL, days INTEGER NOT NULL, max_messages INTEGER NOT NULL)")
+                connection.execute("INSERT INTO mail_scan_state VALUES(?,?,?,?,?,?)", (GMAIL.id, 123, 7, 1, 365, 2000))
+            index = MailSearchIndex(path)
+            state = index.last_scan(GMAIL.id)
+            self.assertEqual((state.completed_at, state.messages, state.complete, state.skipped_messages), (123, 7, True, 0))
+            index.refresh(GMAIL, SyntheticClient())
+            self.assertEqual(index.count(), 1)
+
+    @staticmethod
+    def app_function(name, *, class_name=None, extra=None):
+        source = Path(__file__).resolve().parents[1] / "src/tuxindrive/app.py"
+        tree = ast.parse(source.read_text())
+        parent = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == class_name) if class_name else tree
+        node = next(node for node in parent.body if isinstance(node, ast.FunctionDef) and node.name == name)
+        namespace = {"MailAccount": MailAccount, "MailProvider": MailProvider,
+                     "GLib": SimpleNamespace(markup_escape_text=lambda value: value),
+                     "threading": threading, "MailClient": MailClient, "MailError": MailError}
+        namespace.update(extra or {})
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
+        return namespace[name]
+
+    def test_actual_mail_card_distinguishes_unreadable_messages_from_scan_limit(self):
+        render = self.app_function("_mail_account_card_markup")
+        state = MailIndexState(123, 2, False, 365, 2000, 1)
+        text = render(GMAIL, 0, state)
+        self.assertIn("1 unreadable message(s) skipped", text)
+        self.assertNotIn("scan limit reached", text)
+        self.assertNotIn("No attachments found", text)
+
+    def test_actual_dialog_selection_shows_persisted_partial_scan_warning(self):
+        selected = self.app_function("_selected", class_name="MailAccountsDialog")
+        state = MailIndexState(123, 2, False, 365, 2000, 1)
+        index = Mock()
+        index.last_scan.return_value, index.count.return_value = state, 1
+        dialog = SimpleNamespace(_account=lambda: GMAIL, days=Mock(), limit=Mock(), contents=Mock(), status=Mock(),
+                                 controller=SimpleNamespace(mail_search_index=index,
+                                 managed_policy=SimpleNamespace(allow_content_indexing=True)))
+        selected(dialog)
+        self.assertIn("1 unreadable message(s) skipped", dialog.status.set_text.call_args.args[0])
+
+    def test_actual_refresh_completion_reports_partial_results_without_false_success(self):
+        refresh = self.app_function("_refresh", class_name="MailAccountsDialog", extra={
+            "_run_thread": lambda operation, ready: ready(operation(), None)})
+        index = Mock()
+        index.refresh.return_value = MailIndexStats(1, 2, complete=False, skipped_messages=1)
+        dialog = SimpleNamespace(_busy=False, _closed=False, _account=lambda: GMAIL, _persist_options=lambda value: value,
+                                 _reload=Mock(), _progress=Mock(), operations=[Mock()], view=Mock(), status=Mock(),
+                                 controller=SimpleNamespace(window=None, mail_search_index=index, bandwidth=None,
+                                 mail_authorization=Mock(), managed_policy=SimpleNamespace(
+                                 mail_provider_allowed=lambda _provider: True, allow_content_indexing=True)))
+        refresh(dialog)
+        text = dialog.status.set_text.call_args.args[0]
+        self.assertIn("1 unreadable message(s) skipped", text)
+        self.assertIn("older results were retained", text)
+        self.assertNotIn("Complete scan", text)
+        self.assertFalse(dialog._busy)
 
 
 class MailIndexTests(unittest.TestCase):

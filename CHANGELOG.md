@@ -2,6 +2,20 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.77 — resilient Gmail attachment indexing
+
+- Do not abort a whole Gmail refresh because one message has unreadable MIME
+  metadata. Commit valid attachment results, report the skipped-message count,
+  and retain older entries without stale-entry deletion during a partial scan.
+- Request bounded MIME metadata through 32 levels with an explicit boundary
+  sentinel; recognize opaque named MIME attachments and empty containers.
+  Over-depth, over-budget and malformed messages remain bounded and are skipped.
+- Persist partial-scan warnings across restarts and show them on account cards
+  and in the indexing dialog instead of claiming a complete or limit-only scan.
+- Keep HTTP, quota, authorization, wrong-message identity and cancellation
+  failures fatal; preserve read-only OAuth, metadata-only defaults and existing
+  content-download limits. Existing local mail indexes migrate in place.
+
 ## 0.26.76 — automatic recovery from temporary DNS/network failures
 
 - Show the real DNS/connection cause when the safety preview fails, instead of

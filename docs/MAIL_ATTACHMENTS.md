@@ -181,7 +181,7 @@ Unchanged successfully extracted text is reused across refreshes. This avoids
 re-downloading it, but metadata is rescanned: Gmail history/Microsoft delta
 checkpoints and automatic scheduling are not implemented. Unsupported or
 over-budget content still has searchable metadata. Inline logos, Graph link
-attachments and attached email items are excluded. There is no OCR, archive
+attachments and Graph attached-email items are excluded. There is no OCR, archive
 indexing, or encrypted-document support, and extraction limits are not a
 general-purpose malware sandbox.
 
@@ -191,6 +191,22 @@ selected mailbox's scanned scope. Reduce the history window only if pruning
 older indexed entries is intended. Results may remain stale until a complete
 refresh. The status reports counts, limits and reused/skipped text rather than
 claiming an exact mailbox-wide completion percentage.
+
+From 0.26.77, one unreadable Gmail message no longer aborts a refresh. The scanner
+stages each message independently, indexes valid messages, and reports
+**Partial scan: N unreadable message(s) skipped**. Such scans retain all older
+rows without stale-entry deletion; even a zero-result partial scan is not a
+claim that the mailbox has no attachments. The warning remains on the mailbox
+card and in the indexing dialog after restarting the application. Choose
+**Index attachments now** again to retry skipped messages.
+
+Gmail MIME metadata is bounded to 32 levels and 2,048 parts per message, with
+an extra boundary sentinel to detect deeper children instead of treating an
+omitted projection as a complete empty container. Named opaque MIME attachments
+and explicit zero-byte containers are supported without downloading their
+contents. Over-limit or malformed messages are counted as skipped. HTTP,
+network, quota, authorization and message-identity failures are not silently
+skipped; they still stop the refresh and retain the previous index.
 
 ## Privacy and removal
 

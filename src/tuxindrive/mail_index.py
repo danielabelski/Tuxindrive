@@ -58,6 +58,7 @@ class MailIndexStats:
     downloaded: int = 0
     content_skipped: int = 0
     complete: bool = True
+    skipped_messages: int = 0
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ class MailIndexState:
     complete: bool
     days: int
     max_messages: int
+    skipped_messages: int = 0
 
 
 def _fingerprint(item: MailAttachment) -> str:
@@ -95,9 +97,13 @@ class MailSearchIndex(FolderSearchIndex):
                 CREATE TABLE IF NOT EXISTS mail_scan_state (
                   account_id TEXT PRIMARY KEY, completed_at REAL NOT NULL,
                   messages INTEGER NOT NULL, complete INTEGER NOT NULL,
-                  days INTEGER NOT NULL, max_messages INTEGER NOT NULL
+                  days INTEGER NOT NULL, max_messages INTEGER NOT NULL,
+                  skipped_messages INTEGER NOT NULL DEFAULT 0
                 );
             """)
+            columns = {row["name"] for row in connection.execute("PRAGMA table_info(mail_scan_state)")}
+            if "skipped_messages" not in columns:
+                connection.execute("ALTER TABLE mail_scan_state ADD COLUMN skipped_messages INTEGER NOT NULL DEFAULT 0")
 
     def count(self, account_id: str | None = None) -> int:
         with self._connect() as connection:
@@ -110,7 +116,7 @@ class MailSearchIndex(FolderSearchIndex):
         with self._connect() as connection:
             row = connection.execute("SELECT * FROM mail_scan_state WHERE account_id=?", (account_id,)).fetchone()
             return (MailIndexState(row["completed_at"], row["messages"], bool(row["complete"]),
-                                   row["days"], row["max_messages"]) if row else None)
+                                   row["days"], row["max_messages"], row["skipped_messages"]) if row else None)
 
     @contextmanager
     def maintenance(self):
@@ -191,6 +197,8 @@ class MailSearchIndex(FolderSearchIndex):
                     for row in connection.execute("SELECT * FROM mail_attachments WHERE account_id=?", (account.id,))
                 }
             scan = client.scan(progress)
+            if type(scan.skipped_messages) is not int or not 0 <= scan.skipped_messages <= scan.messages:
+                raise MailError("The provider returned invalid partial-scan statistics; old results are retained.")
             rows, reused, downloaded, skipped, total_bytes = [], 0, 0, 0, 0
             for item in scan.attachments:
                 check_cancel(stop_event)
@@ -233,13 +241,13 @@ class MailSearchIndex(FolderSearchIndex):
                 rows.append((item, search_text, content, int(content_ready), fingerprint))
             check_cancel(stop_event)
             generation, indexed, removed = time.monotonic_ns(), 0, 0
-            complete = scan.complete
+            complete = scan.complete and not scan.skipped_messages
             available = max(0, MAX_ATTACHMENTS - len(previous))
             with self._connect() as connection:
                 for item, searchable, content, content_ready, fingerprint in rows:
                     check_cancel(stop_event)
                     key = (item.message_id, item.attachment_id)
-                    if not scan.complete and key not in previous:
+                    if not complete and key not in previous:
                         if not available:
                             complete = False
                             continue
@@ -253,17 +261,22 @@ class MailSearchIndex(FolderSearchIndex):
                     """, (account.id, item.message_id, item.attachment_id, json.dumps(asdict(item)),
                           searchable, content, content_ready, fingerprint, generation))
                     indexed += 1
-                if scan.complete:
+                if complete:
                     removed = connection.execute(
                         "DELETE FROM mail_attachments WHERE account_id=? AND generation!=?", (account.id, generation)
                     ).rowcount
                 check_cancel(stop_event)
                 connection.execute("""
-                    INSERT INTO mail_scan_state VALUES(?,?,?,?,?,?)
+                    INSERT INTO mail_scan_state
+                      (account_id,completed_at,messages,complete,days,max_messages,skipped_messages)
+                      VALUES(?,?,?,?,?,?,?)
                     ON CONFLICT(account_id) DO UPDATE SET
                       completed_at=excluded.completed_at,messages=excluded.messages,
-                      complete=excluded.complete,days=excluded.days,max_messages=excluded.max_messages
-                """, (account.id, time.time(), scan.messages, int(complete), account.days, account.max_messages))
-            return MailIndexStats(indexed, scan.messages, removed, reused, downloaded, skipped, complete)
+                      complete=excluded.complete,days=excluded.days,max_messages=excluded.max_messages,
+                      skipped_messages=excluded.skipped_messages
+                """, (account.id, time.time(), scan.messages, int(complete), account.days, account.max_messages,
+                      scan.skipped_messages))
+            return MailIndexStats(indexed, scan.messages, removed, reused, downloaded, skipped, complete,
+                                  scan.skipped_messages)
         finally:
             self.refresh_lock.release()

@@ -24,6 +24,12 @@ MAX_CONTENT_RESPONSE_BYTES = 64 * 1024 * 1024
 # New Gmail projects have a lower per-user budget and messages.get costs 20
 # units. Leave ample headroom for pagination, retries and other clients.
 GMAIL_REQUEST_INTERVAL = 0.5
+MAX_MIME_DEPTH = 32
+MAX_MIME_PARTS = 2048
+
+
+class _GmailStructureError(MailError):
+    """One unreadable message, not a network/authentication/quota failure."""
 
 
 @dataclass(frozen=True)
@@ -48,6 +54,7 @@ class MailScan:
     attachments: tuple[MailAttachment, ...]
     messages: int
     complete: bool
+    skipped_messages: int = 0
 
 
 def _text(value, limit: int = 1000) -> str:
@@ -85,22 +92,73 @@ def safe_message_url(url: str, provider: str) -> str:
     raise MailError("This message does not have a safe provider web location.")
 
 
-def _gmail_fields(depth: int = 10, *, content: bool = False) -> str:
+def _gmail_fields(depth: int = MAX_MIME_DEPTH, *, content: bool = False) -> str:
     body = "attachmentId,size" + (",data" if content else "")
     fields = f"partId,filename,mimeType,headers(name,value),body({body})"
-    return fields + (f",parts({_gmail_fields(depth - 1, content=content)})" if depth else "")
+    # At the boundary request a child sentinel rather than silently hiding
+    # deeper parts and mistaking a truncated projection for an empty container.
+    return fields + (f",parts({_gmail_fields(depth - 1, content=content)})"
+                     if depth else ",parts(partId,mimeType)")
 
 
 def _gmail_parts(payload: dict, *, depth: int = 0):
-    if depth > 10:
-        raise MailError("A mail MIME tree exceeded the indexing depth limit.")
-    yield payload
-    if str(payload.get("mimeType", "")).startswith("multipart/") and "parts" not in payload:
-        raise MailError("The mail provider returned an incomplete MIME tree; old results are retained.")
-    for child in payload.get("parts", []):
-        if not isinstance(child, dict):
-            raise MailError("The mail provider returned an invalid MIME part.")
-        yield from _gmail_parts(child, depth=depth + 1)
+    pending, count = [(payload, depth)], 0
+    while pending:
+        part, current_depth = pending.pop()
+        count += 1
+        if current_depth > MAX_MIME_DEPTH or count > MAX_MIME_PARTS:
+            raise _GmailStructureError("A message exceeded the bounded MIME indexing limits.")
+        if not isinstance(part, dict) or not isinstance(part.get("mimeType"), str) or not part["mimeType"]:
+            raise _GmailStructureError("A message has unreadable MIME metadata.")
+        body, children = part.get("body", {}), part.get("parts", [])
+        if not isinstance(body, dict) or not isinstance(children, list):
+            raise _GmailStructureError("A message has an invalid MIME body or child collection.")
+        if part["mimeType"].lower().startswith("multipart/") and "parts" not in part:
+            # Gmail can expose an opaque named MIME attachment as a body, or
+            # omit the empty child collection of a zero-byte container.
+            opaque = (bool(part.get("filename")) and bool(body.get("attachmentId") or part.get("partId"))
+                      and type(body.get("size")) is int and body["size"] >= 0)
+            empty = not part.get("filename") and type(body.get("size")) is int and body["size"] == 0
+            if not opaque and not empty:
+                raise _GmailStructureError("A message has an incomplete MIME tree.")
+        yield part
+        pending.extend((child, current_depth + 1) for child in reversed(children))
+
+
+def _gmail_message_attachments(account: MailAccount, message: dict, message_id: str,
+                               email: str) -> list[MailAttachment]:
+    """Stage an entire message so malformed siblings cannot leak partial rows."""
+    payload = message.get("payload")
+    if not isinstance(payload, dict):
+        raise _GmailStructureError("A message has unreadable MIME metadata.")
+    try:
+        raw_headers = payload.get("headers", [])
+        if not isinstance(raw_headers, list) or any(not isinstance(h, dict) for h in raw_headers):
+            raise _GmailStructureError("A message has unreadable MIME headers.")
+        headers = {str(h.get("name", "")).lower(): _text(h.get("value")) for h in raw_headers}
+        thread = _id(message.get("threadId", message_id))
+        location = "https://mail.google.com/mail/u/0/?" + urlencode({"authuser": email})
+        location += "#all/" + quote(thread, safe="")
+        items = []
+        for part in _gmail_parts(payload):
+            name = _text(part.get("filename"), 255)
+            part_headers = part.get("headers", [])
+            if not isinstance(part_headers, list) or any(not isinstance(h, dict) for h in part_headers):
+                raise _GmailStructureError("A message has unreadable MIME headers.")
+            disposition = next((str(h.get("value", "")) for h in part_headers
+                                if str(h.get("name", "")).lower() == "content-disposition"), "")
+            if not name or disposition.lower().startswith("inline"):
+                continue
+            body = part.get("body", {})
+            identifier = body.get("attachmentId") or "part:" + _id(part.get("partId"))
+            items.append(MailAttachment(
+                account.id, "gmail", account.display_name, message_id, _id(identifier), name,
+                headers.get("subject", "")[:512], headers.get("from", "")[:512],
+                _text(message.get("internalDate", headers.get("date", "")), 100),
+                _size(body.get("size", 0)), _text(part.get("mimeType"), 255), location))
+        return items
+    except MailError as exc:
+        raise _GmailStructureError("A message has unreadable attachment metadata.") from exc
 
 
 class MailClient:
@@ -169,7 +227,7 @@ class MailClient:
         query = "has:attachment -in:trash -in:spam"
         if self.account.days:
             query += f" newer_than:{self.account.days}d"
-        attachments, messages, page_token, seen_pages = [], 0, "", set()
+        attachments, messages, skipped, page_token, seen_pages = [], 0, 0, "", set()
         while True:
             check_cancel(self.stop)
             params = {"q": query, "maxResults": min(100, self.account.max_messages - messages),
@@ -183,40 +241,31 @@ class MailClient:
             for reference in references:
                 check_cancel(self.stop)
                 if messages >= self.account.max_messages or len(attachments) >= MAX_ATTACHMENTS:
-                    return MailScan(tuple(attachments), messages, False)
+                    return MailScan(tuple(attachments), messages, False, skipped)
                 message_id = _id(reference.get("id"))
+                # Transport, credentials and quota failures remain fatal. Only
+                # parsing this successfully fetched message is isolated below.
                 message = self._json("messages/" + quote(message_id, safe=""), params={
                     "format": "full", "fields": f"id,threadId,internalDate,payload({_gmail_fields()})"})
-                payload = message.get("payload", {})
-                if message.get("id") != message_id or not isinstance(payload, dict):
+                if message.get("id") != message_id:
                     raise MailError("The mail provider returned incomplete message metadata.")
-                headers = {str(h.get("name", "")).lower(): _text(h.get("value")) for h in payload.get("headers", [])}
-                thread = _id(message.get("threadId", message_id))
-                location = "https://mail.google.com/mail/u/0/?" + urlencode({"authuser": email})
-                location += "#all/" + quote(thread, safe="")
-                for part in _gmail_parts(payload):
-                    name = _text(part.get("filename"), 255)
-                    disposition = next((str(h.get("value", "")) for h in part.get("headers", [])
-                                        if str(h.get("name", "")).lower() == "content-disposition"), "")
-                    if not name or disposition.lower().startswith("inline"):
-                        continue
-                    body = part.get("body", {})
-                    identifier = body.get("attachmentId") or "part:" + _id(part.get("partId"))
-                    attachments.append(MailAttachment(
-                        self.account.id, "gmail", self.account.display_name, message_id, _id(identifier), name,
-                        headers.get("subject", "")[:512], headers.get("from", "")[:512],
-                        _text(message.get("internalDate", headers.get("date", "")), 100),
-                        _size(body.get("size", 0)), _text(part.get("mimeType"), 255), location))
-                    if len(attachments) >= MAX_ATTACHMENTS:
-                        return MailScan(tuple(attachments), messages + 1, False)
+                try:
+                    items = _gmail_message_attachments(self.account, message, message_id, email)
+                except _GmailStructureError:
+                    skipped += 1
+                    items = []
+                remaining = MAX_ATTACHMENTS - len(attachments)
+                attachments.extend(items[:remaining])
                 messages += 1
                 if progress:
                     progress(messages, self.account.max_messages, len(attachments))
+                if len(attachments) >= MAX_ATTACHMENTS:
+                    return MailScan(tuple(attachments), messages, False, skipped)
             next_page = page.get("nextPageToken", "")
             if not next_page:
-                return MailScan(tuple(attachments), messages, True)
+                return MailScan(tuple(attachments), messages, not skipped, skipped)
             if messages >= self.account.max_messages:
-                return MailScan(tuple(attachments), messages, False)
+                return MailScan(tuple(attachments), messages, False, skipped)
             page_token = _id(next_page)
             if page_token in seen_pages:
                 raise MailError("Mail pagination repeated a page; the previous index is retained.")

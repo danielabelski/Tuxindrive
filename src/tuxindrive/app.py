@@ -162,7 +162,8 @@ def _mail_account_card_markup(account: MailAccount, count: int, scan=None, *, in
     elif scan is None and not count:
         state = "Not indexed yet — choose Index attachments"
     elif scan is not None and not scan.complete:
-        state += " · scan limit reached"
+        state += (f" · partial scan: {scan.skipped_messages} unreadable message(s) skipped"
+                  if scan.skipped_messages else " · scan limit reached")
     elif scan is not None and not count:
         state = "No attachments found in the scanned history"
     return (
@@ -3893,7 +3894,11 @@ class MailAccountsDialog(ResponsiveDialog):
                 self.status.set_text("Connected, but not indexed yet. Choose Index attachments now to populate search.")
             elif scan is not None:
                 history = f"{scan.days} days" if scan.days else "all history"
-                note = "Scan complete for that history." if scan.complete else "Scan limit reached; adjust the history/limit and index again."
+                if scan.skipped_messages:
+                    note = (f"Partial scan: {scan.skipped_messages} unreadable message(s) skipped; "
+                            "older results retained. Index again to retry them.")
+                else:
+                    note = "Scan complete for that history." if scan.complete else "Scan limit reached; adjust the history/limit and index again."
                 self.status.set_text(f"{count} searchable attachments; last scan read {scan.messages} messages "
                                      f"({history}, limit {scan.max_messages}). {note}")
             else:
@@ -3975,7 +3980,11 @@ class MailAccountsDialog(ResponsiveDialog):
             if error:
                 self.status.set_text(str(error))
             else:
-                note = " Complete scan." if result.complete else " Scan/index limit reached; older results were retained."
+                if result.skipped_messages:
+                    note = (f" Partial scan: {result.skipped_messages} unreadable message(s) skipped; "
+                            "older results were retained. Index again to retry them.")
+                else:
+                    note = " Complete scan." if result.complete else " Scan/index limit reached; older results were retained."
                 self.status.set_text(
                     f"Indexed {result.indexed} attachments from {result.messages} messages; removed {result.removed} stale entries. "
                     f"Text: {result.reused} reused, {result.downloaded} download attempts, {result.content_skipped} skipped." + note)
