@@ -1,8 +1,8 @@
 {
-  "version": "0.26.75",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.75/TuxInDrive-0.26.75-windows-x64-setup.exe",
-  "sha256": "52b21d2a369a546e6e6d748783f7135fa665570423bcba5871e83c8a1dda57ac",
-  "notes": "Simpler Gmail browser sign-in for configured desktops; initial/manual attachment indexing and persistent scan status. Shared Gmail production setup remains pending.",
-  "expires_at": "2027-01-07T19:54:07.968793+00:00",
-  "signature": "GYvByTdXs6XVDLfVyp3wFVS5SPb8HLnQTJI/uDSm0IcAe/hLz+zToylV+VAsqMxTsn8CAko9ZBUm2ZOrY89aCA=="
+  "version": "0.26.76",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.76/TuxInDrive-0.26.76-windows-x64-setup.exe",
+  "sha256": "dc57bf993a4009b7b740fefeb84d402b75a5ae807239cb71598b8d7ba757a7c2",
+  "notes": "Temporary DNS/network recovery with persisted backoff, accurate errors and preserved manual/data-safety gates.",
+  "expires_at": "2027-01-10T18:59:02.443761+00:00",
+  "signature": "Aqwnhe5cCSZhXNLkxOFOg8qW8ZH2ap3Hs3rZJFkRevpnzEMxZ3KqHxv14fr3KZvhBTOXq+XyFIfqUUGBfJpYBw=="
 }
