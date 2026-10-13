@@ -209,6 +209,51 @@ days; a failed run keeps existing history, and ordinary jobs are not affected.
 For Codex, the optional chat-only scope backs up conversation records and
 session indexes without attachments, skills, memories or workspace metadata.
 
+### Compact conversation-text backups (0.26.78)
+
+Select **Conversation text only (small)** in the wizard or the existing job's
+**Edit → Codex backup content** selector. Raw journals are streamed directly
+through a bounded projector into private readable Markdown: explicit user and
+visible assistant messages only, without tool results, embedded images/files,
+reasoning or application state. Native restoration is deliberately not claimed.
+New wizard-created Codex jobs recommend text mode; existing modes remain unchanged.
+
+Both preview and upload use the frozen exports with checksum comparison.
+Temporary space is approximately the compact output size plus 256 MiB, not the
+raw journal size. Exports are copied without deletion into `conversation-text`
+below the configured cloud backup root. Old native backups and previously
+exported conversations are not removed when switching modes or encountering an
+unreadable journal; storage already occupied by old backups is not reclaimed.
+Malformed/over-limit conversations are omitted whole with a partial warning and
+relative paths in the job log. Other capture errors remain fatal. Manual-only,
+bandwidth and replaced-version retention settings are retained. Verify performs
+projection and a dry-run without history pruning. The native Proton adapter and
+raw incremental callbacks are blocked for text mode rather than silently
+uploading files the user did not select.
+
+### Stable Codex inputs (0.26.78)
+
+Rclone-backed Codex backups first capture selected files into a private temporary
+tree outside the Codex source. The safety preview and transfer use that same
+frozen input, so an actively growing chat no longer invalidates an upload.
+Completed JSONL records are validated; an unfinished final record waits for the
+next backup attempt. SQLite primaries use the online backup API and are validated
+as standalone copies rather than independently uploading live WAL/SHM files.
+
+The destination layout, manual-only setting, exclusions, deletion guards and
+seven-day version retention remain unchanged. Checksum comparison skips unchanged
+content; this is a changed-file mirror, not block-level deduplication. Preparation
+has its own cancellable progress label. Temporary local free space approximately
+equal to the selected source scope (plus a safety reserve) is required and staging
+is removed after the run. These are stable per-file captures, not an atomic
+whole-application filesystem snapshot. Invalid completed chat records, unstable
+ordinary files, inadequate free space or inconsistent database selections stop
+before cloud transfer rather than silently dropping data.
+
+The startup fix reopens a complete current search schema without rewriting its
+metadata. Existing search data is retained while another refresh holds a writer
+lock; the application does not delete or reset the index to bypass contention.
+
 Treat the generated exclusions as a conservative baseline, not a guarantee for
 future third-party extensions. Review them when a tool adds custom credential
 or environment files. The connector never signs in to an AI service and does

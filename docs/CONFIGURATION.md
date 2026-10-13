@@ -222,9 +222,22 @@ automatically remove older remote versions after a successful run, and are
 marked by `ai_connector`.
 They never authenticate to or scrape an AI service.
 
-For Codex, **Codex: back up chats only** stores `ai_backup_content: chats` and
-adds root-anchored allow rules for active sessions, archived sessions and the
-local session indexes. The default remains `all` for backward compatibility.
+For Codex, **Raw chat records** stores `ai_backup_content: chats` and adds
+root-anchored allow rules for sessions and indexes. Raw journals can still embed
+images and tool results. `all` retains the native local-data scope.
+
+The 0.26.78 **Conversation text only (small)** option stores
+`ai_backup_content: text`, using the same source allow-list but projecting only
+human-visible prompts and replies from active/archived session journals into
+readable `.md` files. The wizard recommends this mode for new Codex backups;
+existing jobs keep their configured scope until changed through **Edit**.
+Text mode forces upload-only and disables raw real-time callbacks. Original
+selection/exclusion rules apply before projection; source `.jsonl` filters are
+not reapplied to generated `.md` files. Non-deleting copy targets
+`<configured backup folder>/conversation-text`, preserving old raw backups and
+any older export of an unreadable conversation. This is a reading archive, not
+a native-session restore. The native Proton adapter rejects text mode instead
+of uploading raw files. No OAuth/AI-service credentials are added.
 
 Credential files, private-key extensions, environment files, sockets, locks,
 logs, temporary data, and caches are excluded from every generated job.

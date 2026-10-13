@@ -9,11 +9,12 @@ from tuxindrive.policies import TransferPolicy
 
 
 class TransferPolicyTests(unittest.TestCase):
-    def test_default_is_unrestricted_maximum_usage(self):
+    def test_default_allows_metered_and_low_battery_on_ac_power(self):
         settings = AppSettings()
+        self.assertEqual(settings.network_policy, "controlled")
         with patch.object(TransferPolicy, "_metered", return_value=True), patch.object(
             TransferPolicy, "_battery_percent", return_value=1
-        ):
+        ), patch.object(TransferPolicy, "_on_ac_power", return_value=True):
             self.assertTrue(TransferPolicy(settings).evaluate().allowed)
 
     def test_controlled_schedule_and_battery_pause(self):

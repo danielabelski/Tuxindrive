@@ -25,7 +25,7 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The source defines **712 unit checks: 698 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-four Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The source defines **757 unit checks: 743 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-four Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 The credential/backup regressions use synthetic data and cover mocked timeout
 cleanup, no key replacement on credential-store failure,
@@ -39,6 +39,42 @@ PYTHONPATH=src TUXINDRIVE_TEST_RCLONE=/absolute/path/to/rclone \
 ```
 
 No live cloud account or personal chat files are used by these regressions.
+
+### Stable Codex backup inputs and startup locking (0.26.78)
+
+`tests.test_backup_snapshot` adds 21 synthetic checks for append-during-capture,
+unfinished/invalid/oversized chat records, ordinary rewrites, deny-first/chat-only
+selection and directory pruning, symlink confinement, SQLite WAL inclusion and
+standalone restore, bounded database deadlines, orphan-journal rejection, private
+temporary files, free-space limits, cancellation, identical preview/transfer
+inputs, failure-before-network, and real account progress functions without GTK.
+Search tests hold an actual SQLite writer transaction while reopening the cache,
+and trace SQL to confirm no initialization writes for a current schema.
+The full guarded suite still runs with a temporary XDG profile. A read-only local
+capture of the maintainer's actual previously failing chat and a synthetic local
+rclone restore/unchanged second-run check are separate from cloud verification.
+No live cloud backup, desktop installation or signed release is implied.
+
+### Compact Codex conversation text (0.26.78)
+
+`tests.test_codex_text` adds 24 checks for human-message projection, Unicode and
+answer-code preservation, omitted image/tool/context/reasoning data, legacy
+display-only journals without duplicate echoes, bounded parsing, cancellation,
+append/prefix-rewrite safety, private compact staging, output-size-only space
+checks, unchanged export checksums, source exclusions and archived sessions.
+Malformed conversations are omitted whole while retaining healthy exports and
+previous cloud copies; all-unreadable inputs fail before any transfer.
+The actual Edit method, configuration round trip and progress UI are exercised
+without GTK. Preview and transfer must use the same frozen `.md` tree; raw
+callbacks and unsupported modes/native adapters cannot bypass the projector.
+Verify is dry-run only and never prunes history.
+
+The real rclone check uses a private temporary local destination and an empty
+configuration, restores readable text, preserves old native/unreadable archives,
+and proves that a tool-only append copies no files on the next checksum run.
+It skips if rclone is unavailable. A separate maintainer-profile measurement
+reads journals without uploading or editing them and removes its temporary
+exports; it does not establish live cloud backup success or a published release.
 
 ### Temporary DNS/network recovery (0.26.76)
 
@@ -161,6 +197,8 @@ directories; cloud synchronization is never started.
 | `test_tray.py` | 8 | Animation frames, paused-job alerts, credential redaction, bounded summaries, runtime failures, and unresolved-error priority over successful or active transfers. |
 | `test_tray_gtk.py` | 4 | Opt-in real GTK summaries in both menus, overflow activation, direct Error details routing, rename/resolution refresh and runtime failures. |
 | `test_migration.py` | 9 | AES-GCM profile round trips, wrong-password/tamper rejection, visible and legacy cloud discovery/migration, complete unlock-key handoff, compact mobile export, secret opt-in, private permissions and validation. |
+| `test_backup_snapshot.py` | 21 | Stable Codex prefixes, bounded record/database validation, SQLite WAL restore, temporary-space limits, private staging, confinement, cancellation, preview/transfer input identity, startup writer-lock avoidance and actual progress UI. |
+| `test_codex_text.py` | 24 | Text-only projection, omitted files/tools/reasoning, legacy journals, prefix validation, cancellation, compact space bounds, partial retention, actual Edit/progress logic, safe commands and real local rclone restore/unchanged repeat. |
 | `test_mail_attachments.py` | 63 | Offline read-only OAuth/PKCE and state checks, public Microsoft client defaults, native-token persistence, metadata-only Gmail/Graph projection, provider-origin and URL confinement, response/download budgets, reusable text, per-account private indexes, cancellation and partial-scan retention. |
 | `test_mail_gtk.py` | 4 | Opt-in isolated actual dialogs: no implicit browser/token access, visible options applied before refresh, text disable/purge, offline mail results and original-message navigation with synthetic accounts. |
 | `test_offline_action.py` | 9 | Mounted-drive fast dispatch, cold-start queuing, both supported command-line availability option forms, lexical file routing without FUSE resolution, sibling-prefix rejection, exact file-rule isolation, nested offline/online-only precedence, and green-state publication only for locally verified rules. |

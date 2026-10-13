@@ -406,7 +406,7 @@ class SyncEngineCommandTests(unittest.TestCase):
             self.assertTrue(self.engine._stale_google_directory_issue(log, 0))
 
     def test_running_transfer_is_stopped_after_no_payload_progress(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {"XDG_CACHE_HOME": temporary}):
             local = Path(temporary) / "codex"
             local.mkdir()
             job = SyncJob(
@@ -468,6 +468,9 @@ class SyncEngineCommandTests(unittest.TestCase):
             def readline(self):
                 raise AssertionError("readline must only run after the pipe is ready")
 
+            def close(self):
+                self.closed = True
+
         with tempfile.TemporaryDirectory() as temporary:
             local = Path(temporary) / "silent"
             local.mkdir()
@@ -490,6 +493,7 @@ class SyncEngineCommandTests(unittest.TestCase):
                 )
             terminate.assert_called_once_with(process)
             selector.close.assert_called_once()
+            self.assertTrue(process.stdout.closed)
             self.assertFalse(completed[0].success)
             self.assertIn("2 minutes without status output", completed[0].message)
             self.assertIn("queue slot was recovered automatically", completed[0].message)

@@ -184,6 +184,39 @@ hidden `.tuxdrive-versions/<job-id>` objects older than seven days. Failed runs
 do not prune history, and ordinary synchronization jobs retain their configured
 retention policy unchanged.
 
+The 0.26.78 `backup_snapshot.py` layer freezes rclone-backed Codex inputs
+before the safety preview and upload, preserving relative paths and filters.
+No hardlinks or relaxed live-file integrity checks are used. Bounded JSONL prefix
+capture tolerates append-only growth, validates complete records and defers an
+unfinished final record; ordinary rewrites fail closed after one retry. SQLite's
+[online backup API](https://www.sqlite.org/backup.html) includes committed WAL
+data in a standalone copy, with bounded cancellation/deadline and validation.
+Temporary staging stays private and outside the source, is capacity-checked,
+and is cleaned after success/failure/cancellation. The engine reports a separate
+snapshotting phase and compares frozen content with checksums; it retains the
+existing mirror format, scheduling, version-retention and deletion protections.
+The local copy is per-file consistent, not a global atomic filesystem snapshot.
+
+For `ai_backup_content=text`, `codex_text.py` instead streams bounded source
+journal records directly to private `.md` output: explicit user/assistant text
+only. Canonical response messages are preferred over duplicate display events;
+legacy display-only journals use an isolated fallback pass. Attachment/image
+parts, tool records, reasoning and injected context are omitted. Complete source
+prefixes are hashed and verified on mutation, without a full raw staging copy.
+Original selection rules run before projection. The output filters match the
+generated `.md` paths; raw callbacks and unsupported native adapters fail closed.
+Preview and transfer use identical frozen exports with checksums. Non-deleting
+`copy` writes to the reserved `conversation-text` child of the configured root,
+preserving prior native backups and unreadable-journal exports. Malformed or
+over-limit journals are omitted whole with explicit warnings; disk, cancellation,
+path-confinement and unstable-prefix failures remain fatal. Text exports are not
+native session restoration files. This mode is new-wizard-recommended, never an
+implicit migration of existing configured scopes.
+
+Search initialization has a read-only fast path for an already-current complete
+schema. It checks tables/columns and FTS triggers without unconditional schema
+metadata writes, allowing activation while a background refresh is writing.
+
 ### Full jobs
 
 - Two-way jobs use `rclone bisync`. The first run is an explicit resync/merge;

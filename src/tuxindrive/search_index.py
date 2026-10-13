@@ -115,6 +115,27 @@ class FolderSearchIndex:
 
     def _initialize(self) -> None:
         with self._connect() as connection:
+            # Do not contend with a large active refresh merely to rewrite
+            # unchanged schema metadata during a second application launch.
+            objects = {row["name"] for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type IN ('table','trigger','index')"
+            )}
+            if {"metadata", "entries", "entries_generation", "entries_search_text"}.issubset(objects):
+                version = connection.execute(
+                    "SELECT value FROM metadata WHERE key='schema_version'"
+                ).fetchone()
+                columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(entries)")}
+                fts_ready = "entries_fts" not in objects or {
+                    "entries_fts_insert", "entries_fts_delete", "entries_fts_update"
+                }.issubset(objects)
+                if version is not None and version[0] == str(SCHEMA_VERSION) and "content_text" in columns and fts_ready:
+                    self._fts_available = "entries_fts" in objects
+                    self._protect(self.path, 0o600)
+                    for suffix in ("-wal", "-shm"):
+                        auxiliary = Path(str(self.path) + suffix)
+                        if auxiliary.exists():
+                            self._protect(auxiliary, 0o600)
+                    return
             connection.execute("PRAGMA journal_mode = WAL")
             connection.execute("PRAGMA synchronous = NORMAL")
             connection.executescript(

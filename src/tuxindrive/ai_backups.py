@@ -163,6 +163,7 @@ def build_backup_jobs(
     interval_minutes: int = 60,
     manual_only: bool = False,
     codex_chats_only: bool = False,
+    codex_text_only: bool = False,
     hostname: str | None = None,
 ) -> list[SyncJob]:
     if not account_remote.strip():
@@ -191,7 +192,7 @@ def build_backup_jobs(
                 exclude_patterns=list(dict.fromkeys(connector_excludes)),
                 include_patterns=(
                     list(CODEX_CHAT_ONLY_INCLUDES)
-                    if connector.key == "codex" and codex_chats_only else []
+                    if connector.key == "codex" and (codex_chats_only or codex_text_only) else []
                 ),
                 realtime_sync=False,
                 version_history=True,
@@ -200,7 +201,8 @@ def build_backup_jobs(
                 max_delete=25,
                 ai_connector=connector.key,
                 ai_backup_content=(
-                    "chats" if connector.key == "codex" and codex_chats_only else "all"
+                    "text" if connector.key == "codex" and codex_text_only
+                    else "chats" if connector.key == "codex" and codex_chats_only else "all"
                 ),
                 manual_only=manual_only,
                 last_status=(

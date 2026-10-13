@@ -117,7 +117,7 @@ from .managed_policy import ManagedPolicy, load_managed_policy
 from .scheduling import persisted_run_time
 from .provider_probe import ProviderCapabilityProbe
 from .selective_rules import PRESETS, preset_by_key, preview_local_rules
-from .ai_backups import build_backup_jobs, connectors as ai_connectors
+from .ai_backups import CODEX_CHAT_ONLY_INCLUDES, build_backup_jobs, connectors as ai_connectors
 
 try:  # Ubuntu's AppIndicator extension provides Windows-like tray controls.
     gi.require_version("AyatanaAppIndicator3", "0.1")
@@ -1054,13 +1054,19 @@ class AIBackupDialog(ResponsiveDialog):
         self.manual_only.connect(
             "toggled", lambda button: self.interval.set_sensitive(not button.get_active())
         )
-        self.codex_chats_only = Gtk.CheckButton(
-            label="Codex: back up chats only"
+        self.codex_content = Gtk.ComboBoxText()
+        for key, label in (
+            ("text", "Conversation text only (small)"),
+            ("chats", "Raw chat records (includes tool output and embedded images)"),
+            ("all", "All local Codex data (excluding credentials and caches)"),
+        ):
+            self.codex_content.append(key, label)
+        self.codex_content.set_active_id("text")
+        self.codex_content.set_tooltip_text(
+            "Text-only saves readable prompts and replies, without files, images, tool output or reasoning. "
+            "It is a reading archive, not a native Codex restore. Requires a rclone-backed cloud account."
         )
-        self.codex_chats_only.set_tooltip_text(
-            "Back up Codex conversation records only; skip attachments, skills, memories, workspace metadata and other files."
-        )
-        self.codex_chats_only.set_sensitive(
+        self.codex_content.set_sensitive(
             bool(self.checks.get("codex") and self.checks["codex"].get_sensitive())
         )
         for index, (label, widget) in enumerate((
@@ -1068,7 +1074,7 @@ class AIBackupDialog(ResponsiveDialog):
             ("Cloud backup folder", self.remote_base),
             ("Backup interval (minutes)", self.interval),
             ("Automatic scheduling", self.manual_only),
-            ("Backup content", self.codex_chats_only),
+            ("Codex backup content", self.codex_content),
         )):
             grid.attach(Gtk.Label(label=label, xalign=0), 0, index, 1, 1)
             grid.attach(widget, 1, index, 1, 1)
@@ -1099,7 +1105,8 @@ class AIBackupDialog(ResponsiveDialog):
             remote_base=self.remote_base.get_text(),
             interval_minutes=self.interval.get_value_as_int(),
             manual_only=self.manual_only.get_active(),
-            codex_chats_only=self.codex_chats_only.get_active(),
+            codex_chats_only=self.codex_content.get_active_id() == "chats",
+            codex_text_only=self.codex_content.get_active_id() == "text",
         )
 
     def validation_error(self, message: str) -> None:
@@ -1180,6 +1187,18 @@ class SyncJobDialog(ResponsiveDialog):
         )
         if existing and existing.is_ai_backup:
             self.interval.set_sensitive(not self.manual_only.get_active())
+        self.codex_content = Gtk.ComboBoxText()
+        for key, label in (
+            ("text", "Conversation text only (small)"),
+            ("chats", "Raw chat records (includes tool output and embedded images)"),
+            ("all", "All local Codex data (excluding credentials and caches)"),
+        ):
+            self.codex_content.append(key, label)
+        self.codex_content.set_active_id(existing.ai_backup_content if existing else "text")
+        self.codex_content.set_tooltip_text(
+            "Text-only exports prompts and replies to conversation-text in the cloud backup folder. "
+            "Old backups are preserved. This reading archive cannot restore native Codex sessions."
+        )
         self.block_delta = Gtk.CheckButton(label="Use block-level delta planning for changed files")
         self.block_delta.set_active(existing.block_delta_transfer if existing else True)
         self.block_delta.set_tooltip_text("Direct peer jobs exchange content-addressed changed blocks; cloud backends use their native transfer capabilities.")
@@ -1285,6 +1304,8 @@ class SyncJobDialog(ResponsiveDialog):
         ]
         if existing and existing.is_ai_backup:
             rows.insert(8, ("AI backup scheduling", self.manual_only))
+            if existing.ai_connector == "codex":
+                rows.insert(9, ("Codex backup content", self.codex_content))
         for row, (label, widget) in enumerate(rows):
             grid.attach(Gtk.Label(label=label, xalign=0), 0, row, 1, 1)
             grid.attach(widget, 1, row, 1, 1)
@@ -1402,6 +1423,15 @@ class SyncJobDialog(ResponsiveDialog):
             value.ai_connector = self.existing.ai_connector
             value.ai_backup_content = self.existing.ai_backup_content
             value.include_patterns = list(self.existing.include_patterns)
+            if value.ai_connector == "codex":
+                value.ai_backup_content = self.codex_content.get_active_id() or "all"
+                if value.ai_backup_content != self.existing.ai_backup_content:
+                    value.initialized = False
+                    value.include_patterns = (list(CODEX_CHAT_ONLY_INCLUDES)
+                                              if value.ai_backup_content in {"text", "chats"} else [])
+                if value.is_codex_text_backup:
+                    value.mode = SyncMode.UPLOAD_ONLY
+                    value.realtime_sync = False
             value.manual_only = self.manual_only.get_active() if value.ai_connector else False
             return [value]
         return values
@@ -7583,7 +7613,11 @@ class TuxInDriveApplication(Gtk.Application):
         else:
             phase = self.engine.job_phase(job_id)
             job.last_status = (
-                "Checking provider changes…"
+                f"Exporting conversation text… {progress or 0}%"
+                if phase == "snapshotting" and job.is_codex_text_backup
+                else f"Preparing stable backup snapshot… {progress or 0}%"
+                if phase == "snapshotting"
+                else "Checking provider changes…"
                 if phase == "checking"
                 else "Verifying synchronized state…"
                 if phase == "verifying"

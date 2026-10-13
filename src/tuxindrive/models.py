@@ -493,6 +493,18 @@ class SyncJob:
         return bool(self.ai_connector)
 
     @property
+    def is_codex_text_backup(self) -> bool:
+        return self.ai_connector == "codex" and self.ai_backup_content == "text"
+
+    @property
+    def backup_remote_spec(self) -> str:
+        """Keep compact exports separate from existing native backup files."""
+        remote = self.remote_spec
+        if self.is_codex_text_backup:
+            return remote.rstrip("/") + ("" if remote.endswith(":") else "/") + "conversation-text"
+        return remote
+
+    @property
     def allows_automatic_runs(self) -> bool:
         return not (self.is_ai_backup and self.manual_only)
 
@@ -610,6 +622,9 @@ class SyncJob:
                 *existing_excludes,
                 *CODEX_TRANSIENT_EXCLUDES,
             )))
+            if data.get("ai_backup_content") == "text":
+                # A raw-file callback must never bypass the text projector.
+                data["realtime_sync"] = False
         # Migrate the former highly sensitive defaults. Explicit non-default
         # operator thresholds remain untouched.
         if data.get("mass_change_limit", 200) == 200:

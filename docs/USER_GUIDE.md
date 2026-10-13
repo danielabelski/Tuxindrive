@@ -74,10 +74,10 @@ Connect a cloud storage account, select **AI backups**, and choose any detected
 Codex, Claude Code, Gemini CLI, Cursor, or Continue installation. Select the
 cloud destination and interval. To prevent all scheduled runs, enable **Manual
 only — run backups with Sync now**, then choose **Enable backups**. TuxInDrive
-can also enable **Codex: back up chats only**. This limits that connector to
-active and archived conversation records plus the local session indexes; it
-does not upload attachments, skills, memories, workspace metadata or other
-Codex profile files. TuxInDrive creates one upload-only job per tool. Automatic
+can also limit Codex to raw chat records. That scope omits separate attachments,
+skills, memories, workspace metadata and other profile files, but the journals
+themselves can still contain large embedded images and tool results.
+TuxInDrive creates one upload-only job per tool. Automatic
 jobs start immediately and use
 the normal scheduler; manual-only jobs remain ready until you select **Sync
 now**. The job card explicitly shows **Manual only**, and **Edit** can switch an
@@ -86,6 +86,37 @@ Unchanged files are not uploaded again. While a backup is running, its job
 status shows the current transfer percentage. Replaced or deleted files are
 kept for seven days, and older remote versions are removed automatically after
 a successful backup so version history cannot grow indefinitely.
+
+**Compact Codex backups (0.26.78):** choose **Conversation text only (small)**
+in **AI backups**, or use **Edit → Codex backup content** on an existing backup.
+This is the default for new Codex jobs in the wizard. It saves readable Markdown
+prompts and assistant replies without attachments, embedded image/file data,
+tool calls/results, reasoning, databases or application state. It is a reading
+archive, **not a backup that can restore native Codex sessions**. For a native
+backup, choose **Raw chat records** or **All local Codex data** instead.
+
+Text-only exports go in the `conversation-text` subfolder of the cloud backup
+location. Unchanged text is skipped even if only tool output was appended.
+Exports use non-deleting copy: old raw backups and earlier exported chats are
+preserved. Switching modes does not automatically reclaim storage already used
+by older backups. Local temporary space is needed only for the compact exports
+plus a 256 MiB safety reserve; the full raw journals are never staged. Progress
+shows **Exporting conversation text…** before upload. Manual-only scheduling and
+seven-day replaced-version retention are unchanged. This mode currently requires
+a rclone-backed cloud account; native Proton does not silently fall back to raw
+uploads. An unreadable conversation is omitted as a whole, with a visible warning
+and its path in **View log**; any previous cloud export is retained. Disk, source
+confinement, cancellation and unstable-prefix failures still abort before upload.
+
+**Native Codex stability fix (0.26.78):** the app prepares a private temporary
+stable copy before preview and upload. **Preparing stable backup snapshot…** is separate
+from transfer progress and supports Stop. You may keep Codex open: growing chat
+files upload as completed records captured for that run, while an unfinished
+last record is reported as deferred. The next manual backup captures later
+records. The native cloud format and changed-file comparison remain the same; this is
+not block-level deduplication. Allow local free space for a temporary copy of the
+selected scope; it is removed after the run. Source data and existing backups
+are not deleted to bypass a capture or validation failure.
 
 If Google Drive reports that a cached directory ID disappeared while a live AI
 workspace is recreating generated files, TuxInDrive restarts that backup once
@@ -894,10 +925,10 @@ Reinstall the current package with `sudo apt install ./tuxindrive_0.26.61_all.de
 - Do not point multiple normal jobs at overlapping local folders.
 - Removing a TuxInDrive job does not delete its local or cloud files.
 
-### Security upgrade checklist for 0.26.77
+### Security upgrade checklist for 0.26.78
 
-1. Install `tuxindrive_0.26.77_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
-2. Confirm **Settings → Check for updates** reports 0.26.77 and no signature or expiry error.
+1. Install `tuxindrive_0.26.78_all.deb`; the upgrade closes an older running TuxInDrive instance. Reopen TuxInDrive and restart Nautilus.
+2. Confirm **Settings → Check for updates** reports 0.26.78 and no signature or expiry error.
 3. Reconnect only when the provider actually rejects authorization, not for DNS failures. pCloud requires the Client ID and secret of an approved pCloud application because its shared rclone OAuth application was revoked. Verify that `~/.config/rclone/rclone.conf` is encrypted and mode `0600`; do not print or upload it.
 4. Confirm the `TuxInDrive rclone configuration` entry exists in GNOME Passwords and Keys/Secret Service. Do not delete it without an export/recovery plan.
 5. Review peer invitations, revoke unused device and Onion credentials, and exchange replacements through an authenticated channel when compromise is suspected.

@@ -17,6 +17,7 @@ import uuid
 import hashlib
 import shlex
 import stat
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,7 @@ from .file_permissions import private_descriptor
 from .bandwidth import GlobalBandwidthController
 from .error_details import redact_error_text
 from .network_recovery import log_network_issue, retry_wait_seconds, transient_network_issue
+from .backup_snapshot import BackupSnapshotError, CodexBackupSnapshot
 
 
 @dataclass(slots=True)
@@ -139,6 +141,7 @@ class SyncEngine:
         self._traffic_totals: dict[str, tuple[int, int]] = {}
         self._job_progress: dict[str, int] = {}
         self._job_phases: dict[str, str] = {}
+        self._snapshot_cancellations: dict[str, threading.Event] = {}
         self._streaming_refresh_mode = "balanced"
         self._cache_watchers: dict[str, InotifyTreeMonitor] = {}
         self._cache_cleanup_state: dict[str, tuple[int, int, bool, int]] = {}
@@ -381,6 +384,8 @@ class SyncEngine:
     ) -> list[str]:
         if self._job_backends.get(job.id) == "proton_cli":
             raise ValueError("Official Proton CLI jobs use the native provider adapter")
+        if job.is_codex_text_backup and job.mode is not SyncMode.UPLOAD_ONLY:
+            raise ValueError("Codex conversation-text backups require upload-only mode")
         local = str(job.local)
         common = [
             "--create-empty-src-dirs",
@@ -401,7 +406,13 @@ class SyncEngine:
         ]
         if job.acknowledge_google_abuse:
             common.append("--drive-acknowledge-abuse")
-        common.extend(job.filter_args(self._filter_excludes(job)))
+        if job.is_codex_text_backup:
+            # Original rules are applied to source journals by the projector.
+            # Applying their .jsonl filters to .md exports would drop answers.
+            common.extend(["--filter", "+ /sessions/**.md", "--filter", "+ /archived_sessions/**.md",
+                           "--filter", "- **"])
+        else:
+            common.extend(job.filter_args(self._filter_excludes(job)))
         common.extend(self.bandwidth.rclone_args(job.bandwidth_limit))
         if dry_run:
             common.append("--dry-run")
@@ -440,7 +451,8 @@ class SyncEngine:
             return [self.rclone_path, action, job.remote_spec, local, *history, *common]
         if job.mode is SyncMode.UPLOAD_ONLY:
             history = ["--backup-dir", remote_history] if job.version_history else []
-            return [self.rclone_path, "sync", local, job.remote_spec, *history, *common]
+            action = "copy" if job.is_codex_text_backup else "sync"
+            return [self.rclone_path, action, local, job.backup_remote_spec, *history, *common]
         if job.mode is SyncMode.VIRTUAL_DRIVE:
             return self.mount_command(job)
         raise ValueError(f"Unsupported sync mode: {job.mode}")
@@ -1671,12 +1683,15 @@ class SyncEngine:
             process = self._processes.get(job_id)
             native = self._job_backends.get(job_id) == "proton_cli"
             queued = job_id in self._waiting_jobs
+            snapshot_stop = self._snapshot_cancellations.get(job_id)
+            if snapshot_stop is not None:
+                snapshot_stop.set()
             if queued:
                 self._cancelled_queued_jobs.add(job_id)
         if native:
             self.proton.cancel(job_id)
         if not process or process.poll() is not None:
-            return native or queued
+            return native or queued or snapshot_stop is not None
         try:
             terminate_process(process)
         except ProcessLookupError:
@@ -1976,6 +1991,7 @@ class SyncEngine:
     ) -> None:
         if (
             job.is_git
+            or job.is_codex_text_backup
             or self._job_backends.get(job.id) == "proton_cli"
             or job.mode is SyncMode.VIRTUAL_DRIVE
             or not job.realtime_sync
@@ -2021,6 +2037,8 @@ class SyncEngine:
             monitor.join(2.0)
 
     def _incremental_command(self, job: SyncJob, change: FileChange) -> list[str] | None:
+        if job.is_codex_text_backup:
+            raise RuntimeError("Conversation-text backups must use the text exporter, not raw-file callbacks")
         relative = change.path.strip("/")
         if not relative or ".." in Path(relative).parts:
             raise RuntimeError(f"unsafe incremental path: {change.path}")
@@ -2376,6 +2394,14 @@ class SyncEngine:
         recovered_duplicates: tuple[str, ...] = (),
         provider_refresh_attempts: int = 0,
     ) -> None:
+        if job.is_codex_text_backup and (
+            job.mode is not SyncMode.UPLOAD_ONLY or job.is_git
+            or self._job_backends.get(job.id) == "proton_cli"
+        ):
+            callback(JobResult(job.id, False,
+                               "Conversation-text backups require an upload-only rclone-backed cloud account; no raw files were uploaded",
+                               log_path))
+            return
         if job.is_git:
             callback(self._run_git_sync(job, log_path, dry_run))
             return
@@ -2427,12 +2453,43 @@ class SyncEngine:
         recovered_locks: list[str] = []
         cleared_incomplete_state: list[str] = []
         failure_log_path = log_path
+        backup_snapshot = None
+        process = None
         try:
             resolved = resolve_rclone(self.rclone_path)
             if resolved is None:
                 resolved = install_rclone()
             self.rclone_path = resolved
             self.leases.rclone_path = resolved
+            if job.ai_connector == "codex" and job.mode is SyncMode.UPLOAD_ONLY and (not dry_run or job.is_codex_text_backup):
+                with self._lock:
+                    snapshot_stop = self._snapshot_cancellations.setdefault(job.id, threading.Event())
+                    self._job_phases[job.id] = "snapshotting"
+                    self._job_progress[job.id] = 0
+
+                def snapshot_progress(done, total):
+                    with self._lock:
+                        self._job_progress[job.id] = min(99, int(100 * done / max(1, total)))
+
+                backup_snapshot = CodexBackupSnapshot(
+                    job, extra_excludes=self._filter_excludes(job),
+                    cancelled=snapshot_stop.is_set, progress=snapshot_progress,
+                ).prepare()
+                prepare_private_file(log_path)
+                with log_path.open("a", encoding="utf-8") as snapshot_log:
+                    snapshot_log.write(
+                        f"Stable Codex snapshot prepared: {backup_snapshot.files} files, "
+                        f"{backup_snapshot.bytes} bytes; {backup_snapshot.deferred_records} "
+                        "unfinished final chat record(s) deferred to the next backup.\n"
+                    )
+                    if backup_snapshot.text_only:
+                        snapshot_log.write(f"Compact conversation text: {backup_snapshot.messages} messages; "
+                                           f"{backup_snapshot.input_bytes} source bytes reduced to {backup_snapshot.bytes} export bytes.\n")
+                        for relative in backup_snapshot.skipped_conversations:
+                            snapshot_log.write("Unreadable conversation skipped; old cloud copy retained: "
+                                               + redact_error_text(relative) + "\n")
+                with self._lock:
+                    self._job_phases[job.id] = "checking"
             if job.mode is SyncMode.TWO_WAY and job.initialized:
                 workdir = self._prepare_bisync_workdir(job)
                 if not dry_run:
@@ -2459,11 +2516,18 @@ class SyncEngine:
             ):
                 preview_path = log_path.with_name(log_path.stem + "-safety-preview.log")
                 preview_command = self.command_for_job(job, dry_run=True)
+                if backup_snapshot is not None:
+                    preview_command[2] = str(backup_snapshot.root)
+                    preview_command.append("--checksum")
                 failure_log_path = preview_path
-                preview_returncode = self._run_safety_preview(
-                    preview_command, preview_path
+                preview_returncode = (
+                    self._run_safety_preview(preview_command, preview_path, cancelled=snapshot_stop.is_set)
+                    if backup_snapshot is not None
+                    else self._run_safety_preview(preview_command, preview_path)
                 )
                 self._record_network(job.id)
+                if backup_snapshot is not None and snapshot_stop.is_set():
+                    raise InterruptedError("Codex backup cancelled during safety preview")
                 if preview_returncode != 0:
                     if self._missing_bisync_state(preview_path):
                         auto_reinitialize = True
@@ -2511,6 +2575,11 @@ class SyncEngine:
                 dry_run=dry_run,
                 force_resync=auto_reinitialize or force_resync,
             )
+            if backup_snapshot is not None:
+                if snapshot_stop.is_set():
+                    raise InterruptedError("Codex backup cancelled before transfer")
+                command[2] = str(backup_snapshot.root)
+                command.append("--checksum")
             prepare_private_file(log_path)
             run_log_offset = log_path.stat().st_size if log_path.exists() else 0
             with log_path.open("a", encoding="utf-8") as log:
@@ -2547,6 +2616,8 @@ class SyncEngine:
                     self._processes[job.id] = process
                     self._job_progress[job.id] = 0
                     self._job_phases[job.id] = "transferring"
+                if backup_snapshot is not None and snapshot_stop.is_set():
+                    terminate_process(process)
                 self._record_network(job.id)
                 assert process.stdout is not None
                 last_transfer_progress = time.monotonic()
@@ -2649,7 +2720,8 @@ class SyncEngine:
                 with self._lock:
                     self._job_phases[job.id] = "verifying"
                 with log_path.open("a", encoding="utf-8") as history_log:
-                    self._prune_remote_history(job, history_log)
+                    if not (job.is_codex_text_backup and dry_run):
+                        self._prune_remote_history(job, history_log)
                 with self._lock:
                     self._job_progress[job.id] = 100
                 if job.mode is SyncMode.TWO_WAY and not dry_run:
@@ -2727,7 +2799,23 @@ class SyncEngine:
                         )
                         result = JobResult(job.id, True, message, log_path)
                 else:
-                    result = JobResult(job.id, True, "Synchronization complete", log_path)
+                    message = "Synchronization complete"
+                    if backup_snapshot is not None:
+                        message = (
+                            "Codex conversation-text preview complete; no files uploaded"
+                            if backup_snapshot.text_only and dry_run
+                            else f"Codex text backup complete: {backup_snapshot.messages} messages, {backup_snapshot.bytes} bytes"
+                            if backup_snapshot.text_only
+                            else "Codex backup complete from a stable snapshot"
+                        )
+                        if backup_snapshot.skipped_conversations:
+                            state = "preview has warning" if dry_run else "backup saved with warning"
+                            message = (f"Codex text {state}: {len(backup_snapshot.skipped_conversations)} "
+                                       "unreadable conversation(s) skipped; previous cloud copies retained")
+                        if backup_snapshot.deferred_records:
+                            message += (f"; {backup_snapshot.deferred_records} unfinished chat record(s) "
+                                        "deferred to the next backup attempt")
+                    result = JobResult(job.id, True, message, log_path)
             elif cancelled:
                 result = JobResult(job.id, False, "Synchronization cancelled", log_path, True)
             else:
@@ -2742,6 +2830,9 @@ class SyncEngine:
                             "Google Drive returned a missing cached directory ID during "
                             "the AI backup; restarting once with a fresh provider listing.\n"
                         )
+                    if backup_snapshot is not None:
+                        backup_snapshot.close()
+                        backup_snapshot = None
                     self._run_worker(
                         job,
                         log_path,
@@ -2786,20 +2877,32 @@ class SyncEngine:
                     integrity_blocked=integrity_issue is not None,
                     transient_network_failure=network_issue is not None,
                 )
-        except (OSError, RuntimeError) as exc:
+        except InterruptedError:
+            result = JobResult(job.id, False, "Codex backup cancelled; existing cloud backup is unchanged", failure_log_path, True)
+        except BackupSnapshotError as exc:
+            result = JobResult(job.id, False, "Codex backup paused before upload: " + str(exc),
+                               failure_log_path, error_source=exc.source_relative)
+        except (OSError, RuntimeError, sqlite3.Error) as exc:
             result = JobResult(
                 job.id,
                 False,
                 f"Synchronization could not start: {redact_error_text(str(exc))}",
                 failure_log_path,
+                error_source=getattr(exc, "source_relative", ""),
                 transient_network_failure=transient_network_issue(str(exc)) is not None,
             )
         finally:
+            if backup_snapshot is not None:
+                backup_snapshot.close()
+            if process is not None and process.stdout is not None:
+                process.stdout.close()
             with self._lock:
                 self._processes.pop(job.id, None)
+                self._snapshot_cancellations.pop(job.id, None)
         callback(result)
 
-    def _run_safety_preview(self, command: list[str], log_path: Path) -> int:
+    def _run_safety_preview(self, command: list[str], log_path: Path, *,
+                            cancelled: Callable[[], bool] | None = None) -> int:
         """Run a dry-run preview without allowing silence to hold a slot.
 
         The preview runs before the normal transfer supervisor.  It therefore
@@ -2818,6 +2921,8 @@ class SyncEngine:
             last_size = 0
             last_output = time.monotonic()
             while process.poll() is None:
+                if cancelled is not None and cancelled():
+                    return stop_process(process)
                 size = os.fstat(preview.fileno()).st_size
                 if size != last_size:
                     last_size = size

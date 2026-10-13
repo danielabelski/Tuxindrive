@@ -7,7 +7,19 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.77
+## Current baseline: 0.26.78
+
+### Implemented in 0.26.78: compact and stable Codex backups
+
+- Readable conversation-text archives without attachments, tool results or
+  embedded images; selectable on existing jobs and recommended in the wizard.
+- Direct projection into compact private staging, with unchanged-text skipping
+  and non-deleting cloud copy; existing backup data is not removed automatically.
+- Whole-conversation omission with warnings for malformed journals; fatal disk,
+  cancellation, path-confinement and source-integrity boundaries remain intact.
+- Stable native chat prefixes and SQLite online backups while Codex stays open.
+- Separate cancellable preparation progress and current-index startup without
+  unnecessary writes. Text archives do not restore native Codex sessions.
 
 ### Implemented in 0.26.77: resilient Gmail indexing
 

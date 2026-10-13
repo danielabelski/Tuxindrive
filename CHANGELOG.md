@@ -2,6 +2,30 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.78 — compact Codex text backups and stable backup inputs
+
+- Add **Conversation text only (small)** for Codex: stream readable prompts and
+  replies directly into private Markdown, without files, embedded images,
+  tool output, reasoning or application state. Recommend this mode in the wizard
+  and make it selectable on existing jobs through Edit. It is a reading archive,
+  not a native Codex-session restore.
+- Copy compact exports incrementally into a separate `conversation-text`
+  subfolder; preserve existing raw backups and previous exports of unreadable
+  conversations. Do not stage a full-size raw copy. Report partial warnings for
+  malformed journals; cancellation, disk and source-integrity failures stay fatal.
+- Capture private disposable Codex input snapshots before preview and upload;
+  never upload growing live conversation files or bypass integrity checks.
+  Freeze and validate chat prefixes, defer unfinished final records, and use
+  SQLite's online backup API for standalone, validated database copies.
+- Reuse the same frozen tree for safety preview and transfer. Preserve existing
+  paths, exclusion rules, checksum comparison, manual-only scheduling, version
+  retention and deletion guards. Clean temporary staging after the run.
+- Show cancellable snapshot-preparation progress separately from cloud upload.
+  Insufficient local space, invalid chat records or unstable ordinary files
+  stop before any cloud transfer.
+- Open a complete current search schema without rewriting metadata or creating
+  tables on every startup, avoiding writer-lock crashes during another refresh.
+
 ## 0.26.77 — resilient Gmail attachment indexing
 
 - Do not abort a whole Gmail refresh because one message has unreadable MIME
