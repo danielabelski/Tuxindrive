@@ -25,7 +25,7 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The source defines **757 unit checks: 743 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-four Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The source defines **760 unit checks: 746 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-six Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 The credential/backup regressions use synthetic data and cover mocked timeout
 cleanup, no key replacement on credential-store failure,
@@ -39,6 +39,18 @@ PYTHONPATH=src TUXINDRIVE_TEST_RCLONE=/absolute/path/to/rclone \
 ```
 
 No live cloud account or personal chat files are used by these regressions.
+
+### Online-account sidebar scrolling (0.26.79)
+
+The structural regression keeps the production account list inside a vertical
+scroll container while its heading and Add account button remain outside it.
+`tests.test_accounts_sidebar_gtk` executes the exact sidebar constructor block
+on an isolated GTK display with synthetic accounts, without starting the app or
+loading accounts, credentials or timers. Forty cards must fit a bounded window,
+the last card must scroll into view without changing the folder pane's scroll
+position, and Add account must stay visible and clickable. Zero/two-card lists
+must hide the scrollbar. Run with `TUXINDRIVE_GTK_TESTS=1`, an isolated Xvfb display
+and a temporary XDG profile; never attach these tests to the user's live desktop.
 
 ### Stable Codex backup inputs and startup locking (0.26.78)
 
@@ -216,7 +228,8 @@ directories; cloud synchronization is never started.
 | `test_peer.py` | 27 | Invitation compatibility, approval-based LAN requests/advertisements, roles/drops/transports, signed atomic deltas, isolated device roots, authorization/revocation, host-key pinning, leases and private identities. |
 | `test_policies.py` | 7 | Controlled defaults plus battery, metered-network and normal/overnight schedule decisions, including fail-open probe handling. |
 | `test_recovery.py` | 13 | Local archive/restore behavior, disabled retention, malformed/foreign record rejection, expiry pruning, mass-change and ransomware-suffix blocking, integrity-audit parsing and directional repairs. |
-| `test_responsive_windows.py` | 11 | Monitor-safe, freely resizable client/server windows, local scrolling, wide-control isolation, search preview gating, OAuth recovery routing, live log lifecycle and dedicated recovery details. |
+| `test_responsive_windows.py` | 12 | Monitor-safe, freely resizable client/server windows, independent account scrolling, local scrolling, wide-control isolation, search preview gating, OAuth recovery routing, live log lifecycle and dedicated recovery details. |
+| `test_accounts_sidebar_gtk.py` | 2 | Actual constructor sidebar with 40 synthetic accounts; bounded allocation, final-card reachability, independent scrolling, fixed Add account action and no unnecessary scrollbar for empty/short lists. |
 | `test_search_index.py` | 14 | Private metadata indexing, explicit bounded content opt-in, Unicode/token lookup, cancellation, literal wildcard handling, stale pruning, exclusions, symlink rejection, paused roots, streaming avoidance and safety-limit retention. |
 | `test_security.py` | 8 | Empty/absolute/parent path rejection, symlink refusal, confined atomic installation, Ed25519-only keys and signed transaction tamper detection. |
 | `test_server.py` | 26 | Private initialization, race-resistant root configuration writes, shared agent/relay bandwidth control, package-launcher forwarding and private library isolation, TLS/URL/token validation, default-off client flag, opaque mailbox/object/rendezvous/collaboration isolation and deterministic same-second operation ordering, expiry/quota bounds, bounded authenticated HTTP and relay admission, relay rejection, read-only MCP, GUI/desktop packaging and private staging-file permission rejection. |

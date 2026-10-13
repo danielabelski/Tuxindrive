@@ -4720,7 +4720,16 @@ class MainWindow(Gtk.ApplicationWindow):
         self.account_list = Gtk.ListBox()
         self.account_list.get_style_context().add_class("account-list")
         self.account_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        sidebar.pack_start(self.account_list, False, False, 0)
+        # Keep account cards inside the available height, independently of the
+        # synchronized-folder pane. Header and Add account remain reachable.
+        self.account_scroll = Gtk.ScrolledWindow()
+        self.account_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.account_scroll.set_min_content_height(1)
+        self.account_scroll.set_propagate_natural_height(False)
+        self.account_scroll.set_overlay_scrolling(False)
+        self.account_scroll.set_vexpand(True)
+        self.account_scroll.add(self.account_list)
+        sidebar.pack_start(self.account_scroll, True, True, 0)
         connect_button = Gtk.Button(label=tr("connect_account"))
         connect_button.get_style_context().add_class("primary-outline")
         connect_button.connect("clicked", self._choose_provider)

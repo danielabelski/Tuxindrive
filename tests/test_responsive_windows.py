@@ -8,6 +8,19 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 
 
 class ResponsiveWindowTests(unittest.TestCase):
+    def test_accounts_sidebar_scrolls_without_hiding_heading_or_add_account(self) -> None:
+        source = (REPOSITORY / "src/tuxindrive/app.py").read_text(encoding="utf-8")
+        sidebar = source[source.index("        sidebar = Gtk.Box"):source.index("        main = Gtk.Box")]
+        self.assertIn("self.account_scroll = Gtk.ScrolledWindow()", sidebar)
+        self.assertIn("self.account_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)", sidebar)
+        self.assertIn("self.account_scroll.set_propagate_natural_height(False)", sidebar)
+        self.assertIn("self.account_scroll.set_overlay_scrolling(False)", sidebar)
+        self.assertIn("self.account_scroll.add(self.account_list)", sidebar)
+        self.assertIn("sidebar.pack_start(self.account_scroll, True, True, 0)", sidebar)
+        self.assertIn("sidebar.pack_start(account_label, False, False, 0)", sidebar)
+        self.assertIn("sidebar.pack_start(connect_button, False, False, 0)", sidebar)
+        self.assertNotIn("sidebar.pack_start(self.account_list", sidebar)
+
     def test_client_dialogs_use_monitor_safe_maximum_without_forced_maximization(self) -> None:
         source = (REPOSITORY / "src/tuxindrive/app.py").read_text(encoding="utf-8")
 

@@ -2,6 +2,13 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.79 — scrollable online-account sidebar
+
+- Scroll cloud and mail account cards independently of synchronized folders.
+  Keep the Online accounts heading and Add account button fixed and reachable.
+  Show a vertical scrollbar only when needed, without enlarging the window to
+  fit every account or changing account order, menus or credentials.
+
 ## 0.26.78 — compact Codex text backups and stable backup inputs
 
 - Add **Conversation text only (small)** for Codex: stream readable prompts and

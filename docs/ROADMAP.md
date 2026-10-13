@@ -7,7 +7,15 @@ This document records completed safety work and proposes future work. Suggestion
 
 The longer-term product direction is a **“Signal for files and cooperation”**: private workspaces in which people verify devices, exchange files and messages, synchronize offline changes, and—where a format supports it—edit together in real time. This is a design goal, not a present security claim. Every feature must ship with an explicit threat model and must identify which content and metadata remain visible to endpoints, relays, storage providers, Tor observers, and workspace administrators.
 
-## Current baseline: 0.26.78
+## Current baseline: 0.26.79
+
+### Implemented in 0.26.79: independent account-sidebar scrolling
+
+Cloud and mail account cards scroll within the desktop window instead of forcing
+it to fit every account. The heading and Add account action remain fixed, and
+the folder pane keeps its independent scroll position. Forty synthetic accounts
+and empty/short lists are verified on an isolated GTK display; account identity,
+ordering, menus and credentials are unchanged.
 
 ### Implemented in 0.26.78: compact and stable Codex backups
 
