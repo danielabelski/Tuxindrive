@@ -1,8 +1,8 @@
 {
-  "version": "0.26.77",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.77/TuxInDrive-0.26.77-windows-x64-setup.exe",
-  "sha256": "a049c4bc227679bda7e9ad251c553c977557e536dc0c21341ccb73c10bf1948f",
-  "notes": "Resilient Gmail attachment indexing with bounded MIME parsing, visible partial-scan warnings and preservation of existing results.",
-  "expires_at": "2027-01-10T20:27:05.020203+00:00",
-  "signature": "Qg2fmEGGjJ7Qr+CxoN/WeOOGCn8X9n8f2RS83vtqB03GYwvM/syyLqaNlohmvgSu7wSq5zZQUfwM3alSoCx8Dg=="
+  "version": "0.26.78",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/TuxInDrive-0.26.78-windows-x64-setup.exe",
+  "sha256": "7a10fad9fb0526c199c1eb55aab651352bdafd0d948080460067b9ffafd72cdc",
+  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
+  "expires_at": "2027-01-11T17:56:45.520929+00:00",
+  "signature": "PQv0bTjQF8tc3ZL129bxProO3rgy7hajM+kRmLS1AnEUO8vHn9YhpFviQOjzkcr8MrvLAMvGmeu3IpVEdXA7Cg=="
 }

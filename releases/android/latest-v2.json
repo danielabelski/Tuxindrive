@@ -1,8 +1,8 @@
 {
-  "version": "0.26.77",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.77/TuxInDrive-0.26.77-android.apk",
-  "sha256": "8695123b26669a2b51cee840fa72e84b7085a5fdaee54f2c76bf323f73320dea",
-  "notes": "Resilient Gmail attachment indexing with bounded MIME parsing, visible partial-scan warnings and preservation of existing results.",
-  "expires_at": "2027-01-10T20:27:05.409734+00:00",
-  "signature": "DE9KiXeai3GVUBN04j2a/xUdk3ZA7EuzUlBB1qlQdofuRGhB2cRE0up9ONgUjASnfER9rCLKkWFH+bLWfd61DQ=="
+  "version": "0.26.78",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/TuxInDrive-0.26.78-android.apk",
+  "sha256": "357756d836d6a13899f05dd215e6c4c15b550fcd68c8a4cd4676fdb38bf9f7f8",
+  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
+  "expires_at": "2027-01-11T17:56:45.957677+00:00",
+  "signature": "3NPfWDr0zsxgmP6mA8bfog6QJuV9WEJpHYz0PTPt9K4M8rri+orSZsFGUby1m2a2f2vUE6nrVq2rTD9oFK7kAw=="
 }

@@ -1,8 +1,8 @@
 {
-  "version": "0.26.77",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.77/TuxInDrive-0.26.77-macos-arm64.dmg",
-  "sha256": "41612484ef7d91b3726d2f076694696fc30b25b688f3612157894a628c1adca9",
-  "notes": "Resilient Gmail attachment indexing with bounded MIME parsing, visible partial-scan warnings and preservation of existing results.",
-  "expires_at": "2027-01-10T20:27:05.029285+00:00",
-  "signature": "SEu3dQgyksccnCY+UF3dBcOySMLM314IdDxHzF9ZNjC/FGkUi0K/VzdBVtDJixepucECvy/zZ2TaSwjfMYO/Aw=="
+  "version": "0.26.78",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/TuxInDrive-0.26.78-macos-arm64.dmg",
+  "sha256": "4162b8030165280984569f9ace8e51425203f96b12487ffc497fd73233a46e83",
+  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
+  "expires_at": "2027-01-11T17:56:45.658219+00:00",
+  "signature": "z8JVKsb9jqqBxOoC7nFM1PewEND3adQ69RJmRozLlZVcZFyJ6MLRkhHbW5MunDD0Hy1qrbtZdYKXYAbYoTvsDQ=="
 }
