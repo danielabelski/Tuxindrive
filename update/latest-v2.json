@@ -1,8 +1,8 @@
 {
-  "version": "0.26.78",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/tuxindrive_0.26.78_all.deb",
-  "sha256": "7ef37a40828b36e09e00d27db8fd42d096efbd392411b70ffa3adc7c7117d584",
-  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
-  "expires_at": "2027-01-11T17:56:45.390789+00:00",
-  "signature": "txsGbMp1uYJaIBY7TyMkLacTGmxDb+n9pjLsU/I0EKZ6YBc9YDGuN3azXJ+v04Plo6Kne6W9u8ZmjOfWIw/sDw=="
+  "version": "0.26.79",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/tuxindrive_0.26.79_all.deb",
+  "sha256": "734cb4115bffc637a88cf7310dab282671cab58e997fc43587bb15eb496da019",
+  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
+  "expires_at": "2027-01-11T19:12:35.999325+00:00",
+  "signature": "jtFyPMZQzSizkUSjNmlk7D5fKRj1kBAIVZg/Onht0nzNQitW6kRns0qXE4PtyilBZgZ4O9XZ9X4Cso1ScTvoAg=="
 }

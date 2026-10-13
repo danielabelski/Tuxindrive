@@ -1,8 +1,8 @@
 {
-  "version": "0.26.78",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/TuxInDrive-0.26.78-windows-x64-setup.exe",
-  "sha256": "7a10fad9fb0526c199c1eb55aab651352bdafd0d948080460067b9ffafd72cdc",
-  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
-  "expires_at": "2027-01-11T17:56:45.520929+00:00",
-  "signature": "PQv0bTjQF8tc3ZL129bxProO3rgy7hajM+kRmLS1AnEUO8vHn9YhpFviQOjzkcr8MrvLAMvGmeu3IpVEdXA7Cg=="
+  "version": "0.26.79",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/TuxInDrive-0.26.79-windows-x64-setup.exe",
+  "sha256": "ebd35e2cc5e5fd75196105af2b3f0084a9d4afd6089430df952e8193d92fdaf5",
+  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
+  "expires_at": "2027-01-11T19:12:36.269426+00:00",
+  "signature": "3ar0levpEQvAdRqj1oJK32+51hRRV5jMlPztOr9kCqs7iN4XlOqCdKogOW8Om2H9DVgJ8dE2ZeW/xeRL47OwAA=="
 }

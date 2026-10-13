@@ -1,8 +1,8 @@
 {
-  "version": "0.26.78",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/TuxInDrive-0.26.78-macos-arm64.dmg",
-  "sha256": "4162b8030165280984569f9ace8e51425203f96b12487ffc497fd73233a46e83",
-  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
-  "expires_at": "2027-01-11T17:56:45.658219+00:00",
-  "signature": "z8JVKsb9jqqBxOoC7nFM1PewEND3adQ69RJmRozLlZVcZFyJ6MLRkhHbW5MunDD0Hy1qrbtZdYKXYAbYoTvsDQ=="
+  "version": "0.26.79",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/TuxInDrive-0.26.79-macos-arm64.dmg",
+  "sha256": "834ccbfd997a581af0c6527d31c96a8cd7bbe0a6755e02e59ad083ff0eb6df2a",
+  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
+  "expires_at": "2027-01-11T19:12:36.589707+00:00",
+  "signature": "re+B4sJINaYbCHfmgJMbWENswrwtHfQokplGsArBYmGPVCKTeWVJ99CaVUVfGDn6PAS9Xv/59g51XUOzVIkiBA=="
 }

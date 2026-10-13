@@ -1,8 +1,8 @@
 {
-  "version": "0.26.78",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.78/TuxInDrive-0.26.78-android.apk",
-  "sha256": "357756d836d6a13899f05dd215e6c4c15b550fcd68c8a4cd4676fdb38bf9f7f8",
-  "notes": "Compact Codex conversation-text backups without attachments or tool data; stable native snapshots and startup index-lock avoidance. Select text-only in Edit; existing cloud backups are retained.",
-  "expires_at": "2027-01-11T17:56:45.957677+00:00",
-  "signature": "3NPfWDr0zsxgmP6mA8bfog6QJuV9WEJpHYz0PTPt9K4M8rri+orSZsFGUby1m2a2f2vUE6nrVq2rTD9oFK7kAw=="
+  "version": "0.26.79",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/TuxInDrive-0.26.79-android.apk",
+  "sha256": "4c41a15facb478b527ea13e45e2dde3aff8d1f272337b64eec417ae2a103bce1",
+  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
+  "expires_at": "2027-01-11T19:12:37.422678+00:00",
+  "signature": "Q1irZrBvlAxnWJz7ytM2QoiAA02bxCCEx+kzgaPKhnF3OcSXxbgUNKri8fcC0/nF8Fk5Mmjd2IM1NYLyzEC3Bw=="
 }
