@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from urllib.request import urlopen
+from unittest import mock
 
 ARCHIVE_COMMIT = "dd626c281342ed448f326d3e2b83924203fac673"
 OLD_PACKAGES = {
@@ -56,7 +57,12 @@ def main():
         sys.path.insert(0, "/usr/lib")
         namespace = "tuxdrive" if args.from_version in {"0.18.1", "0.19.1"} else "tuxindrive"
         updater = importlib.import_module(namespace + ".updater")
-        helper = importlib.import_module(namespace + ".update_helper")
+        try:
+            helper = importlib.import_module(namespace + ".update_helper")
+        except ModuleNotFoundError as exc:
+            if args.from_version != "0.18.1" or exc.name != namespace + ".update_helper":
+                raise
+            helper = None  # This release predates the independent root helper.
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
         test_key = Ed25519PrivateKey.generate()
@@ -73,13 +79,27 @@ def main():
         alias.write_bytes(package.read_bytes())
         staging = root / "staging"
         staging.mkdir(mode=0o700)
-        staged = helper.stage_verified_package(alias, staging / alias.name, release)
+        staged = helper.stage_verified_package(alias, staging / alias.name, release) if helper else alias
         assert hashlib.sha256(staged.read_bytes()).hexdigest() == signed["sha256"]
-        run("apt-get", "install", "-y", "--no-install-recommends", str(staged))
+        if helper:
+            run("apt-get", "install", "-y", "--no-install-recommends", str(staged))
+        else:
+            real_run, real_which = subprocess.run, updater.shutil.which
+
+            def isolated_run(command, **kwargs):
+                if command[0] == "/isolated-test/pkexec":
+                    assert command[1:] == [real_which("apt-get") or "/usr/bin/apt-get", "install", "-y", str(alias)]
+                    command = command[1:]
+                return real_run(command, **kwargs)
+
+            with mock.patch.object(updater.shutil, "which", side_effect=lambda name: "/isolated-test/pkexec" if name == "pkexec" else real_which(name)), \
+                    mock.patch.object(updater.subprocess, "run", side_effect=isolated_run):
+                updater.UpdateManager(args.from_version).install(alias)
         run("tuxindrive", "--version")
         assert hashlib.sha256(sentinel.read_bytes()).hexdigest() == sentinel_digest
         print(json.dumps({"from": args.from_version, "to": version,
-            "historical_parser_and_helper_staging": True, "apt_upgrade": True,
+            "historical_parser_and_helper_staging": helper is not None,
+            "historical_prehelper_install_validation": helper is None, "apt_upgrade": True,
             "profile_sentinel_unchanged": True, "signature_is_test_only": True}))
 
 
