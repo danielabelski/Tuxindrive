@@ -81,8 +81,8 @@ cannot modify it. It initializes a
 random 384-bit API token once. Read and then securely remove its bootstrap copy:
 
 ```bash
-sudo cat /var/lib/tuxindrive-server/bootstrap-token
-sudo shred -u /var/lib/tuxindrive-server/bootstrap-token
+sudo tuxindrive-server admin read-bootstrap-token
+sudo tuxindrive-server admin delete-bootstrap-token
 sudo systemctl enable --now tuxindrive-server
 curl http://127.0.0.1:9443/healthz
 ```

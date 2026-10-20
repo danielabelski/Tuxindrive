@@ -1,12 +1,13 @@
 name: tuxindrive
 base: core24
-version: "0.26.79"
+version: "0.26.80"
 summary: Multi-cloud sync, streaming, and encrypted collaboration
 description: |
   TuxInDrive is a Linux-first desktop client for synchronizing and streaming
   user-selected folders across multiple cloud providers. It also supports
   searchable synchronized folders, encrypted peer collaboration, offline
   files, recovery, and optional Nautilus integration.
+  This is a classic, unconfined desktop package; it is not a strict snap sandbox.
 grade: stable
 confinement: classic
 license: MIT
@@ -24,6 +25,24 @@ apps:
       PYTHONPATH: $SNAP/usr/lib/python3/dist-packages
 
 parts:
+  rclone-pinned:
+    plugin: nil
+    build-packages: [curl, unzip]
+    override-build: |
+      set -eu
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) digest=aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa ;;
+        arm64) digest=d0ad88ba4c8e285b7c9efa591e0ab643280a91741e13c27f3a9c0957ccfa5203 ;;
+        *) echo 'Unsupported pinned rclone architecture' >&2; exit 1 ;;
+      esac
+      archive="rclone-v1.75.0-linux-$CRAFT_ARCH_BUILD_FOR.zip"
+      curl --fail --location --retry 2 --connect-timeout 15 --max-time 180 \
+        --output "$archive" "https://downloads.rclone.org/v1.75.0/$archive"
+      printf '%s  %s\n' "$digest" "$archive" | sha256sum --check -
+      install -d "$CRAFT_PART_INSTALL/usr/bin"
+      unzip -p "$archive" "rclone-v1.75.0-linux-$CRAFT_ARCH_BUILD_FOR/rclone" \
+        > "$CRAFT_PART_INSTALL/usr/bin/rclone"
+      chmod 0755 "$CRAFT_PART_INSTALL/usr/bin/rclone"
   tuxindrive:
     plugin: python
     source: .
@@ -51,7 +70,6 @@ parts:
       - python3-venv
       - python3.12-minimal
       - python3.12-venv
-      - rclone
       - xdg-utils
     override-build: |
       craftctl default

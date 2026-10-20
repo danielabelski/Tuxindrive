@@ -2,6 +2,22 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.80 — distribution and optional-server hardening
+
+- Run admitted TLS handshakes in bounded request workers, not the accept loop;
+  silent or malformed clients no longer freeze every server connection.
+- Move bootstrap-token administration into a root-only directory. Migrate only
+  a private regular legacy token matching the existing authorization hash;
+  reject symlinks, hardlinks, FIFOs and oversized files without changing access.
+- Isolate privileged Python startup. Keep the synchronization engine, storage
+  formats, encryption and OAuth permissions unchanged.
+- Build Android without production credentials and sign exact outputs in a
+  protected separate job, preserving the existing APK signing certificate.
+- Refuse replacement of published release assets, restrict Snap publication,
+  and accurately disclose the absence of Windows Authenticode signing.
+- Restore legacy-compatible Linux download routing without relaxing signature,
+  checksum, expiry, version or Debian package-identity checks.
+
 ## 0.26.79 — scrollable online-account sidebar
 
 - Scroll cloud and mail account cards independently of synchronized folders.

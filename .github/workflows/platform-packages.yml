@@ -2,6 +2,11 @@ name: Build desktop packages
 
 on:
   workflow_dispatch:
+    inputs:
+      collect_dependency_verification:
+        description: Collect unsigned Android dependency checksums for review; never publish
+        type: boolean
+        default: false
   push:
     branches: [main]
     tags: ["v*"]
@@ -21,9 +26,16 @@ on:
       - "requirements*.txt"
       - ".github/workflows/platform-packages.yml"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-packages-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   safety-gate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -47,17 +59,21 @@ jobs:
         run: PYTHONPATH=src TUXINDRIVE_ISOLATED_PROCESS_TESTS=1 .venv-ci/bin/python -m unittest discover -s integration_tests -v
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.build.outputs.version }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
       - name: Build Debian package
+        id: build
         run: |
           sh scripts/build-deb.sh
           sh scripts/build-server-deb.sh
           python3 -m pip install -r requirements-ci.txt
           version=$(PYTHONPATH=src python3 -c 'from tuxindrive import __version__; print(__version__)')
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
           python3 -m pip_audit -r requirements-security.txt --format cyclonedx-json \
             --output "dist/TuxInDrive-${version}-python.cdx.json"
       - name: Stage dedicated Linux release folder
@@ -76,8 +92,37 @@ jobs:
             releases/linux/packages/tuxindrive-server_*_all.deb
             releases/linux/packages/TuxInDrive-*-python.cdx.json
 
+  legacy-upgrades:
+    needs: linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        from-version: ["0.18.1", "0.19.1", "0.26.2", "0.26.79"]
+    container:
+      image: ubuntu:24.04
+      options: --pids-limit 256
+    steps:
+      - name: Install isolated upgrade prerequisites
+        run: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git python3 ca-certificates
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tuxindrive-linux
+          path: current-packages
+      - name: Verify historical parser, helper staging and clean APT upgrade
+        env:
+          TUXINDRIVE_ISOLATED_UPGRADE_TESTS: "1"
+          FROM_VERSION: ${{ matrix.from-version }}
+          RELEASE_VERSION: ${{ needs.linux.outputs.version }}
+          DEBIAN_FRONTEND: noninteractive
+        run: python3 scripts/test-legacy-upgrade.py --from-version "$FROM_VERSION" --package "current-packages/tuxindrive_${RELEASE_VERSION}_all.deb"
+
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
@@ -150,7 +195,7 @@ jobs:
           path: releases/macos/packages/TuxInDrive-*-macos-*.dmg
 
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -182,25 +227,20 @@ jobs:
             -o "${GITHUB_WORKSPACE}/android/app/libs/rclone.aar" \
             github.com/rclone/rclone/librclone/gomobile
           test -s "${GITHUB_WORKSPACE}/android/app/libs/rclone.aar"
-      - name: Build Android sideload APK and Play Store bundle
+      - name: Build unsigned Android packages without signing credentials
         env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          TUXINDRIVE_ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          TUXINDRIVE_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          TUXINDRIVE_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          COLLECT_VERIFICATION: ${{ inputs.collect_dependency_verification }}
         run: |
           version=$(PYTHONPATH=src python3 -c 'from tuxindrive import __version__; print(__version__)')
-          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main ]]; then
-            test -n "$ANDROID_KEYSTORE_BASE64"
-            test -n "$TUXINDRIVE_ANDROID_STORE_PASSWORD"
-            test -n "$TUXINDRIVE_ANDROID_KEY_ALIAS"
-            test -n "$TUXINDRIVE_ANDROID_KEY_PASSWORD"
-            export TUXINDRIVE_ANDROID_KEYSTORE="$RUNNER_TEMP/tuxindrive-release.jks"
-            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$TUXINDRIVE_ANDROID_KEYSTORE"
-            gradle -p android --no-daemon \
+          verification_flags=()
+          if [[ "$COLLECT_VERIFICATION" == true ]]; then
+            verification_flags=(--write-verification-metadata sha256)
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "$COLLECT_VERIFICATION" == true ]]; then
+            gradle -p android --no-daemon "${verification_flags[@]}" \
               :app:testSideloadReleaseUnitTest :app:lintSideloadRelease :app:assembleSideloadRelease \
               :app:testStoreReleaseUnitTest :app:lintStoreRelease :app:bundleStoreRelease
-            package=android/app/build/outputs/apk/sideload/release/app-sideload-release.apk
+            package=android/app/build/outputs/apk/sideload/release/app-sideload-release-unsigned.apk
             store_bundle=android/app/build/outputs/bundle/storeRelease/app-store-release.aab
           else
             gradle -p android --no-daemon :app:testSideloadDebugUnitTest :app:lintSideloadDebug :app:assembleSideloadDebug
@@ -209,26 +249,91 @@ jobs:
           fi
           test -s "$package"
           mkdir -p dist
-          cp "$package" "dist/TuxInDrive-${version}-android.apk"
-          mkdir -p releases/android/packages
-          cp "dist/TuxInDrive-${version}-android.apk" releases/android/packages/
+          cp "$package" "dist/TuxInDrive-${version}-android-unsigned.apk"
           if [[ -n "$store_bundle" ]]; then
             test -s "$store_bundle"
-            cp "$store_bundle" "dist/TuxInDrive-${version}-android-store.aab"
-            cp "dist/TuxInDrive-${version}-android-store.aab" releases/android/packages/
+            cp "$store_bundle" "dist/TuxInDrive-${version}-android-store-unsigned.aab"
           fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tuxindrive-android-unsigned
+          retention-days: 7
+          path: |
+            dist/TuxInDrive-*-android-unsigned.apk
+            dist/TuxInDrive-*-android-store-unsigned.aab
+      - name: Export checksum candidates for maintainer review
+        if: inputs.collect_dependency_verification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: android-dependency-verification
+          retention-days: 3
+          path: android/gradle/verification-metadata.xml
+
+  android-sign:
+    if: ${{ !inputs.collect_dependency_verification && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
+    needs: [safety-gate, linux, legacy-upgrades, android]
+    runs-on: ubuntu-24.04
+    environment: release
+    steps:
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tuxindrive-android-unsigned
+          path: unsigned
+      - name: Sign exact build outputs without running project or Gradle code
+        env:
+          RELEASE_VERSION: ${{ needs.linux.outputs.version }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          TUXINDRIVE_ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          TUXINDRIVE_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          TUXINDRIVE_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = tpluharik/Tuxindrive
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            test "$GITHUB_REF_NAME" = "v$RELEASE_VERSION"
+          fi
+          tools="$ANDROID_HOME/build-tools/35.0.0"
+          test -x "$tools/apksigner"
+          test -x "$tools/zipalign"
+          task_signing_dir=$(mktemp -d "$RUNNER_TEMP/tuxindrive-sign.XXXXXXXX")
+          trap 'rm -f -- "$task_signing_dir/release.jks"' EXIT
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$task_signing_dir/release.jks"
+          keytool -exportcert -keystore "$task_signing_dir/release.jks" \
+            -storepass:env TUXINDRIVE_ANDROID_STORE_PASSWORD -alias "$TUXINDRIVE_ANDROID_KEY_ALIAS" \
+            -file "$task_signing_dir/certificate.der"
+          expected=485e258558e47f140543e36b2092b9357fe365fae104e5c017bd28ec4209a58b
+          actual=$(sha256sum "$task_signing_dir/certificate.der" | cut -d ' ' -f 1)
+          test "$actual" = "$expected"
+          mkdir -p releases/android/packages
+          apk="TuxInDrive-$RELEASE_VERSION-android.apk"
+          aab="TuxInDrive-$RELEASE_VERSION-android-store.aab"
+          "$tools/zipalign" -P 16 -f 4 "unsigned/TuxInDrive-$RELEASE_VERSION-android-unsigned.apk" "$task_signing_dir/aligned.apk"
+          "$tools/apksigner" sign --ks "$task_signing_dir/release.jks" \
+            --ks-key-alias "$TUXINDRIVE_ANDROID_KEY_ALIAS" \
+            --ks-pass env:TUXINDRIVE_ANDROID_STORE_PASSWORD --key-pass env:TUXINDRIVE_ANDROID_KEY_PASSWORD \
+            --out "releases/android/packages/$apk" "$task_signing_dir/aligned.apk"
+          "$tools/apksigner" verify --verbose --print-certs "releases/android/packages/$apk"
+          jarsigner -keystore "$task_signing_dir/release.jks" \
+            -storepass:env TUXINDRIVE_ANDROID_STORE_PASSWORD -keypass:env TUXINDRIVE_ANDROID_KEY_PASSWORD \
+            -signedjar "releases/android/packages/$aab" \
+            "unsigned/TuxInDrive-$RELEASE_VERSION-android-store-unsigned.aab" "$TUXINDRIVE_ANDROID_KEY_ALIAS"
+          jarsigner -verify "releases/android/packages/$aab"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tuxindrive-android
           retention-days: 7
-          path: |
-            releases/android/packages/TuxInDrive-*-android.apk
-            releases/android/packages/TuxInDrive-*-android-store.aab
+          path: releases/android/packages/*
 
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
-    needs: [safety-gate, linux, windows, macos, android]
-    runs-on: ubuntu-latest
+    if: ${{ !inputs.collect_dependency_verification && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
+    needs: [safety-gate, linux, legacy-upgrades, windows, macos, android-sign]
+    runs-on: ubuntu-24.04
     environment: release
     permissions:
       contents: write
@@ -238,8 +343,20 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
+          name: tuxindrive-linux
           path: release-assets
-          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tuxindrive-windows-x64
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tuxindrive-macos
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tuxindrive-android
+          path: release-assets
       - name: Validate version-bound platform packages
         run: |
           version=$(PYTHONPATH=src python3 -c 'from tuxindrive import __version__; print(__version__)')
@@ -273,12 +390,8 @@ jobs:
           mapfile -t packages < <(find release-assets -type f -print)
           test "${#packages[@]}" -eq 10
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-              gh release upload "$RELEASE_TAG" "${packages[@]}" --clobber
-            else
-              echo "::error::Release $RELEASE_TAG already exists. Bump the application version before publishing from main."
-              exit 1
-            fi
+            echo "::error::Release $RELEASE_TAG already exists. Published assets cannot be replaced; bump the version."
+            exit 1
           else
             gh release create "$RELEASE_TAG" "${packages[@]}" \
               --target "$GITHUB_SHA" --generate-notes --title "TuxInDrive ${RELEASE_TAG#v}"

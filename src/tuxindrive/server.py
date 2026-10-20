@@ -431,11 +431,14 @@ class TuxInDriveServer(ThreadingHTTPServer):
         self._relays_by_tenant: dict[str, int] = {}
         self.address_family = socket.AF_INET6 if ":" in config.bind else socket.AF_INET
         super().__init__((config.bind, config.port), RequestHandler)
+        self._tls_context: ssl.SSLContext | None = None
         if config.tls_certificate:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.minimum_version = ssl.TLSVersion.TLSv1_2
             context.load_cert_chain(config.tls_certificate, config.tls_private_key)
-            self.socket = context.wrap_socket(self.socket, server_side=True)
+            # Keep accept() non-blocking with respect to TLS. Admission limits
+            # must apply before an untrusted peer can start a handshake.
+            self._tls_context = context
 
     def get_request(self):
         request, address = super().get_request()
@@ -462,6 +465,18 @@ class TuxInDriveServer(ThreadingHTTPServer):
 
     def process_request_thread(self, request, client_address) -> None:
         try:
+            if self._tls_context is not None:
+                try:
+                    request = self._tls_context.wrap_socket(
+                        request, server_side=True, do_handshake_on_connect=False,
+                    )
+                    request.settimeout(self.config.request_timeout_seconds)
+                    request.do_handshake()
+                except (OSError, ssl.SSLError):
+                    # A silent/malformed peer occupies only its admitted slot,
+                    # for at most the existing configured connection timeout.
+                    self.shutdown_request(request)
+                    return
             super().process_request_thread(request, client_address)
         finally:
             self._release_request(str(client_address[0]))

@@ -85,5 +85,7 @@ jobs:
       - name: Install and verify server package
         run: |
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "./dist/tuxindrive-server_${TUXINDRIVE_VERSION}_all.deb"
-          test -s /var/lib/tuxindrive-server/bootstrap-token
+          test -s /var/lib/tuxindrive-server-admin/bootstrap-token
+          test "$(stat -c '%a:%U' /var/lib/tuxindrive-server-admin)" = 700:root
+          tuxindrive-server admin read-bootstrap-token >/dev/null
           tuxindrive-server check --config /etc/tuxindrive-server/server.json

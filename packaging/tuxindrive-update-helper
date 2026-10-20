@@ -1,5 +1,5 @@
 #!/bin/sh
 set -eu
-export PYTHONPATH=/usr/lib
+unset PYTHONPATH PYTHONHOME
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-exec /usr/bin/python3 -m tuxindrive.update_helper "$@"
+exec /usr/bin/python3 -I -c 'import runpy,sys; sys.path.insert(0,"/usr/lib"); runpy.run_module("tuxindrive.update_helper",run_name="__main__",alter_sys=True)' "$@"

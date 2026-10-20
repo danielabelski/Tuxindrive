@@ -1,7 +1,13 @@
 # Code signing policy
 
-Free code signing is provided by SignPath.io; the certificate is provided by
-SignPath Foundation.
+Windows installers are currently not Authenticode-signed. Expiring update
+manifests are separately signed offline using Ed25519; that is not a native
+Windows publisher signature. Current macOS DMGs are ad-hoc signed, not notarized.
+
+The planned integration is SignPath.io with a certificate from SignPath
+Foundation. The Windows approval and signing flow below is the target policy,
+not a statement that the integration already operates. Never replace an existing
+release's unsigned bytes with signed bytes; publish a higher version instead.
 
 ## Scope and official artifacts
 
@@ -28,7 +34,7 @@ Repository and signing-service accounts require multi-factor authentication.
 Signing credentials are stored only as protected service secrets and are never
 committed, embedded in artifacts, or copied into issue discussions or logs.
 
-## Build and release controls
+## Target Windows signing controls
 
 1. GitHub-hosted runners build the Windows application and installer from the
    tagged public source and pinned workflow actions.
