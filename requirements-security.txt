@@ -1,2 +1,5 @@
-cryptography>=50.0.0,<51
-defusedxml>=0.7.1,<0.8
+# Audit the actual pinned release runtime, not whichever newer patch resolves today.
+cryptography==50.0.0
+defusedxml==0.7.1
+cffi==2.1.1
+pycparser==3.11

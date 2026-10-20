@@ -291,16 +291,10 @@ jobs:
             github.com/rclone/rclone/librclone/gomobile
           test -s "${GITHUB_WORKSPACE}/android/app/libs/rclone.aar"
       - name: Build unsigned Android packages without signing credentials
-        env:
-          COLLECT_VERIFICATION: ${{ inputs.collect_dependency_verification }}
         run: |
           version=$(PYTHONPATH=src python3 -c 'from tuxindrive import __version__; print(__version__)')
-          verification_flags=()
-          if [[ "$COLLECT_VERIFICATION" == true ]]; then
-            verification_flags=(--write-verification-metadata sha256)
-          fi
-          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main || "$COLLECT_VERIFICATION" == true ]]; then
-            gradle -p android --no-daemon "${verification_flags[@]}" \
+          if [[ "$GITHUB_REF" == refs/tags/v* || "$GITHUB_REF" == refs/heads/main ]]; then
+            gradle -p android --no-daemon \
               :app:testSideloadReleaseUnitTest :app:lintSideloadRelease :app:assembleSideloadRelease \
               :app:testStoreReleaseUnitTest :app:lintStoreRelease :app:bundleStoreRelease
             package=android/app/build/outputs/apk/sideload/release/app-sideload-release-unsigned.apk
@@ -324,14 +318,6 @@ jobs:
           path: |
             dist/TuxInDrive-*-android-unsigned.apk
             dist/TuxInDrive-*-android-store-unsigned.aab
-      - name: Export checksum candidates for maintainer review
-        if: inputs.collect_dependency_verification
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: android-dependency-verification
-          retention-days: 3
-          path: android/gradle/verification-metadata.xml
-
   android-sign:
     if: ${{ !inputs.collect_dependency_verification && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     needs: [safety-gate, linux, legacy-upgrades, android]

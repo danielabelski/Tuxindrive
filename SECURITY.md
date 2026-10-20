@@ -2,7 +2,20 @@
 
 ## Supported release
 
-TuxInDrive 0.26.24 is the supported security baseline. Older packages retained for historical reference must not be installed on production systems. Installers and APKs are published as immutable assets on the matching GitHub Release; clients accept updates only through the signed platform manifests in `releases/`.
+TuxInDrive 0.26.80 is the current distribution-security baseline. Older packages
+are historical references, not production-install recommendations. The retained
+0.19.1 file exists only for already-issued legacy migration metadata until it
+expires. Product packages are published once per version and never replaced;
+Linux's identical commit-pinned raw copy supports historical updaters. Clients
+still require the appropriate expiring, signed platform manifest.
+
+0.26.80 addresses the 20 October distribution review: bounded server TLS
+handshakes, root-only bootstrap-token administration with safe migration,
+isolated privileged update startup, protected separate Android signing and
+non-replaceable release assets. Synchronization, backup formats, encryption and
+mail OAuth scopes are unchanged. Windows installers remain without Authenticode;
+macOS packages are ad-hoc signed rather than notarized. Neither should be
+confused with the offline Ed25519 signatures on update metadata.
 
 The source review dated **2026-08-22** found a high-severity privilege-boundary
 issue in the optional Linux server package, server resource-exhaustion risk,
