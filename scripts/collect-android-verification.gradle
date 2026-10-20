@@ -1,0 +1,15 @@
+// Explicit unsigned CI collection only; never invoked by application runtime.
+gradle.projectsEvaluated {
+    gradle.rootProject.tasks.register("collectVerificationDependencies") {
+        doLast {
+            def app = gradle.rootProject.project(":app")
+            app.configurations.findAll {
+                it.canBeResolved && (it.name.endsWith("CompileClasspath") ||
+                    it.name.endsWith("RuntimeClasspath"))
+            }.sort { it.name }.each { configuration ->
+                println("Verifying dependency inputs for " + configuration.name)
+                configuration.resolve()
+            }
+        }
+    }
+}
