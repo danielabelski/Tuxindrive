@@ -1,6 +1,42 @@
-# TuxInDrive 0.26.61 security hardening and secure operation
+# TuxInDrive 0.26.80 security hardening and secure operation
 
-This document explains the controls retained through TuxInDrive 0.26.61, including critical/high remediation, approval-based peer sharing, explicit online-only/offline retention, automatic AI-tool backup boundaries, GitHub and Proton boundaries, global traffic control, signed platform updates, encrypted desktop-to-mobile migration, what changed for existing users, which data remain sensitive, what the controls do not guarantee, and how maintainers verify a release. It complements the concise vulnerability-reporting policy in [`SECURITY.md`](../SECURITY.md), implementation [architecture](ARCHITECTURE.md), and operational [runbook](OPERATIONS.md).
+This document explains the controls retained through TuxInDrive 0.26.80,
+including distribution hardening and the boundaries of existing sync, backup,
+peer sharing, encrypted migration and update verification. It complements the
+concise [security policy](../SECURITY.md), [architecture](ARCHITECTURE.md) and
+operational [runbook](OPERATIONS.md).
+
+## Distribution changes in 0.26.80
+
+- TLS handshakes occur after admission in bounded workers, using the existing
+  connection timeout; a silent peer cannot freeze the accept loop.
+- The optional server keeps its bootstrap token in
+  `/var/lib/tuxindrive-server-admin`, owned by root with mode 0700; the token is
+  root-only mode 0600. Safe legacy migration verifies the token against existing
+  authorization and does not rotate credentials or change the database.
+- Privileged update startup clears Python environment overrides and uses `-I`.
+- Android builds receive no production signing credentials; a separate protected
+  signing job verifies the established certificate and never runs Gradle.
+- All publication paths refuse replacement of existing release assets. Snap
+  remains classic/unconfined to preserve desktop integrations, with protected
+  version-tag publication and the pinned verified rclone bundle.
+- Python release and audit dependencies have reviewed SHA-256 locks. Gradle
+  verification covers dependency/plugin inputs. Native MSYS2/Homebrew package
+  inventories are retained as CI evidence; complete immutable OS snapshots and
+  byte-for-byte reproducibility remain follow-up work, not a present claim.
+- Windows installers remain without Authenticode and macOS images are ad-hoc
+  signed, not notarized. Offline Ed25519 update signatures remain independent.
+
+The small identical Linux raw compatibility copy preserves historical URL and
+Debian-identity rules. Both legacy and current manifests must be signed by the
+keys their respective clients already trust. No signature bypass or key
+replacement is a recovery method. Keep the 0.19.1 package until its already-
+issued metadata expires on 9 November 2026. Old package copies remain recoverable
+from the immutable 0.26.79 source history; no history is rewritten.
+
+Upgrade the optional server package and restart its service to load the new
+TLS implementation. Installing this patch does not automatically enable a
+previously disabled server, change sync scheduling or start new network scans.
 
 > **Audit status (2026-08-22):** version 0.26.20 closed the audited server
 > configuration-boundary, bounded-network, Android updater and sensitive-path
