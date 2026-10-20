@@ -9,6 +9,15 @@ The longer-term product direction is a **“Signal for files and cooperation”*
 
 ## Current baseline: 0.26.80
 
+### Implemented in 0.26.80: distribution and server hardening
+
+TLS handshakes share bounded worker admission and timeouts. Bootstrap-token
+administration is root-only with bounded non-following reads and authenticated
+legacy migration. Privileged update startup is isolated. Android signing is
+separate from Gradle and preserves the established certificate; release assets
+cannot be replaced and Snap publishing requires an approved version tag.
+The synchronization engine, backup formats and OAuth scopes are unchanged.
+
 ### Implemented in 0.26.79: independent account-sidebar scrolling
 
 Cloud and mail account cards scroll within the desktop window instead of forcing

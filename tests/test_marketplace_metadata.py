@@ -19,7 +19,8 @@ class MarketplaceMetadataTests(unittest.TestCase):
     def test_release_workflow_builds_store_bundle_and_generates_metadata(self):
         workflow = (ROOT / ".github/workflows/platform-packages.yml").read_text(encoding="utf-8")
         self.assertIn(":app:bundleStoreRelease", workflow)
-        self.assertIn("TuxInDrive-${version}-android-store.aab", workflow)
+        self.assertIn("TuxInDrive-$RELEASE_VERSION-android-store.aab", workflow)
+        self.assertIn("TuxInDrive-${version}-android-store-unsigned.aab", workflow)
         self.assertIn("generate-marketplace-metadata.py", workflow)
         self.assertIn("marketplace-metadata.tar.gz", workflow)
 

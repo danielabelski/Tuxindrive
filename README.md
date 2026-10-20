@@ -230,7 +230,7 @@ Proton Drive uses Proton's official browser-authenticated CLI on supported Linux
 - Android update downloads remain signature/digest bound, accept only explicit HTTPS GitHub release redirect origins, are installed from a durable atomic cache file, and request sideload permission only in the sideload build. The sideload app now checks automatically, respects network/battery constraints, and notifies the user before Android's mandatory installer approval.
 - The complete control inventory, upgrade procedure, credential migration behavior, residual risks, and operator checklist are in the [security-hardening guide](docs/SECURITY_HARDENING.md).
 
-The following controls are enforced in 0.26.79:
+The following controls are enforced in 0.26.80:
 
 - Signed and expiring update manifests are verified in both the desktop process and a fixed privileged helper. The helper stages the package in a root-only directory and rechecks its digest and Debian identity before APT executes it.
 - Tor-only/no-public-IP shares bind SFTP to loopback, and protocol-v5 invitations carry an explicit transport allowlist so direct-only and no-relay policies cannot silently fall back.
@@ -370,7 +370,7 @@ TuxInDrive Profile links the application to an existing Google Drive, OneDrive, 
 | Platform | Package | Notes |
 | --- | --- | --- |
 | Ubuntu/Debian | `tuxindrive_0.26.80_all.deb` | Signed in-app Debian updates remain supported. |
-| Ubuntu/Debian Server | `tuxindrive-server_0.26.79_all.deb` | Separate preview service; explicit enablement, bearer token, and TLS for remote access. |
+| Ubuntu/Debian Server | `tuxindrive-server_0.26.80_all.deb` | Separate preview service; explicit enablement, bearer token, and TLS for remote access. |
 | Ubuntu/Debian Network Lab | `tuxindrive-network-lab_0.26.31+lab5_all.deb` | Separate local release with 19 functional scenarios, visual topology and real multi-address loopback traffic. |
 | Windows 10/11 x64 | `TuxInDrive-0.26.80-windows-x64-setup.exe` | Same GTK desktop UI; install WinFsp for streaming drives. |
 | macOS 12+ | `TuxInDrive-0.26.80-macos-*.dmg` | Same GTK desktop UI; install macFUSE for streaming drives. |
@@ -403,7 +403,7 @@ and keep the required `./` local-file prefix:
 
 ```bash
 cd ~/Downloads
-sudo apt install ./tuxindrive-server_0.26.79_all.deb
+sudo apt install ./tuxindrive-server_0.26.80_all.deb
 ```
 
 Continue with the bootstrap token, service start, local health check, TLS rules,
@@ -428,7 +428,7 @@ Maintainers can produce a signed Launchpad source upload with
 Launchpad receives source packages and builds the final binaries inside the
 matching Ubuntu series.
 
-The Debian installers are written to `dist/tuxindrive_0.26.80_all.deb` and `dist/tuxindrive-server_0.26.79_all.deb`. The independently versioned Network Lab build writes `dist/tuxindrive-network-lab_0.26.31+lab5_all.deb`. Windows, macOS and Android artifacts are built by `.github/workflows/platform-packages.yml` on their native build hosts. Durable product packages are attached to the matching GitHub Release; the lab uses its own `network-lab-v*` release. Dedicated signed client channel manifests and package-location pointers live under [`releases/`](releases/README.md).
+The Debian installers are written to `dist/tuxindrive_0.26.80_all.deb` and `dist/tuxindrive-server_0.26.80_all.deb`. The independently versioned Network Lab build writes `dist/tuxindrive-network-lab_0.26.31+lab5_all.deb`. Windows, macOS and Android artifacts are built by `.github/workflows/platform-packages.yml` on their native build hosts. Durable product packages are attached to the matching GitHub Release; the lab uses its own `network-lab-v*` release. Dedicated signed client channel manifests and package-location pointers live under [`releases/`](releases/README.md).
 
 ### Local-first collaborative documents
 
@@ -442,7 +442,7 @@ Select the **?** button in the top bar to open the searchable offline documentat
 
 The flag selector switches **English**, **German**, **French**, **Spanish**, **Arabic**, or **Hebrew** immediately and stores the choice privately. Arabic and Hebrew labels and documentation use right-to-left text flow without moving the interface controls. Provider and rclone diagnostics may remain in their source language so technical evidence is not mistranslated.
 
-The current suite contains 760 unit test definitions (746 Python, including 26 display-dependent checks, and 14 Android JVM tests), including automatic, manual-only and Codex chat-only AI-backup discovery, secret exclusions, root-symlink rejection, incremental retention cleanup and progress reporting; approval-based LAN discovery; encrypted `.tdx`/QR interoperability and malformed-frame rejection; aggregate automatic bandwidth protection and independent directional limits; protocol-provider capability guards; selective transfer rules; per-file recovery resolution; checksum-failure pausing with exact provider paths and correlation-safe provider diagnostics; cross-platform network-counter failure handling; path, symlink and signing-key security; bounded opt-in search previews; recovery retention and confinement; visual themes; aggregate tray state and error summaries; newest-first live logs; exact Nautilus 4.1 integration; bounded FUSE hydration; asynchronous cloud-folder editing; drag/drop groups; GitHub and Proton guards; signed update channels; bounded server requests and relays; Network Lab isolation/scenarios/progress; server installation, isolation and GUI privilege boundaries; hostile ODF/CRDT input; Android serialization and input validation; responsive desktop-window constraints; release packaging; and six-language help parity. See [Testing and release verification](docs/TESTING.md) for details.
+The current suite contains 770 unit test definitions (756 Python, including 26 display-dependent checks, and 14 Android JVM tests), including automatic, manual-only and Codex chat-only AI-backup discovery, secret exclusions, root-symlink rejection, incremental retention cleanup and progress reporting; approval-based LAN discovery; encrypted `.tdx`/QR interoperability and malformed-frame rejection; aggregate automatic bandwidth protection and independent directional limits; protocol-provider capability guards; selective transfer rules; per-file recovery resolution; checksum-failure pausing with exact provider paths and correlation-safe provider diagnostics; cross-platform network-counter failure handling; path, symlink and signing-key security; bounded opt-in search previews; recovery retention and confinement; visual themes; aggregate tray state and error summaries; newest-first live logs; exact Nautilus 4.1 integration; bounded FUSE hydration; asynchronous cloud-folder editing; drag/drop groups; GitHub and Proton guards; signed update channels; bounded server requests and relays; Network Lab isolation/scenarios/progress; server installation, isolation and GUI privilege boundaries; hostile ODF/CRDT input; Android serialization and input validation; responsive desktop-window constraints; release packaging; and six-language help parity. See [Testing and release verification](docs/TESTING.md) for details.
 
 ## Suggestions and roadmap
 

@@ -16,7 +16,13 @@ the installation and update instructions in the [user guide](USER_GUIDE.md).
 | Linux server preview | `tuxindrive-server_VERSION_all.deb` | No automatic-update channel in the first preview |
 | Linux Network Lab | `tuxindrive-network-lab_VERSION+labREVISION_all.deb` | Separate `network-lab-vVERSION.REVISION` release; never the desktop/server updater |
 
-Large packages are GitHub Release assets, not Git objects. The dedicated
+Large packages are GitHub Release assets, not Git objects. The small, identical
+Linux compatibility copy is an explicit exception: retain a versioned
+`dist/tuxdrive_VERSION_all.deb` in Git and point the Linux feed at its immutable
+commit using the legacy `raw.githubusercontent.com/tpluharik/Tuxdrive/` prefix.
+Historical clients before 0.26.3 cannot use Release-download URLs. They also
+require the preserved Debian `Package: tuxdrive` identity. Never rename or
+repackage bytes after computing their signatures. The dedicated
 `releases/windows`, `releases/macos`, and `releases/android` folders are stable
 channel roots: each contains the signed manifest and `packages/README.md`
 pointing to the durable Release URL. Linux retains the compatibility channel
@@ -71,12 +77,22 @@ Desktop and Android must verify the same canonical bytes; Android's regression
 fixture uses an official manifest produced by the offline Python signer.
 
 Android packages are additionally signed with a long-lived Android keystore.
-The keystore and passwords are encrypted GitHub Actions secrets:
+The keystore and passwords are protected release-environment secrets, not
+repository-wide secrets:
 `ANDROID_KEYSTORE_BASE64`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
 `ANDROID_KEY_PASSWORD`. Losing that identity prevents seamless upgrades of an
 installed Android app. Windows/macOS production code-signing and notarization
-should use their platform identities when available; update-manifest
+are not currently available in this workflow; update-manifest
 verification remains mandatory and separate.
+
+The Android build job receives no signing credentials. A separate job, after
+guarded tests and historical upgrade checks, downloads only its unsigned
+artifacts from that same workflow run. It does not check out application code
+or run Gradle. It verifies the certificate against the established sideload
+identity, signs APKs with apksigner and AABs with jarsigner, verifies signatures,
+and removes its temporary keystore. Never regenerate a release identity because
+credentials are missing. The release environment restricts main/version tags
+and requires maintainer approval; branch builds cannot access its secrets.
 
 ## Before tagging
 
@@ -100,9 +116,10 @@ version tag to point at a different commit.
 `.github/workflows/platform-packages.yml` builds Linux, Windows, macOS, and
 Android on relevant pushes to `main`, manual dispatch, and version tags. A
 main-branch run publishes a durable `vVERSION` Release only when that source
-version has no Release yet; an existing Release is left unchanged. A version
-tag validates that the tag equals the source version. Both publication paths
-require the Android release keystore, download all platform artifacts, check
+version has no Release yet; an existing Release is refused. A version
+tag validates that the tag equals the source version and also refuses an
+existing Release. Both publication paths wait for isolated Android signing,
+download only the four approved platform artifacts, check
 exact version-bound names, produce `SHA256SUMS.txt`, and publish one complete
 package set. Documentation-only commits do not trigger this path-filtered
 workflow.
@@ -127,7 +144,8 @@ For every platform package:
    those exact bytes.
 2. Set a bounded expiry that allows normal upgrades but forces periodic
    channel renewal.
-3. Use only the approved GitHub Release URL and exact versioned filename.
+3. Use the approved GitHub Release URL and exact versioned filename; Linux uses
+   the byte-identical commit-pinned compatibility copy described above.
 4. Canonicalize and sign with the offline Ed25519 private key using the
    repository manifest-signing tooling.
 5. Verify with the embedded public key and the updater parser before commit;
@@ -138,6 +156,18 @@ For every platform package:
 The manifest commit normally follows a successful package release because its
 hash cannot be known beforehand. Until that commit lands, clients
 correctly continue to report the preceding trusted version.
+
+Keep the original 0.19.1 compatibility file while the preceding legacy manifest
+remains valid (through 9 November 2026). Renew `update/latest.json` using only
+its original offline key and a bridge proven on 0.18.1; never substitute the
+modern key or bypass verification. Test the real published feeds with the
+historical parsers after signing. CI's historical staging test uses a synthetic
+test key and is not proof of a production-key signature by itself.
+
+Dependency-verification collection is an explicit unsigned-only dispatch mode.
+Review the generated Gradle metadata before committing it; collection runs
+cannot sign or publish. Keep dependency versions unchanged during this
+hardening rollout and refresh pins through a reviewed change.
 
 ## Release validation
 

@@ -25,7 +25,21 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The source defines **760 unit checks: 746 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-six Python checks require an isolated GTK display and are skipped during the normal headless suite. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The source defines **770 unit checks: 756 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks and four clean historical-upgrade scenarios. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-six Python checks require an isolated GTK display. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+
+### Distribution hardening in 0.26.80
+
+`tests.test_distribution_hardening` covers silent and malformed TLS clients,
+admission-slot recovery, private bootstrap-token reads and migration, symlink,
+hardlink, FIFO, permission and size rejection, isolated helper startup and
+secret-free Android builds with separate signing. TLS tests create disposable
+certificates and bind only to loopback. No installed service is used.
+
+`scripts/test-legacy-upgrade.py` is fail-closed outside an explicitly opted-in
+disposable GitHub CI container. The 0.18.1, 0.19.1, 0.26.2 and 0.26.79 scenarios
+verify checksum-pinned historical packages, their actual parser/helper staging,
+clean APT upgrade and profile-sentinel preservation. Synthetic test signatures
+do not replace checking real published feeds with the historical trusted keys.
 
 The credential/backup regressions use synthetic data and cover mocked timeout
 cleanup, no key replacement on credential-store failure,
