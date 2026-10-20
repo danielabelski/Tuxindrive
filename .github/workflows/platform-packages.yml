@@ -378,7 +378,11 @@ jobs:
         with:
           name: tuxindrive-android
           retention-days: 7
-          path: releases/android/packages/*
+          # apksigner can also create an optional .idsig sidecar. It is not a
+          # standalone package or part of the nine-product release contract.
+          path: |
+            releases/android/packages/TuxInDrive-*-android.apk
+            releases/android/packages/TuxInDrive-*-android-store.aab
 
   publish-release:
     if: ${{ !inputs.collect_dependency_verification && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}

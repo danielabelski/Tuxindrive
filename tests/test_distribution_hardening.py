@@ -199,6 +199,9 @@ class DistributionWorkflowTests(unittest.TestCase):
         self.assertNotIn("gradle -p", signing)
         self.assertIn("apksigner", signing)
         self.assertIn("jarsigner", signing)
+        self.assertIn("releases/android/packages/TuxInDrive-*-android.apk", signing)
+        self.assertIn("releases/android/packages/TuxInDrive-*-android-store.aab", signing)
+        self.assertNotIn("path: releases/android/packages/*", signing)
         self.assertIn("485e258558e47f140543e36b2092b9357fe365fae104e5c017bd28ec4209a58b", signing)
         self.assertNotIn("--clobber", workflow)
 
