@@ -1,8 +1,8 @@
 {
-  "version": "0.26.79",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/TuxInDrive-0.26.79-macos-arm64.dmg",
-  "sha256": "834ccbfd997a581af0c6527d31c96a8cd7bbe0a6755e02e59ad083ff0eb6df2a",
-  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
-  "expires_at": "2027-01-11T19:12:36.589707+00:00",
-  "signature": "re+B4sJINaYbCHfmgJMbWENswrwtHfQokplGsArBYmGPVCKTeWVJ99CaVUVfGDn6PAS9Xv/59g51XUOzVIkiBA=="
+  "version": "0.26.80",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.80/TuxInDrive-0.26.80-macos-arm64.dmg",
+  "sha256": "666f575fb76730974c00cf86bc6664d82d460d71b5a84b48e9e1dfb6e9ef7c81",
+  "notes": "Distribution security hardening. macOS image remains ad-hoc signed, not notarized.",
+  "expires_at": "2027-01-18T19:14:27.838515+00:00",
+  "signature": "R5tQ/2jmj2obmmuP1eQfQQmOFDPVdbzWxHJ2zxIcgZBbVUWXTvijggQuO1fLVJx0YeNFtf1LZWX1DB76ItNbDA=="
 }

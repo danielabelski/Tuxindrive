@@ -1,8 +1,8 @@
 {
-  "version": "0.26.79",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/TuxInDrive-0.26.79-windows-x64-setup.exe",
-  "sha256": "ebd35e2cc5e5fd75196105af2b3f0084a9d4afd6089430df952e8193d92fdaf5",
-  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
-  "expires_at": "2027-01-11T19:12:36.269426+00:00",
-  "signature": "3ar0levpEQvAdRqj1oJK32+51hRRV5jMlPztOr9kCqs7iN4XlOqCdKogOW8Om2H9DVgJ8dE2ZeW/xeRL47OwAA=="
+  "version": "0.26.80",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.80/TuxInDrive-0.26.80-windows-x64-setup.exe",
+  "sha256": "336e0cd814ae6e37797c9fcd583ef201fb984e2968e7e2ff69facd104bc967e8",
+  "notes": "Distribution security hardening. Native Windows Authenticode signing remains separate.",
+  "expires_at": "2027-01-18T19:14:27.626888+00:00",
+  "signature": "/24a99bqtS+s2LUxta3xP0Uu+WbqyC0CoQ8Toho8RW5VGogZaN9jI2PMTbXJhSRWWk/P5GtrsRGbWnObl9FDBA=="
 }

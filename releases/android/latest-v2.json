@@ -1,8 +1,8 @@
 {
-  "version": "0.26.79",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/TuxInDrive-0.26.79-android.apk",
-  "sha256": "4c41a15facb478b527ea13e45e2dde3aff8d1f272337b64eec417ae2a103bce1",
-  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
-  "expires_at": "2027-01-11T19:12:37.422678+00:00",
-  "signature": "Q1irZrBvlAxnWJz7ytM2QoiAA02bxCCEx+kzgaPKhnF3OcSXxbgUNKri8fcC0/nF8Fk5Mmjd2IM1NYLyzEC3Bw=="
+  "version": "0.26.80",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.80/TuxInDrive-0.26.80-android.apk",
+  "sha256": "5299ba66780a6df335f82b7ae615f16007edd34aec22682718ef6564fdbe24cf",
+  "notes": "Protected separate Android signing with the established certificate.",
+  "expires_at": "2027-01-18T19:14:28.433541+00:00",
+  "signature": "OQGkgZPbUN46kJKbkw9oZoG/dDOvMrXz9QFiN7GRXsuQGljYMAWxkoEc6/MCk070+xzaMGwyVvQK0URo4QfBAQ=="
 }

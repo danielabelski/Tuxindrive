@@ -1,8 +1,8 @@
 {
-  "version": "0.26.79",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.79/tuxindrive_0.26.79_all.deb",
-  "sha256": "734cb4115bffc637a88cf7310dab282671cab58e997fc43587bb15eb496da019",
-  "notes": "Scrollable Online accounts sidebar with a fixed heading and Add account button; independent folder scrolling and automatic overflow scrollbar.",
-  "expires_at": "2027-01-11T19:12:35.999325+00:00",
-  "signature": "jtFyPMZQzSizkUSjNmlk7D5fKRj1kBAIVZg/Onht0nzNQitW6kRns0qXE4PtyilBZgZ4O9XZ9X4Cso1ScTvoAg=="
+  "version": "0.26.80",
+  "url": "https://raw.githubusercontent.com/tpluharik/Tuxdrive/4ca0aa188788b62d44afc963198739cdd379079f/dist/tuxdrive_0.26.80_all.deb",
+  "sha256": "251e65f0ec136d3159f1639fa0fd05da4ae8d66e60b1340a9dd72d165e86522a",
+  "notes": "Distribution and optional-server security hardening. Sync and backup formats are unchanged.",
+  "expires_at": "2027-01-18T19:14:27.300343+00:00",
+  "signature": "6LJjfHUXmlph1snaO0jb5ThhUtJzheLAr27DVtkEFV2gS1wZ2+QXknB4NGcQayqLzFcCv6OfX49DXk51IIkUDw=="
 }
