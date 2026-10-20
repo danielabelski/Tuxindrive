@@ -57,7 +57,7 @@ Version 0.23.0 preserves those controls while adding event-driven monitoring and
 
 Upgrade, restart TuxInDrive and Nautilus, verify cloud access, inspect peer authorization, run an integrity check on important jobs, and retain an independent backup. Do not continue using a package whose signed update manifest has expired or failed verification.
 
-The 0.19.1 release completes a trust-root rotation without disabling verification. The legacy `latest.json` manifest is signed by the original offline key embedded in 0.18.1 and is restricted to the 0.19.1 bridge package. Version 0.19.1 reads `latest-v2.json`, signed by the rotated offline key, for all later updates. Both private keys remain outside the repository with mode `0600`; the original key should be retired after the documented legacy-support window.
+The 0.19.1 release completed a trust-root rotation without disabling verification. The legacy `latest.json` manifest remains signed by the original offline key embedded in 0.18.1. It may advance from the historical 0.19.1 bridge only to the byte-identical current Linux compatibility package after the clean 0.18.1 upgrade gate and production-signature checks pass. Version 0.19.1 and later read `latest-v2.json`, signed by the rotated offline key. Both private keys remain outside the repository with mode `0600`; the original key should be retired after the documented legacy-support window.
 
 ## Security control inventory
 

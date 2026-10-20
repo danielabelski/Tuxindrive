@@ -136,12 +136,19 @@ class UpdateManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "filename"):
             UpdateManager.parse_manifest(json.dumps(payload).encode(), self.public)
 
-    def test_legacy_bridge_manifest_remains_fixed_at_0191(self):
-        """Keep 0.18.1 on its one-step bridge without moving the old trust root."""
+    def test_legacy_bridge_preserves_old_trust_and_verified_linux_identity(self):
+        """Allow the historical bridge or a tested current bridge, never a key change."""
+        from tuxindrive import __version__
+
         old_public = "xyquZ4Mp8SGBpNiNjEcjhkeaPxBkAOwiBT0AhdhjolU="
         release = UpdateManager.parse_manifest(Path("update/latest.json").read_bytes(), old_public)
-        self.assertEqual(release.version, "0.19.1")
-        self.assertEqual(release.url.rsplit("/", 1)[-1], "tuxdrive_0.19.1_all.deb")
+        if release.version == "0.19.1":
+            self.assertEqual(release.url.rsplit("/", 1)[-1], "tuxdrive_0.19.1_all.deb")
+        else:
+            current = UpdateManager.parse_manifest(Path("update/latest-v2.json").read_bytes())
+            self.assertEqual(release.version, __version__)
+            self.assertEqual((release.url, release.sha256), (current.url, current.sha256))
+            self.assertRegex(release.url, r"^https://raw\.githubusercontent\.com/tpluharik/Tuxdrive/[0-9a-f]{40}/dist/tuxdrive_")
 
     def test_manifest_rejects_untrusted_download(self):
         payload = self.release_payload().replace(b"raw.githubusercontent.com/tpluharik/TuxInDrive", b"example.com")
