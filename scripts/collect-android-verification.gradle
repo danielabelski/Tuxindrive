@@ -8,7 +8,14 @@ gradle.projectsEvaluated {
                     it.name.endsWith("RuntimeClasspath"))
             }.sort { it.name }.each { configuration ->
                 println("Verifying dependency inputs for " + configuration.name)
-                configuration.resolve()
+                // Resolve published dependencies, not the Android test's own
+                // project outputs, which deliberately have many artifact types.
+                // Keep strict resolution: a missing remote artifact must fail.
+                configuration.incoming.artifactView {
+                    componentFilter { identifier ->
+                        identifier instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier
+                    }
+                }.artifacts.artifactFiles.files
             }
         }
     }
