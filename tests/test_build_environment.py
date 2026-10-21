@@ -76,6 +76,16 @@ class FrozenBuildEnvironmentTests(unittest.TestCase):
                 ("runtime/bin/link", "link", "../lib/file")])
             MODULE.extract(archive, root / "out", "windows-msys2")
             self.assertEqual((root / "out/runtime/bin/link").read_text(), "expected")
+            # A host directory can occupy a captured link's location; preserve
+            # it, replay the link, and never write through an ambient parent.
+            (root / "host/bin/link").mkdir(parents=True)
+            (root / "host/bin/link/old").write_text("runner data")
+            (root / "ambient").mkdir()
+            (root / "host/lib").symlink_to(root / "ambient", target_is_directory=True)
+            MODULE.overlay_runtime(root / "out/runtime", root / "host", root / "backup")
+            self.assertEqual((root / "host/bin/link").read_text(), "expected")
+            self.assertEqual((root / "backup/bin/link/old").read_text(), "runner data")
+            self.assertFalse((root / "ambient/file").exists())
 
     def test_traversal_absolute_windows_path_and_duplicates_are_rejected(self):
         invalid = ["../escape", "/runtime/absolute", "runtime/../escape", "runtime/C:drive", "runtime\\escape"]

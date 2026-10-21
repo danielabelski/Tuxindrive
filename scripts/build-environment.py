@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 import platform
 import posixpath
 import re
+import shutil
 import sys
 import subprocess
 import tarfile
@@ -199,6 +200,35 @@ def audit_archive(path, prefix):
     return fixtures
 
 
+def overlay_runtime(source, destination, backup):
+    """Replay exact captured node types, preserving displaced runner files.
+
+    ditto cannot replace a preinstalled directory with a captured symlink.
+    Work parent-first and never copy through an ambient linked parent. This is
+    used only in a disposable CI host; it never removes a Homebrew prefix.
+    """
+    source, destination, backup = map(Path, (source, destination, backup))
+    for item in sorted(source.rglob("*"), key=lambda p: (len(p.relative_to(source).parts), str(p))):
+        relative = item.relative_to(source)
+        target = destination / relative
+        directory = item.is_dir() and not item.is_symlink()
+        if directory and target.is_dir() and not target.is_symlink():
+            continue
+        if target.exists() or target.is_symlink():
+            saved = backup / relative
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            if saved.exists() or saved.is_symlink():
+                raise ValueError("Runner backup path already exists")
+            target.rename(saved)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if item.is_symlink():
+            target.symlink_to(os.readlink(item), target_is_directory=item.is_dir())
+        elif directory:
+            target.mkdir()
+        else:
+            shutil.copy2(item, target)
+
+
 def capture(args):
     source = Path(args.runtime).resolve(strict=True)
     output = Path(args.output).resolve()
@@ -278,15 +308,21 @@ def restore(args):
         stage = cache / "macos-stage"
         extract(archive, stage, "/opt/homebrew")
         runtime = stage / "runtime"
-        subprocess.run(["/usr/bin/ditto", str(runtime), "/opt/homebrew"], check=True)
+        overlay_runtime(runtime, "/opt/homebrew", cache / "macos-host-backup")
         # Compile only captured schema XML, not the runner's ambient schema
         # collection. Homebrew creates this generated cache after installation.
-        schemas = runtime / "share/glib-2.0/schemas"
+        schemas = cache / "captured-gtk-schemas"
+        schemas.mkdir()
+        for definition in runtime.glob("Cellar/*/*/share/glib-2.0/schemas/*"):
+            if definition.is_file() and definition.suffix in {".xml", ".dtd"}:
+                target = schemas / definition.name
+                if target.exists() and digest(target) != digest(definition):
+                    raise ValueError("Conflicting captured GTK schema definitions")
+                shutil.copy2(definition, target)
         if not list(schemas.glob("*.gschema.xml")):
             raise ValueError("Captured GTK schemas are missing")
         subprocess.run(["/opt/homebrew/opt/glib/bin/glib-compile-schemas", "--strict", str(schemas)], check=True)
-        subprocess.run(["/usr/bin/ditto", str(schemas / "gschemas.compiled"),
-            "/opt/homebrew/share/glib-2.0/schemas/gschemas.compiled"], check=True)
+        shutil.copy2(schemas / "gschemas.compiled", "/opt/homebrew/share/glib-2.0/schemas/gschemas.compiled")
         python = "/opt/homebrew/opt/python@3.14/libexec/bin/python3"
     else:
         if platform.system() != "Windows" or platform.machine().lower() not in {"amd64", "x86_64"}:
