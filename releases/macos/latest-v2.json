@@ -1,8 +1,8 @@
 {
-  "version": "0.26.80",
-  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.80/TuxInDrive-0.26.80-macos-arm64.dmg",
-  "sha256": "666f575fb76730974c00cf86bc6664d82d460d71b5a84b48e9e1dfb6e9ef7c81",
-  "notes": "Distribution security hardening. macOS image remains ad-hoc signed, not notarized.",
-  "expires_at": "2027-01-18T19:14:27.838515+00:00",
-  "signature": "R5tQ/2jmj2obmmuP1eQfQQmOFDPVdbzWxHJ2zxIcgZBbVUWXTvijggQuO1fLVJx0YeNFtf1LZWX1DB76ItNbDA=="
+  "version": "0.26.81",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/v0.26.81/TuxInDrive-0.26.81-macos-arm64.dmg",
+  "sha256": "3fc39a7edaaef0c1c966787f4f3a27ab9bd41e0687af79a95424894c2d4ebd02",
+  "notes": "Frozen native build dependencies with SHA-256 verification and startup checks. Sync, backup and credential formats unchanged. Native Windows/macOS signing remains pending.",
+  "expires_at": "2027-01-19T04:16:45.129634+00:00",
+  "signature": "f5rZGkc+3jcMrBwfqLnXMD9YWrO/bO24U0QX7UUo1FU7nNKVvrBxPzw7FY8wfn+02aG9mvAjKh4atKUVVEM9CA=="
 }
