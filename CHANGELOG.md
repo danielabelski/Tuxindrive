@@ -2,6 +2,19 @@
 
 This changelog summarizes user-visible releases. Detailed operation, safety limitations, and recovery instructions are maintained in the [user guide](docs/USER_GUIDE.md).
 
+## 0.26.81 — frozen native build dependencies
+
+- Build Windows and macOS from reviewed, SHA-256-pinned native dependency
+  snapshots rather than live package-manager resolution. Preserve 0.26.80's
+  dependency versions, original native library paths and packaging tools.
+- Isolate the macOS Python build environment from unrelated system packages.
+- Reject altered, missing, oversized or unsafe build archives without fallback;
+  exclude private keyrings, user homes, application data, logs and caches.
+- Add native GTK/import and frozen-application startup checks before publication.
+- Keep synchronization, backup and credential formats unchanged. Windows
+  Authenticode and Apple Developer ID/notarization remain explicitly pending;
+  hosted OS images and bit-for-bit reproducibility are not claimed as frozen.
+
 ## 0.26.80 — distribution and optional-server hardening
 
 - Run admitted TLS handshakes in bounded request workers, not the accept loop;

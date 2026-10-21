@@ -23,6 +23,9 @@ on:
       - "scripts/build-server-deb.sh"
       - "scripts/build-windows.ps1"
       - "scripts/build-windows-msys2.sh"
+      - "scripts/build-windows-frozen.sh"
+      - "scripts/build-environment.py"
+      - "packaging/build-environments/**"
       - "scripts/build-macos.sh"
       - "scripts/generate-marketplace-metadata.py"
       - "packaging/marketplaces/**"
@@ -185,45 +188,37 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
-      - uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2
-        with:
-          msystem: UCRT64
-          update: false
-          install: >-
-            git
-            mingw-w64-ucrt-x86_64-gtk3
-            mingw-w64-ucrt-x86_64-python
-            mingw-w64-ucrt-x86_64-python-cryptography
-            mingw-w64-ucrt-x86_64-python-defusedxml
-            mingw-w64-ucrt-x86_64-python-gobject
-            mingw-w64-ucrt-x86_64-python-keyring
-            mingw-w64-ucrt-x86_64-python-pip
-            mingw-w64-ucrt-x86_64-pyinstaller
-      - name: Install Python application dependencies
-        shell: msys2 {0}
+      - name: Restore SHA-256-pinned Windows runtime and installer compiler
+        shell: pwsh
+        run: python scripts/build-environment.py restore --platform windows-x64 --lock packaging/build-environments/windows-x64.lock.json
+      - name: Freeze Windows application using only the verified environment
+        shell: pwsh
+        env:
+          MSYSTEM: UCRT64
+          CHERE_INVOKING: "1"
         run: |
-          python -m pip download --no-deps --require-hashes --only-binary=:all: \
-            -r requirements-build-tools.lock --dest build/verified-build-tools
-          wheelhouse=$(cygpath -m "$PWD/build/verified-build-tools")
-          PIP_NO_INDEX=1 PIP_FIND_LINKS="$wheelhouse" \
-            python -m pip install --break-system-packages --no-deps .
+          $bash = Join-Path $env:TUXINDRIVE_MSYS_ROOT 'usr\bin\bash.exe'
+          & $bash -lc 'sh scripts/build-windows-frozen.sh'
+          if ($LASTEXITCODE -ne 0) { throw 'Verified Windows build failed' }
       - name: Record Windows package inputs
-        shell: msys2 {0}
+        shell: pwsh
         run: |
-          mkdir -p build-inputs
-          pacman -Q > build-inputs/windows-msys2-packages.txt
-          python -m pip list --format=json > build-inputs/windows-python-packages.json
+          Copy-Item packaging/build-environments/windows-x64.lock.json build-inputs/
+          $env:ImageVersion | Set-Content build-inputs/windows-host-image.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: build-inputs-windows
           retention-days: 90
           path: build-inputs/*
-      - name: Freeze Windows application in the configured MSYS2 environment
-        shell: msys2 {0}
-        run: sh scripts/build-windows-msys2.sh
       - name: Build Windows installer and portable archive
         shell: pwsh
         run: scripts/build-windows.ps1 -PackageOnly
+      - name: Verify frozen Windows application starts without opening an account
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath "$PWD\build\windows\TuxInDrive\TuxInDrive.exe" -ArgumentList '--version' -PassThru
+          if (-not $process.WaitForExit(60000)) { throw 'Frozen application smoke test timed out' }
+          if ($process.ExitCode -ne 0) { throw 'Frozen application could not load its runtime' }
       - name: Stage dedicated Windows release folder
         shell: pwsh
         run: |
@@ -245,24 +240,26 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
-      - name: Install GTK desktop runtime
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: "1"
-        run: brew install gtk+3 pygobject3
+      - name: Restore SHA-256-pinned macOS runtime closure
+        run: /usr/bin/python3 scripts/build-environment.py restore --platform macos-arm64 --lock packaging/build-environments/macos-arm64.lock.json
       - name: Install Python application dependencies
+        env:
+          PYTHONPATH: /opt/homebrew/opt/pygobject3/lib/python3.14/site-packages:/opt/homebrew/opt/py3cairo/lib/python3.14/site-packages
         run: |
-          python3 -m venv --system-site-packages .venv-macos
+          "$TUXINDRIVE_FROZEN_PYTHON" -m venv .venv-macos
           .venv-macos/bin/python -m pip install --require-hashes -r requirements-build-tools.lock
-          .venv-macos/bin/python -m pip install --require-hashes --no-build-isolation -r requirements-runtime-macos.lock
+          .venv-macos/bin/python -m pip install --require-hashes --only-binary=:all: --no-build-isolation -r requirements-runtime-macos.lock
           .venv-macos/bin/python -m pip download --no-deps --require-hashes --only-binary=:all: \
             -r requirements-build-tools.lock --dest build/verified-build-tools
           PIP_NO_INDEX=1 PIP_FIND_LINKS="$PWD/build/verified-build-tools" \
             .venv-macos/bin/python -m pip install --no-deps .
+          .venv-macos/bin/python -c 'import gi; gi.require_version("Gtk", "3.0"); from gi.repository import Gtk, Gio, GLib; import cryptography, defusedxml; import keyring.backends.macOS; assert Gtk.get_major_version() == 3'
       - name: Record macOS package inputs
         run: |
           mkdir -p build-inputs
-          brew list --versions > build-inputs/macos-homebrew-packages.txt
-          brew info --json=v2 --installed > build-inputs/macos-homebrew-info.json
+          cp packaging/build-environments/macos-arm64.lock.json build-inputs/
+          cp packaging/build-environments/macos-arm64-baseline.json build-inputs/
+          printf '%s\n' "$ImageVersion" > build-inputs/macos-host-image.txt
           .venv-macos/bin/python -m pip list --format=json > build-inputs/macos-python-packages.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -272,7 +269,10 @@ jobs:
       - name: Build ad-hoc signed macOS application image
         env:
           PYTHON_BIN: .venv-macos/bin/python
+          PYTHONPATH: /opt/homebrew/opt/pygobject3/lib/python3.14/site-packages:/opt/homebrew/opt/py3cairo/lib/python3.14/site-packages
         run: sh scripts/build-macos.sh
+      - name: Verify frozen macOS application starts without opening an account
+        run: build/macos/TuxInDrive.app/Contents/MacOS/TuxInDrive --version
       - name: Stage dedicated macOS release folder
         run: |
           mkdir -p releases/macos/packages

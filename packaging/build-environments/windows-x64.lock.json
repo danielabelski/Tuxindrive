@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "platform": "windows-x64",
+  "sha256": "c3c078ad86c736fa499bbe6bd50582cdfe4e30336e0918a0f8bd50387ad31566",
+  "size": 384729258,
+  "baseline_sha256": "9d4c6d3fbadb2eea9a54d3bc6d223e6e532ba1269defacb530e18b36d251b1f4",
+  "baseline_release": "0.26.80",
+  "prefix": "windows-msys2",
+  "host_os": "Windows-2022Server-10.0.20348-SP0",
+  "host_image": "20261012.333.1",
+  "capture_commit": "766361e9124a0678366ba022a99c0018b8cb2d68",
+  "baseline_canonical_sha256": "d6a7265aa18957402f5c256cb940e0fabb71cb10d505a281c814bae61695c410",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/build-inputs-20261021.1/environment-windows-x64.tar.gz"
+}

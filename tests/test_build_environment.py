@@ -19,6 +19,7 @@ class FrozenBuildEnvironmentTests(unittest.TestCase):
     def lock(self, **changes):
         return {"schema": 1, "platform": "windows-x64", "size": 3,
             "sha256": "a" * 64,
+            "baseline_canonical_sha256": "b" * 64,
             "url": MODULE.RELEASE_PREFIX + "20261021.1/environment-windows-x64.tar.gz", **changes}
 
     def archive(self, path, entries):
@@ -127,6 +128,13 @@ class FrozenBuildEnvironmentTests(unittest.TestCase):
         self.assertNotIn("secrets.", capture)
         self.assertNotIn("contents: write", capture)
         self.assertIn("!inputs.capture_native_environments", workflow)
+        release_windows = workflow.split("\n  windows:\n")[1].split("\n  macos:\n")[0]
+        release_macos = workflow.split("\n  macos:\n")[1].split("\n  android-verification:\n")[0]
+        self.assertIn("build-environment.py restore", release_windows)
+        self.assertIn("build-environment.py restore", release_macos)
+        self.assertNotIn("msys2/setup-msys2", release_windows)
+        self.assertNotIn("brew install", release_macos)
+        self.assertNotIn("--system-site-packages", release_macos)
 
     def test_baselines_preserve_reviewed_release_versions(self):
         root = ROOT / "packaging/build-environments"
@@ -137,12 +145,27 @@ class FrozenBuildEnvironmentTests(unittest.TestCase):
         self.assertEqual(macos["baseline_release"], "0.26.80")
         self.assertEqual(macos["formulae"]["gtk+3"], "3.24.52")
         self.assertEqual(macos["formulae"]["python@3.14"], "3.14.7")
+        with tempfile.TemporaryDirectory() as temporary:
+            lf, crlf = Path(temporary) / "lf.json", Path(temporary) / "crlf.json"
+            lf.write_bytes(b'{\n"a": 1\n}\n')
+            crlf.write_bytes(b'{\r\n"a": 1\r\n}\r\n')
+            self.assertEqual(MODULE.baseline_digest(lf), MODULE.baseline_digest(crlf))
 
     def test_snapshot_excludes_private_keyrings_caches_and_logs(self):
         for name in ("runtime/etc/pacman.d/gnupg", "runtime/etc/pacman.d/gnupg/private-keys-v1.d/test.key",
                 "runtime/etc/ssl/private/key.pem", "runtime/var/cache/archive", "runtime/var/log/build.log"):
             self.assertIsNone(MODULE.snapshot_filter(tarfile.TarInfo(name)))
         self.assertIsNotNone(MODULE.snapshot_filter(tarfile.TarInfo("runtime/etc/ssl/certs/ca-bundle.crt")))
+        with tempfile.TemporaryDirectory() as temporary:
+            archive = Path(temporary) / "archive.tar.gz"
+            header = "-----BEGIN PRIVATE KEY-----\nTEST FIXTURE ONLY\n"
+            self.archive(archive, [("runtime/etc/unexpected.key", "file", header)])
+            with self.assertRaisesRegex(ValueError, "Unreviewed private-key"):
+                MODULE.audit_archive(archive, "windows-msys2")
+            self.archive(archive, [("runtime/ucrt64/lib/python3.12/test/certdata/keycert.pem", "file", header)])
+            self.assertEqual(MODULE.audit_archive(archive, "windows-msys2"), 1)
+            self.archive(archive, [("runtime/module.py", "file", 'HEADER = b"-----BEGIN PRIVATE KEY-----"')])
+            self.assertEqual(MODULE.audit_archive(archive, "windows-msys2"), 0)
 
 
 if __name__ == "__main__":

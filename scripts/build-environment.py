@@ -13,7 +13,6 @@ from pathlib import Path, PurePosixPath
 import platform
 import posixpath
 import re
-import shutil
 import sys
 import subprocess
 import tarfile
@@ -25,6 +24,11 @@ MAX_EXPANDED = 12 * 1024**3
 MAX_MEMBERS = 250000
 RELEASE_PREFIX = "https://github.com/tpluharik/Tuxindrive/releases/download/build-inputs-"
 ROOT = Path(__file__).resolve().parents[1]
+PRIVATE_HEADER = re.compile(rb"(?m)^-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----\r?$")
+PUBLIC_TEST_CERTIFICATES = frozenset(("allsans.pem", "badcert.pem", "badkey.pem", "idnsans.pem",
+    "keycert.passwd.pem", "keycert.pem", "keycert2.pem", "keycert3.pem", "keycert4.pem",
+    "keycertecc.pem", "leaf-missing-aki.keycert.pem", "nosan.pem", "pycakey.pem",
+    "ssl_key.passwd.pem", "ssl_key.pem"))
 
 
 def digest(path):
@@ -42,6 +46,13 @@ def read_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def baseline_digest(path):
+    # Git's Windows checkout may use CRLF; inventory identity is canonical JSON,
+    # not a platform's line-ending convention.
+    payload = json.dumps(read_json(path), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def validate_lock(lock, target):
     if lock.get("schema") != 1 or lock.get("platform") != target:
         raise ValueError("Wrong build-environment schema/platform")
@@ -54,6 +65,8 @@ def validate_lock(lock, target):
         raise ValueError("Build input must be an exact official versioned Release asset")
     if not url.endswith("/environment-" + target + ".tar.gz"):
         raise ValueError("Build input URL/platform mismatch")
+    if not re.fullmatch(r"[0-9a-f]{64}", lock.get("baseline_canonical_sha256", "")):
+        raise ValueError("Missing canonical reviewed inventory digest")
     return lock
 
 
@@ -149,6 +162,43 @@ def snapshot_filter(info):
     return info
 
 
+def audit_archive(path, prefix):
+    """Reject credential material; recognize only upstream public test fixtures.
+
+    Python/OpenSSL source strings mentioning PEM headers are not key blocks.
+    The reviewed Python distributions also ship public TLS regression fixtures;
+    retain these unmodified rather than pruning dependencies to silence a scan.
+    Never include key bytes in diagnostics.
+    """
+    with tarfile.open(path, "r:gz") as archive:
+        members = safe_members(archive, prefix)
+        for member in members:
+            if snapshot_filter(member) is None:
+                raise ValueError("Excluded private/cache path in build archive")
+            if member.name == "runtime/home" or member.name.startswith("runtime/home/"):
+                raise ValueError("Home directory in build archive")
+    fixtures = 0
+    with tarfile.open(path, "r|gz") as archive:
+        for member in archive:
+            if not member.isfile():
+                continue
+            stream, tail, private = archive.extractfile(member), b"", False
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                private = private or bool(PRIVATE_HEADER.search(tail + chunk))
+                tail = chunk[-256:]
+            if private:
+                parts = PurePosixPath(member.name)
+                directory = str(parts.parent)
+                public_fixture = directory in {
+                    "runtime/ucrt64/lib/python3.12/test/certdata",
+                    "runtime/ucrt64/lib/python3.12/site-packages/future/backports/test",
+                    "runtime/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/test/certdata"}
+                if not public_fixture or parts.name not in PUBLIC_TEST_CERTIFICATES:
+                    raise ValueError("Unreviewed private-key block in build archive: " + member.name)
+                fixtures += 1
+    return fixtures
+
+
 def capture(args):
     source = Path(args.runtime).resolve(strict=True)
     output = Path(args.output).resolve()
@@ -200,10 +250,10 @@ def capture(args):
     with tarfile.open(archive_path, "w:gz", compresslevel=3, dereference=False) as archive:
         for path, name in sorted(selected + additions, key=lambda p: p[1]):
             archive.add(path, arcname=name, filter=snapshot_filter)
-    with tarfile.open(archive_path, "r:gz") as archive:
-        safe_members(archive, prefix)
+    audit_archive(archive_path, prefix)
     metadata = {"schema": 1, "platform": args.platform, "sha256": digest(archive_path),
         "size": archive_path.stat().st_size, "baseline_sha256": digest(baseline),
+        "baseline_canonical_sha256": baseline_digest(baseline),
         "baseline_release": "0.26.80", "prefix": prefix,
         "host_os": platform.platform(), "host_image": os.environ.get("ImageVersion", "unknown"),
         "capture_commit": os.environ.get("GITHUB_SHA", "unknown")}
@@ -214,7 +264,7 @@ def capture(args):
 def restore(args):
     lock = validate_lock(read_json(args.lock), args.platform)
     baseline = ROOT / "packaging/build-environments" / (args.platform + "-baseline.json")
-    if digest(baseline) != lock["baseline_sha256"]:
+    if baseline_digest(baseline) != lock["baseline_canonical_sha256"]:
         raise ValueError("Build lock differs from reviewed baseline")
     cache = ROOT / "build/verified-environments"
     cache.mkdir(parents=True, exist_ok=True)
@@ -229,6 +279,14 @@ def restore(args):
         extract(archive, stage, "/opt/homebrew")
         runtime = stage / "runtime"
         subprocess.run(["/usr/bin/ditto", str(runtime), "/opt/homebrew"], check=True)
+        # Compile only captured schema XML, not the runner's ambient schema
+        # collection. Homebrew creates this generated cache after installation.
+        schemas = runtime / "share/glib-2.0/schemas"
+        if not list(schemas.glob("*.gschema.xml")):
+            raise ValueError("Captured GTK schemas are missing")
+        subprocess.run(["/opt/homebrew/opt/glib/bin/glib-compile-schemas", "--strict", str(schemas)], check=True)
+        subprocess.run(["/usr/bin/ditto", str(schemas / "gschemas.compiled"),
+            "/opt/homebrew/share/glib-2.0/schemas/gschemas.compiled"], check=True)
         python = "/opt/homebrew/opt/python@3.14/libexec/bin/python3"
     else:
         if platform.system() != "Windows" or platform.machine().lower() not in {"amd64", "x86_64"}:

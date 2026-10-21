@@ -1,10 +1,21 @@
-# TuxInDrive 0.26.80 security hardening and secure operation
+# TuxInDrive 0.26.81 security hardening and secure operation
 
-This document explains the controls retained through TuxInDrive 0.26.80,
+This document explains the controls retained through TuxInDrive 0.26.81,
 including distribution hardening and the boundaries of existing sync, backup,
 peer sharing, encrypted migration and update verification. It complements the
 concise [security policy](../SECURITY.md), [architecture](ARCHITECTURE.md) and
 operational [runbook](OPERATIONS.md).
+
+## Frozen build inputs in 0.26.81
+
+Reviewed native dependency archives replace live MSYS2/Homebrew resolution in
+release jobs. Exact hashes, sizes and baseline inventories are checked before
+extraction; there is no dependency-version fallback. The macOS Python build
+does not inherit arbitrary global packages. Native import/startup tests run in
+disposable CI without real accounts. This is build-time only; application
+sync/backup/encryption behavior is unchanged. See [frozen build inputs](BUILD_INPUTS.md)
+for refresh controls and the explicit unfrozen host-OS boundary. Authenticode
+and Developer ID/notarization remain pending, not silently replaced by ad-hoc keys.
 
 ## Distribution changes in 0.26.80
 

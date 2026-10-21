@@ -25,9 +25,16 @@ The dependency-install step is required when using an isolated Python environmen
 
 CI pins third-party actions by immutable commit, runs high-severity Bandit checks and `pip-audit`, and publishes a CycloneDX dependency SBOM with the package.
 
-The source defines **770 unit checks: 756 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks and four clean historical-upgrade scenarios. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-six Python checks require an isolated GTK display. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
+The source defines **782 unit checks: 768 Python tests and 14 Android JVM tests**, plus three separate isolated process-lifecycle checks and four clean historical-upgrade scenarios. These counts describe test definitions, not evidence that a particular revision has passed CI. Twenty-six Python checks require an isolated GTK display. Tests use temporary directories and mocked cloud/Git/Tor processes where possible, so they do not require or expose real credentials or personal files. Coverage includes automatic, manual-only and Codex chat-only AI-tool backups, protocol-provider capability guards, selective transfer rules, non-destructive per-file recovery, managed policy, cloud copy, content indexing, aggregate tray state and error summaries, historical upgrades, and Gmail/Microsoft 365 attachment indexing. Server API and Network Lab integration use only temporary loopback listeners and fictional ciphertext-like bytes.
 
 ### Distribution hardening in 0.26.80
+
+Version 0.26.81 adds 12 frozen-build-input checks covering exact lock identity,
+size/hash failures, cache revalidation, archive traversal, escaping links,
+duplicate/special members, linked parents, private-directory exclusions and
+release/capture isolation. Native jobs also load GTK, crypto and keyring modules
+and start the frozen application with `--version` in disposable CI, without
+connecting an account. See [build-input boundaries](BUILD_INPUTS.md).
 
 `tests.test_distribution_hardening` covers silent and malformed TLS clients,
 admission-slot recovery, private bootstrap-token reads and migration, symlink,
@@ -231,6 +238,7 @@ directories; cloud synchronization is never started.
 | `test_nautilus_extension.py` | 12 | Exact path/menu isolation, cached/coalesced badge refresh, URI lifecycle, Nautilus 4.1 construction, sensitivity and verified offline transitions. |
 | `test_network_usage.py` | 10 | Linux/macOS/Windows counter parsing and failure handling, platform dispatch, current rates, daily reset, counter rollover and private persistent totals. |
 | `test_packaging.py` | 22 | Debian/Windows/macOS/Android/Snap packaging, signing policy, release-channel layout, native assets, automatic missing-version publication, upgrade process, Nautilus routing and emblem metadata. |
+| `test_build_environment.py` | 12 | Hash/size/origin/platform locks, bounded downloads, cache rehashing, safe archive replay, private-directory exclusions and unsigned capture/release isolation. |
 | `test_password_helper.py` | 8 | Private credential-helper input/output, packaged Secret Service fallback, migration-key storage and rejection behavior. |
 | `test_profile_qr.py` | 3 | Stable desktop/Android QR protocol, multi-frame ordering/deduplication, bounds and incomplete/mixed/tampered transfer rejection. |
 | `test_performance.py` | 16 | Inotify delivery/startup race, remote retry, shared scans, interruptible monitor shutdown, overflow reconciliation, monitor safety, cache protection, fail-closed markers and performance hooks. |

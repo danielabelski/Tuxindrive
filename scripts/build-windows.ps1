@@ -13,7 +13,10 @@ if (-not $PackageOnly) {
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
 }
 if (-not (Test-Path "build\windows\TuxInDrive\TuxInDrive.exe")) { throw "Frozen Windows application was not created" }
-$Iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+$Iscc = $env:INNO_SETUP_ISCC
+if ([string]::IsNullOrWhiteSpace($Iscc)) {
+    $Iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+}
 if (-not (Test-Path $Iscc)) { throw "Inno Setup 6 is required" }
 & $Iscc "/DAppVersion=$Version" "packaging\windows\TuxInDrive.iss"
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }

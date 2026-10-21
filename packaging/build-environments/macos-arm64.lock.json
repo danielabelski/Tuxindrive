@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "platform": "macos-arm64",
+  "sha256": "f89e3900fcab1fa0df7491be73963e808b9126304fa373614655ab08485de887",
+  "size": 145304754,
+  "baseline_sha256": "692f97198bc72f89f7d50430eed662c24af6ce9069ca58cc54fb6beaabd8938d",
+  "baseline_release": "0.26.80",
+  "prefix": "/opt/homebrew",
+  "host_os": "macOS-14.8.9-arm64-arm-64bit",
+  "host_image": "20260831.0302.1",
+  "capture_commit": "766361e9124a0678366ba022a99c0018b8cb2d68",
+  "baseline_canonical_sha256": "3f3bbf93a72403dadf43233d6fd3760217639a7e728c1b6a6cf8e995cea6187a",
+  "url": "https://github.com/tpluharik/Tuxindrive/releases/download/build-inputs-20261021.1/environment-macos-arm64.tar.gz"
+}

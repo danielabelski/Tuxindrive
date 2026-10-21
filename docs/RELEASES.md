@@ -1,8 +1,13 @@
 # TuxInDrive release process
 
 This document defines the release and signed update-channel workflow for
-TuxInDrive 0.26.80. It is intended for maintainers. Users should use
+TuxInDrive 0.26.81. It is intended for maintainers. Users should use
 the installation and update instructions in the [user guide](USER_GUIDE.md).
+
+Native dependencies are replayed from reviewed, SHA-256-pinned archives. Only
+explicit unsigned capture mode contacts live native package managers. A failed
+lock, download or archive check blocks the build; no live-resolution fallback is
+allowed. See [frozen build-input refresh and boundaries](BUILD_INPUTS.md).
 
 ## Release outputs
 

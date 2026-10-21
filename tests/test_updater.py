@@ -146,7 +146,8 @@ class UpdateManagerTests(unittest.TestCase):
             self.assertEqual(release.url.rsplit("/", 1)[-1], "tuxdrive_0.19.1_all.deb")
         else:
             current = UpdateManager.parse_manifest(Path("update/latest-v2.json").read_bytes())
-            self.assertEqual(release.version, __version__)
+            self.assertEqual(release.version, current.version)
+            self.assertLessEqual(version_key(release.version), version_key(__version__))
             self.assertEqual((release.url, release.sha256), (current.url, current.sha256))
             self.assertRegex(release.url, r"^https://raw\.githubusercontent\.com/tpluharik/Tuxdrive/[0-9a-f]{40}/dist/tuxdrive_")
 

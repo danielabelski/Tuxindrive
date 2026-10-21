@@ -2,7 +2,7 @@
 
 ## Supported release
 
-TuxInDrive 0.26.80 is the current distribution-security baseline. Older packages
+TuxInDrive 0.26.81 is the current distribution-security baseline. Older packages
 are historical references, not production-install recommendations. The retained
 0.19.1 file exists only for already-issued legacy migration metadata until it
 expires. Product packages are published once per version and never replaced;
@@ -17,12 +17,18 @@ mail OAuth scopes are unchanged. Windows installers remain without Authenticode;
 macOS packages are ad-hoc signed rather than notarized. Neither should be
 confused with the offline Ed25519 signatures on update metadata.
 
+0.26.81 freezes reviewed native runtime/packaging dependencies behind exact
+archive hashes and removes live MSYS2/Homebrew resolution from release builds.
+It isolates the macOS Python build and adds native startup checks. The hosted
+OS and system packaging tools are recorded, not frozen VM images; native
+Windows/macOS publisher signing remains pending. See [build-input boundaries](docs/BUILD_INPUTS.md).
+
 The source review dated **2026-08-22** found a high-severity privilege-boundary
 issue in the optional Linux server package, server resource-exhaustion risk,
 and release-supply-chain hardening gaps. Version 0.26.20 remediates the server
 boundary, bounded-network, Android updater and sensitive-path findings and adds
-regression coverage. Native Windows/macOS signing and fully immutable platform
-package-manager inputs remain release-environment work. See findings and status in
+regression coverage. Native Windows/macOS signing and immutable host-OS images
+remain release-environment work. See findings and status in
 [docs/SECURITY_AUDIT_2026-08-22.md](docs/SECURITY_AUDIT_2026-08-22.md).
 
 Report suspected vulnerabilities privately through GitHub's **Security → Report a vulnerability** workflow. Do not place credentials, peer invitations, Onion authorization material, private keys, or personal filenames in a public issue.
