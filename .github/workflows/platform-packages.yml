@@ -7,6 +7,10 @@ on:
         description: Collect unsigned Android dependency checksums for review; never publish
         type: boolean
         default: false
+      capture_native_environments:
+        description: Capture unsigned native build inputs for review; never publish or sign
+        type: boolean
+        default: false
   push:
     branches: [main]
     tags: ["v*"]
@@ -35,6 +39,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  capture-windows:
+    if: inputs.capture_native_environments
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: msys2/setup-msys2@fb197b72ce45fb24f17bf3f807a388985654d1f2
+        id: msys
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            git mingw-w64-ucrt-x86_64-gtk3 mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-cryptography mingw-w64-ucrt-x86_64-python-defusedxml
+            mingw-w64-ucrt-x86_64-python-gobject mingw-w64-ucrt-x86_64-python-keyring
+            mingw-w64-ucrt-x86_64-python-pip mingw-w64-ucrt-x86_64-pyinstaller
+      - name: Capture the reviewed runtime and Inno Setup, without application code
+        shell: pwsh
+        env:
+          CAPTURE_MSYS_ROOT: ${{ steps.msys.outputs.msys2-location }}
+        run: python scripts/build-environment.py capture --platform windows-x64 --runtime "$env:CAPTURE_MSYS_ROOT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-environment-windows-x64
+          retention-days: 7
+          path: build-environment-candidate/*
+
+  capture-macos:
+    if: inputs.capture_native_environments
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Prepare the established GTK runtime for capture only
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: brew install gtk+3 pygobject3
+      - name: Capture the reviewed runtime closure, without application code
+        run: /usr/bin/python3 scripts/build-environment.py capture --platform macos-arm64 --runtime /opt/homebrew
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-environment-macos-arm64
+          retention-days: 7
+          path: build-environment-candidate/*
+
   safety-gate:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -61,7 +114,7 @@ jobs:
         run: PYTHONPATH=src TUXINDRIVE_ISOLATED_PROCESS_TESTS=1 .venv-ci/bin/python -m unittest discover -s integration_tests -v
 
   linux:
-    if: ${{ !inputs.collect_dependency_verification }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments }}
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.build.outputs.version }}
@@ -126,7 +179,7 @@ jobs:
         run: python3 scripts/test-legacy-upgrade.py --from-version "$FROM_VERSION" --package "current-packages/tuxindrive_${RELEASE_VERSION}_all.deb"
 
   windows:
-    if: ${{ !inputs.collect_dependency_verification }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments }}
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -186,7 +239,7 @@ jobs:
             releases/windows/packages/TuxInDrive-*-windows-x64-portable.zip
 
   macos:
-    if: ${{ !inputs.collect_dependency_verification }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments }}
     runs-on: macos-14
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -257,7 +310,7 @@ jobs:
           path: android/gradle/verification-metadata.xml
 
   android:
-    if: ${{ !inputs.collect_dependency_verification }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -319,7 +372,7 @@ jobs:
             dist/TuxInDrive-*-android-unsigned.apk
             dist/TuxInDrive-*-android-store-unsigned.aab
   android-sign:
-    if: ${{ !inputs.collect_dependency_verification && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     needs: [safety-gate, linux, legacy-upgrades, android]
     runs-on: ubuntu-24.04
     environment: release
@@ -385,7 +438,7 @@ jobs:
             releases/android/packages/TuxInDrive-*-android-store.aab
 
   publish-release:
-    if: ${{ !inputs.collect_dependency_verification && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     needs: [safety-gate, linux, legacy-upgrades, windows, macos, android-sign]
     runs-on: ubuntu-24.04
     environment: release
