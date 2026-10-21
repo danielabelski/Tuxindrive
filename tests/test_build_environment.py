@@ -138,6 +138,12 @@ class FrozenBuildEnvironmentTests(unittest.TestCase):
         self.assertEqual(macos["formulae"]["gtk+3"], "3.24.52")
         self.assertEqual(macos["formulae"]["python@3.14"], "3.14.7")
 
+    def test_snapshot_excludes_private_keyrings_caches_and_logs(self):
+        for name in ("runtime/etc/pacman.d/gnupg", "runtime/etc/pacman.d/gnupg/private-keys-v1.d/test.key",
+                "runtime/etc/ssl/private/key.pem", "runtime/var/cache/archive", "runtime/var/log/build.log"):
+            self.assertIsNone(MODULE.snapshot_filter(tarfile.TarInfo(name)))
+        self.assertIsNotNone(MODULE.snapshot_filter(tarfile.TarInfo("runtime/etc/ssl/certs/ca-bundle.crt")))
+
 
 if __name__ == "__main__":
     unittest.main()

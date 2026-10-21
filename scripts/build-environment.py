@@ -138,6 +138,17 @@ def extract(archive_path, destination, prefix):
             archive.extract(item, destination, set_attrs=True, **kwargs)
 
 
+def snapshot_filter(info):
+    excluded = ("runtime/etc/pacman.d/gnupg", "runtime/etc/ssl/private",
+        "runtime/etc/pki/private", "runtime/var/cache", "runtime/var/tmp", "runtime/var/log")
+    if (any(info.name == path or info.name.startswith(path + "/") for path in excluded)
+            or "/__pycache__/" in info.name or info.name.endswith(".pyc")):
+        return None
+    info.uid = info.gid = 0
+    info.uname = info.gname = ""
+    return info
+
+
 def capture(args):
     source = Path(args.runtime).resolve(strict=True)
     output = Path(args.output).resolve()
@@ -186,15 +197,9 @@ def capture(args):
                 selected.append((path, "runtime/etc/" + folder))
         prefix = "/opt/homebrew"
     archive_path = output / ("environment-" + args.platform + ".tar.gz")
-    def include(info):
-        if "/var/cache/" in info.name or "/__pycache__/" in info.name or info.name.endswith(".pyc"):
-            return None
-        info.uid = info.gid = 0
-        info.uname = info.gname = ""
-        return info
     with tarfile.open(archive_path, "w:gz", compresslevel=3, dereference=False) as archive:
         for path, name in sorted(selected + additions, key=lambda p: p[1]):
-            archive.add(path, arcname=name, filter=include)
+            archive.add(path, arcname=name, filter=snapshot_filter)
     with tarfile.open(archive_path, "r:gz") as archive:
         safe_members(archive, prefix)
     metadata = {"schema": 1, "platform": args.platform, "sha256": digest(archive_path),
