@@ -58,6 +58,8 @@ publication gates remain in force.
    overwrite an existing input version. Pin the verified bytes in the lock files.
 6. Validate both native builds from those locks in a fresh CI run before merging
    a version bump. A missing archive or changed hash blocks publication.
+   `native_replay_only=true` runs guarded tests and both native builds without
+   Android signing, an application release or a redundant Android rebuild.
 
 ## Explicit boundaries
 

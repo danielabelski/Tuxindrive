@@ -145,6 +145,9 @@ class FrozenBuildEnvironmentTests(unittest.TestCase):
         self.assertNotIn("msys2/setup-msys2", release_windows)
         self.assertNotIn("brew install", release_macos)
         self.assertNotIn("--system-site-packages", release_macos)
+        for job in ("android-sign", "publish-release"):
+            condition = workflow.split("\n  " + job + ":\n")[1].splitlines()[0]
+            self.assertIn("!inputs.native_replay_only", condition)
 
     def test_baselines_preserve_reviewed_release_versions(self):
         root = ROOT / "packaging/build-environments"

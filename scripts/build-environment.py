@@ -323,7 +323,9 @@ def restore(args):
             raise ValueError("Captured GTK schemas are missing")
         subprocess.run(["/opt/homebrew/opt/glib/bin/glib-compile-schemas", "--strict", str(schemas)], check=True)
         shutil.copy2(schemas / "gschemas.compiled", "/opt/homebrew/share/glib-2.0/schemas/gschemas.compiled")
-        python = "/opt/homebrew/opt/python@3.14/libexec/bin/python3"
+        python = "/opt/homebrew/opt/python@3.14/bin/python3.14"
+        if not Path(python).is_file():
+            raise ValueError("Captured macOS interpreter is missing")
     else:
         if platform.system() != "Windows" or platform.machine().lower() not in {"amd64", "x86_64"}:
             raise ValueError("Windows build input architecture mismatch")

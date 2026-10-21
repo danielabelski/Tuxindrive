@@ -11,6 +11,10 @@ on:
         description: Capture unsigned native build inputs for review; never publish or sign
         type: boolean
         default: false
+      native_replay_only:
+        description: Validate frozen Windows/macOS builds only; never sign or publish
+        type: boolean
+        default: false
   push:
     branches: [main]
     tags: ["v*"]
@@ -38,7 +42,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: platform-packages-${{ github.ref }}
+  group: platform-packages-${{ github.ref }}-${{ inputs.native_replay_only && 'native' || 'full' }}
   cancel-in-progress: false
 
 jobs:
@@ -117,7 +121,7 @@ jobs:
         run: PYTHONPATH=src TUXINDRIVE_ISOLATED_PROCESS_TESTS=1 .venv-ci/bin/python -m unittest discover -s integration_tests -v
 
   linux:
-    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && !inputs.native_replay_only }}
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.build.outputs.version }}
@@ -310,7 +314,7 @@ jobs:
           path: android/gradle/verification-metadata.xml
 
   android:
-    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && !inputs.native_replay_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -372,7 +376,7 @@ jobs:
             dist/TuxInDrive-*-android-unsigned.apk
             dist/TuxInDrive-*-android-store-unsigned.aab
   android-sign:
-    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && !inputs.native_replay_only && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     needs: [safety-gate, linux, legacy-upgrades, android]
     runs-on: ubuntu-24.04
     environment: release
@@ -438,7 +442,7 @@ jobs:
             releases/android/packages/TuxInDrive-*-android-store.aab
 
   publish-release:
-    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
+    if: ${{ !inputs.collect_dependency_verification && !inputs.capture_native_environments && !inputs.native_replay_only && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') }}
     needs: [safety-gate, linux, legacy-upgrades, windows, macos, android-sign]
     runs-on: ubuntu-24.04
     environment: release
